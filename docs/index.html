@@ -1224,7 +1224,7 @@ function applySettings(s) {
     if (!s.cmp.sw || !Array.isArray(s.cmp.sw.a) || !Array.isArray(s.cmp.sw.b)) s.cmp.sw = { a: [], b: [] };
     if (!s.cmp.fold || typeof s.cmp.fold !== "object") s.cmp.fold = { a: false, b: false };
     // Every visit opens the comparison fresh: player vs player, my team against the free-agent market
-    Object.assign(s.cmp, { mode: "players", a: [], b: [], tta: null, ttb: null, sw: { a: [], b: [] } });
+    Object.assign(s.cmp, { mode: "players", a: [], b: [], tta: null, ttb: null, sw: { a: [], b: [] }, nba: { a: "", b: "" } });
   }
   // Saved picks of the old Guard / Forward / Center filter are dropped
   Object.assign(st, s, { punts: new Set(s.punts || []), pos: new Set((s.pos || []).filter((x) => POSITIONS.includes(x))) });
@@ -2321,6 +2321,7 @@ function renderCmpSide(side) {
     if (box.dataset.mode !== "trade") {
       // The player box takes typing: the list narrows to matching names of the chosen team
       box.innerHTML = `<select data-cmptt="${side}" aria-label="בחר קבוצה"></select>` +
+        `<select data-cmpnba="${side}" aria-label="קבוצת NBA" hidden></select>` +
         `<input data-cmptp="${side}" list="cmpTp${side}" autocomplete="off" aria-label="בחר שחקן"><datalist id="cmpTp${side}"></datalist>`;
       box.dataset.mode = "trade";
     }
@@ -2339,10 +2340,21 @@ function renderCmpSide(side) {
       tsel.value = c[key];
     }
     const added = new Set(c[side]);
-    const from = !c[key] ? []
+    // Free agents / all players: a second box narrows them to one NBA team (all teams by default)
+    const wide = c[key] === "all" || c[key] === "free";
+    const nsel = box.querySelector("[data-cmpnba]");
+    c.nba = c.nba || { a: "", b: "" };
+    nsel.hidden = !wide;
+    if (wide && nsel !== document.activeElement) {
+      nsel.innerHTML = `<option value="">כל הקבוצות</option>` + Object.keys(TEAM_NAMES).sort().map((t) => `<option value="${t}">${esc(TEAM_NAMES[t])}</option>`).join("");
+      nsel.value = c.nba[side] || "";
+    }
+    const nba = wide ? c.nba[side] : "";
+    const from = (!c[key] ? []
       : c[key] === "all" ? players.filter((p) => p.L)
       : c[key] === "free" ? players.filter((p) => p.L && !picks.some((x) => x.id === p.id))
-      : picks.filter((x) => x.team === Number(c[key])).map((x) => PLAYER_BY_ID.get(x.id)).filter(Boolean);
+      : picks.filter((x) => x.team === Number(c[key])).map((x) => PLAYER_BY_ID.get(x.id)).filter(Boolean))
+      .filter((p) => !nba || p.team26 === nba);
     const pool = from.filter((p) => !added.has(p.id)).sort((a, b) => (rank.get(a.id) ?? 1e9) - (rank.get(b.id) ?? 1e9));
     if (psel !== document.activeElement) {
       psel.placeholder = !c[key] ? "בחר קבוצה קודם" : pool.length ? "בחר שחקן" : "אין שחקנים בקבוצה הזו";
@@ -2695,6 +2707,8 @@ $("viewCmp").addEventListener("change", (e) => {
     saveSettings(); return renderCmp();
   }
   if (tt) { st.cmp["tt" + tt.dataset.cmptt] = tt.value; saveSettings(); return renderCmp(); }
+  const nb = e.target.closest("[data-cmpnba]");
+  if (nb) { st.cmp.nba = { ...(st.cmp.nba || { a: "", b: "" }), [nb.dataset.cmpnba]: nb.value }; saveSettings(); return renderCmp(); }
   const sel = e.target.closest("[data-cmpteam]");
   if (!sel) return;
   st.cmp[sel.dataset.cmpteam === "a" ? "ta" : "tb"] = Number(sel.value);
