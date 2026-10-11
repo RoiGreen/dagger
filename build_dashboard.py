@@ -110,6 +110,30 @@ def team_logos() -> dict:
     return out
 
 
+FORM_DAYS = [7, 14, 30]
+
+
+def attach_form(players: list[dict]) -> str | None:
+    """Recent form: each player's averages over the last 7 / 14 / 30 days of regular-season games, counted back from
+    the latest game played (the 2026-27 regular season once it starts, before that the end of 2025-26).
+    p["form"] = {"7": [games, [STATS averages]], ...}. Returns the last game date."""
+    cur = pd.read_csv(CURRENT_LOGS) if CURRENT_LOGS.exists() and CURRENT_LOGS.stat().st_size > 200 else pd.DataFrame()
+    logs = cur if not cur.empty else pd.read_csv(DATA / "player_game_logs_regular.csv")
+    logs = logs[logs["MIN"] > 0].copy()
+    logs["GAME_DATE"] = pd.to_datetime(logs["GAME_DATE"].astype(str).str[:10])
+    end = logs["GAME_DATE"].max()
+    by_id = {p["id"]: p for p in players}
+    for days in FORM_DAYS:
+        win = logs[logs["GAME_DATE"] > end - pd.Timedelta(days=days)]
+        g = win.groupby("PLAYER_ID")
+        means, counts = g[STATS].mean(), g.size()
+        for pid, row in means.iterrows():
+            if pid in by_id:
+                by_id[pid].setdefault("form", {})[str(days)] = [int(counts[pid]), [round(float(row[c]), 2) for c in STATS]]
+    print(f"Recent form up to {end:%Y-%m-%d}: {sum(1 for p in players if 'form' in p)} players")
+    return f"{end:%Y-%m-%d}"
+
+
 RECENT_GAMES = 30  # games in the player card
 
 
@@ -414,6 +438,7 @@ def main() -> None:
     attach_injuries(players)
     attach_vs(players)
     attach_recent(players)
+    form_end = attach_form(players)
     # Embedded, because claude.ai artifacts cannot load images from other sites
     with_img = 0
     for p in players:
@@ -458,7 +483,7 @@ def main() -> None:
     payload = json.dumps({"stats": STATS, "seasons": seasons, "preseason": PRESEASON, "current": CURRENT,
                           "curMaxGp": cur_max_gp, "players": players,
                           "teamSeasons": team_seasons, "injUpdated": inj_updated, "vsGames": VS_GAMES, "sched": sched,
-                          "dist": team_distribution(), "box": box_scores(), "logos": team_logos()},
+                          "dist": team_distribution(), "box": box_scores(), "logos": team_logos(), "formEnd": form_end},
                          ensure_ascii=False, separators=(",", ":"))
     html = html.replace("/*__DATA__*/null", payload)
     OUT.write_text(html, encoding="utf-8")

@@ -852,6 +852,16 @@ table.cmpt td.lbl { min-width: 5.5em; }
           </details>
         </div>
         <div class="field">
+          <label for="formWin">כושר עדכני</label>
+          <select id="formWin">
+            <option value="">עונה שלמה (העונות שנבחרו)</option>
+            <option value="7">7 ימים אחרונים</option>
+            <option value="14">14 ימים אחרונים</option>
+            <option value="30">חודש אחרון</option>
+          </select>
+          <p class="hint" id="formHint" hidden></p>
+        </div>
+        <div class="field">
           <label for="vsOpp">נגד יריבה</label>
           <select id="vsOpp"><option value="">ללא (נתוני העונות שנבחרו)</option></select>
           <p class="hint">בחירת יריבה מציגה לכל שחקן את הממוצע ב־4 המשחקים האחרונים שלו מולה בעונה הסדירה (2025-26, ו־2026-27 כשיש בה משחקים).</p>
@@ -1079,7 +1089,7 @@ const players = D.players.map((p) => ({ ...p, proj: p.rookie ? p.s : null, projG
 // how far the season has gone (60% of the most games anyone has played), capped by the slider
 function seasonMinGames(y) {
   if (y === D.preseason) return 1;
-  if (y === D.current) return Math.min(st.minGp, Math.max(1, Math.ceil(0.6 * (D.curMaxGp || 1))));
+  if (y === D.current) return Math.min(st.minGp, Math.max(1, D.curMaxGp || 1));  // capped at the games played so far
   return st.minGp;
 }
 function setLines(p) {
@@ -1126,6 +1136,16 @@ function applySeasons() {
     p.adv = tw ? [0, 1, 2].map((i) => adv.reduce((a, l, j) => a + l.adv[i] * w[j], 0) / tw) : null;
     setLines(p);
   }
+  // Recent form: the last 7 / 14 / 30 days replace the season numbers; he must have played about half his team's games
+  if (st.formWin && !st.vsOpp) {
+    for (const p of players) {
+      const f = p.form?.[st.formWin];
+      if (!f || f[0] < FORM_MIN[st.formWin]) { p.has = false; continue; }
+      p.s = f[1]; p.gp = f[0]; p.gpTotal = f[0]; p.adv = null;
+      p.has = true;
+      setLines(p);
+    }
+  }
   // Against one opponent: each player's last games vs that team replace the season numbers
   if (st.vsOpp) {
     for (const p of players) {
@@ -1138,6 +1158,7 @@ function applySeasons() {
   }
 }
 
+const FORM_MIN = { 7: 2, 14: 4, 30: 8 };  // games needed in the window (a team plays ~3.5 a week)
 // Fantasy positions: a player is eligible at each one in his "PG/SG" string
 const POSITIONS = ["PG", "SG", "SF", "PF", "C"];
 const hasPos = (p, x) => (p.pos || "").split("/").includes(x);
@@ -1146,7 +1167,7 @@ const hasPos = (p, x) => (p.pos || "").split("/").includes(x);
 const st = {
   fmt: "cat", mode: "g", teams: 8, roster: 13, punts: new Set(), settingsVersion: 5,
   q: "", minGp: 50, minMin: 0, catFilters: [{ cat: "PTS", val: 0 }], pos: new Set(), teamSel: [], maxAge: 42,
-  hideTaken: true, onlyMoved: false, noHurt: false, weekGames: [], onlyFav: false, inj: "all", rookies: "all", myPos: 1, snake: true, roles: [], leagueName: "", teamNames: [], tags: {}, tagsMigrated: false,
+  hideTaken: true, onlyMoved: false, noHurt: false, weekGames: [], formWin: "", onlyFav: false, inj: "all", rookies: "all", myPos: 1, snake: true, roles: [], leagueName: "", teamNames: [], tags: {}, tagsMigrated: false,
   cmp: { mode: "players", a: [], b: [], ta: 0, tb: 1, tta: null, ttb: null, chart: "val", sw: { a: [], b: [] }, fold: { a: false, b: false } },
   sort: "zTotal", asc: false, tab: "board", advSort: "USG", advAsc: false, teamSort: "PACE", teamAsc: false, availSeasons: [2], vsOpp: "",
 };
@@ -1202,7 +1223,7 @@ function applySettings(s) {
   // What the user built stays: league setup (format, teams, roster, Punt), draft settings, table marks
   // (favorites and draft picks are stored apart from the settings).
   for (const k of ["q", "minGp", "minMin", "catFilters", "pos", "teamSel", "maxAge", "hideTaken", "onlyMoved", "noHurt", "onlyFav",
-    "inj", "rookies", "roles", "weekGames", "sort", "asc", "tab", "advSort", "advAsc", "teamSort", "teamAsc", "availSeasons", "vsOpp", "mode", "cmp"]) delete s[k];
+    "inj", "rookies", "roles", "weekGames", "formWin", "sort", "asc", "tab", "advSort", "advAsc", "teamSort", "teamAsc", "availSeasons", "vsOpp", "mode", "cmp"]) delete s[k];
   if (s.onlyInj && !s.inj) s.inj = "only";
   if (!Array.isArray(s.roles)) s.roles = s.role ? [s.role] : [];
   if (!Array.isArray(s.teamSel)) s.teamSel = s.team ? [s.team] : [];
@@ -3055,7 +3076,18 @@ function syncControls() {
   for (const b of document.querySelectorAll("[data-punt]")) b.setAttribute("aria-pressed", st.punts.has(b.dataset.punt));
   $("ptsHint").hidden = st.fmt !== "pts";  // Punt stays visible in both formats
   setField("teams", st.teams); setField("roster", st.roster); setField("q", st.q);
-  $("minGp").value = st.minGp; $("minGpOut").textContent = st.minGp;
+  // Only 2026-27 chosen: the games minimum runs up to the games played so far; earlier seasons stay free (10-82)
+  const onlyCur = chosenSeasons().every((y) => y === D.current);
+  $("minGp").min = onlyCur ? 1 : 10; $("minGp").max = onlyCur ? Math.max(D.curMaxGp || 1, 1) : 82;
+  $("minGp").value = st.minGp; $("minGpOut").textContent = onlyCur ? Math.min(st.minGp, D.curMaxGp || 1) : st.minGp;
+  $("formWin").value = st.formWin || "";
+  const fh = $("formHint");
+  fh.hidden = !st.formWin;
+  if (st.formWin && D.formEnd) {
+    const end = new Date(D.formEnd + "T12:00:00Z"), start = new Date(end - (Number(st.formWin) - 1) * 864e5);
+    const d = (x) => x.toLocaleDateString("he-IL", { day: "numeric", month: "numeric", year: "2-digit", timeZone: "UTC" });
+    fh.textContent = `משחקי העונה הסדירה מ־${d(start)} עד ${d(end)}. נספרים שחקנים עם ${FORM_MIN[st.formWin]} משחקים לפחות.`;
+  }
   $("minMin").value = st.minMin; $("minMinOut").textContent = st.minMin;
   syncCatFilters();
   setField("maxAge", st.maxAge);
@@ -3097,6 +3129,7 @@ $("puntChips").innerHTML = CATS.map((c) => `<button class="chip punt" data-punt=
 const teams = [...new Set(players.map((p) => p.team26).filter(Boolean))].sort();
 $("vsOpp").innerHTML += teams.map((t) => `<option value="${t}">${t}</option>`).join("");
 $("vsOpp").addEventListener("change", (e) => { st.vsOpp = e.target.value; update(); });
+$("formWin").addEventListener("change", (e) => { st.formWin = e.target.value; update(); });
 $("teamChips").innerHTML = teams.map((t) => `<button class="chip" type="button" data-teamsel="${t}" aria-pressed="false">${t}</button>`).join("");
 $("teamClear").addEventListener("click", () => { st.teamSel = []; update(false); });
 $("vsNote").addEventListener("click", (e) => { if (e.target.id === "vsClear") { st.vsOpp = ""; update(); } });
