@@ -813,6 +813,17 @@ table.cmpt td.lbl { min-width: 5.5em; }
           <p class="hint" id="minCatHint">ריק או 0 = בלי סינון. + מוסיף סינון על קטגוריה נוספת, וכל הסינונים חלים יחד. הערכים לפי מצב התצוגה (אמיתי או 36 דקות).</p>
         </div>
         <div class="field">
+          <span class="lbl">משחקים בשבוע הפנטזי</span>
+          <div class="chips" role="group" aria-label="משחקים בשבוע הפנטזי">
+            <button class="chip" data-wg="0" aria-pressed="false">0</button>
+            <button class="chip" data-wg="1" aria-pressed="false">1</button>
+            <button class="chip" data-wg="2" aria-pressed="false">2</button>
+            <button class="chip" data-wg="3" aria-pressed="false">3</button>
+            <button class="chip" data-wg="4" aria-pressed="false">4</button>
+            <button class="chip" data-wg="5" aria-pressed="false" title="5 משחקים או יותר">5</button>
+          </div>
+        </div>
+        <div class="field">
           <span class="lbl">עמדה</span>
           <div class="chips" id="posChips">
             <button class="chip" data-pos="PG" aria-pressed="false">PG</button>
@@ -1125,7 +1136,7 @@ const hasPos = (p, x) => (p.pos || "").split("/").includes(x);
 const st = {
   fmt: "cat", mode: "g", teams: 8, roster: 13, punts: new Set(), settingsVersion: 5,
   q: "", minGp: 50, minMin: 0, catFilters: [{ cat: "PTS", val: 0 }], pos: new Set(), teamSel: [], maxAge: 42,
-  hideTaken: true, onlyMoved: false, noHurt: false, onlyFav: false, inj: "all", rookies: "all", myPos: 1, snake: true, roles: [], leagueName: "", teamNames: [], tags: {}, tagsMigrated: false,
+  hideTaken: true, onlyMoved: false, noHurt: false, weekGames: [], onlyFav: false, inj: "all", rookies: "all", myPos: 1, snake: true, roles: [], leagueName: "", teamNames: [], tags: {}, tagsMigrated: false,
   cmp: { mode: "players", a: [], b: [], ta: 0, tb: 1, tta: null, ttb: null, chart: "val", sw: { a: [], b: [] }, fold: { a: false, b: false } },
   sort: "zTotal", asc: false, tab: "board", advSort: "USG", advAsc: false, teamSort: "PACE", teamAsc: false, availSeasons: [2], vsOpp: "",
 };
@@ -1181,7 +1192,7 @@ function applySettings(s) {
   // What the user built stays: league setup (format, teams, roster, Punt), draft settings, table marks
   // (favorites and draft picks are stored apart from the settings).
   for (const k of ["q", "minGp", "minMin", "catFilters", "pos", "teamSel", "maxAge", "hideTaken", "onlyMoved", "noHurt", "onlyFav",
-    "inj", "rookies", "roles", "sort", "asc", "tab", "advSort", "advAsc", "teamSort", "teamAsc", "availSeasons", "vsOpp", "mode", "cmp"]) delete s[k];
+    "inj", "rookies", "roles", "weekGames", "sort", "asc", "tab", "advSort", "advAsc", "teamSort", "teamAsc", "availSeasons", "vsOpp", "mode", "cmp"]) delete s[k];
   if (s.onlyInj && !s.inj) s.inj = "only";
   if (!Array.isArray(s.roles)) s.roles = s.role ? [s.role] : [];
   if (!Array.isArray(s.teamSel)) s.teamSel = s.team ? [s.team] : [];
@@ -1305,7 +1316,9 @@ function passes(p) {
     (st.rookies === "all" || (st.rookies === "only") === !!p.rookie) &&
     (!st.hideTaken || (!taken.has(p.id) && !mine.has(p.id))) &&
     (!st.onlyMoved || hasMoved(p)) &&
-    (!st.noHurt || !p.hurt) &&  // on ESPN's injury list now (OUT or GTD)
+    (!st.noHurt || !p.hurt) &&
+    // games his team plays in the fantasy week (Monday to Sunday, this week); 5 stands for 5 or more
+    (!st.weekGames.length || st.weekGames.includes(Math.min((TEAM_WEEK.get(p.team26) || { total: 0 }).total, 5))) &&  // on ESPN's injury list now (OUT or GTD)
     (st.inj === "all" || (st.inj === "only") === !!p.injured) &&
     (!st.roles.length || st.roles.includes(p.role)) &&
     (!st.onlyFav || fav.has(p.id)) &&
@@ -3005,6 +3018,7 @@ function syncControls() {
   for (const b of document.querySelectorAll("[data-fmt]")) b.setAttribute("aria-pressed", b.dataset.fmt === st.fmt);
   for (const b of document.querySelectorAll("[data-mode]")) b.setAttribute("aria-pressed", b.dataset.mode === st.mode);
   for (const b of document.querySelectorAll("[data-pos]")) b.setAttribute("aria-pressed", st.pos.has(b.dataset.pos));
+  for (const b of document.querySelectorAll("[data-wg]")) b.setAttribute("aria-pressed", st.weekGames.includes(Number(b.dataset.wg)));
   for (const b of document.querySelectorAll("[data-punt]")) b.setAttribute("aria-pressed", st.punts.has(b.dataset.punt));
   $("ptsHint").hidden = st.fmt !== "pts";  // Punt stays visible in both formats
   setField("teams", st.teams); setField("roster", st.roster); setField("q", st.q);
@@ -3099,6 +3113,7 @@ document.addEventListener("click", (e) => {
     return update();
   }
   if (t.dataset.mode) { st.mode = t.dataset.mode; return update(); }
+  if (t.dataset.wg) { const n = Number(t.dataset.wg); st.weekGames = st.weekGames.includes(n) ? st.weekGames.filter((x) => x !== n) : [...st.weekGames, n]; return update(false); }
   if (t.dataset.pos) { st.pos.has(t.dataset.pos) ? st.pos.delete(t.dataset.pos) : st.pos.add(t.dataset.pos); return update(false); }
   if (t.dataset.punt) { st.punts.has(t.dataset.punt) ? st.punts.delete(t.dataset.punt) : st.punts.add(t.dataset.punt); return update(); }
   if (t.dataset.k) {
