@@ -3186,8 +3186,10 @@ $("pickEdit").addEventListener("keydown", (e) => {
 // ---------- auto-pick: the best available player by the current ranking, for the team on the clock ----------
 function autoPick(until) {
   const n = Math.max(st.teams, 1), total = n * Math.max(st.roster, 1), me = myIdx();
-  const rank = last.now.rank;
-  const pool = last.list.filter((p) => rank.has(p.id)).sort((a, b) => rank.get(a.id) - rank.get(b.id)).map((p) => p.id);
+  // Everyone on a 2026-27 roster (and rookies), not only players who pass the table filters: a star who missed
+  // games last season (below the games minimum) is still drafted. Value = Z (9 categories) or FPTS (points)
+  const val = (p) => (st.fmt === "pts" ? p.F.g : (zOf(p)?.total ?? -99));
+  const pool = players.filter((p) => p.L && (p.team26 || p.rookie)).sort((a, b) => val(b) - val(a)).map((p) => p.id);
   const used = new Set(picks.map((x) => x.id));
   let made = 0, at = 0;
   for (;;) {
