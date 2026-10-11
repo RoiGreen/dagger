@@ -490,6 +490,8 @@ button.game:hover { background: rgba(255,255,255,.12); border-color: rgba(255,17
 .game .sc { margin-inline-start: 5px; color: #93a0bd; }
 .game .tm.won .sc, .game .tm.won { color: #ffffff; }
 .game.fin .time { color: #93a0bd; font-size: .78rem; letter-spacing: .1em; }
+.nbalogo { height: 30px; width: auto; flex: none; margin-inline-end: 4px; }
+.sitenote { text-align: center; font-size: .75rem; color: var(--muted); margin: 8px 0 0; }
 .daynav { display: inline-flex; align-items: center; gap: 4px; flex: none; }
 .dbtn { border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); color: #eef2fa; border-radius: 7px; min-width: 26px; height: 26px;
   font: inherit; font-weight: 800; cursor: pointer; display: grid; place-items: center; padding: 0 6px; }
@@ -1032,6 +1034,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
       </section>
     </main>
   </div>
+  <p class="sitenote">האתר אינו קשור ל־NBA או לקבוצותיה. השמות והלוגואים שייכים לבעליהם.</p>
 </div>
 
 <script>
@@ -1644,7 +1647,7 @@ function renderTicker() {
   const i = GAME_DAYS.indexOf(day), prev = GAME_DAYS[i - 1], next = GAME_DAYS[i + 1];
   const games = GAMES.filter((g) => g.d === day).sort((a, b) => a.t - b.t);
   const side = (t, s, won) => `<span class="tm${won ? " won" : ""}">${teamLogo(t)}${esc(t)}${s != null ? `<b class="sc">${s}</b>` : ""}</span>`;
-  tk.innerHTML = `<span class="daynav">
+  tk.innerHTML = `${(D.logos || {}).NBA ? `<img class="nbalogo" src="${D.logos.NBA}" alt="NBA">` : ""}<span class="daynav">
       <button type="button" class="dbtn" data-tday="${prev || ""}" ${prev ? "" : "disabled"} aria-label="יום קודם" title="יום קודם">›</button>
       <span class="lbl${day === today ? " live" : ""}">${day === today ? "TONIGHT" : esc(dayLabel(day))}</span>
       <button type="button" class="dbtn" data-tday="${next || ""}" ${next ? "" : "disabled"} aria-label="יום הבא" title="יום הבא">‹</button>

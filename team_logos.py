@@ -37,6 +37,13 @@ def ensure_team_logos() -> str:
         except Exception:  # noqa: BLE001 - a missing logo falls back to the team's colours
             failed += 1
         time.sleep(0.05)
+    league = OUT / "NBA.svg"  # the league logo for the games bar
+    if not league.exists():
+        try:
+            req = urllib.request.Request("https://cdn.nba.com/logos/leagues/logo-nba.svg", headers={"User-Agent": "Mozilla/5.0"})
+            league.write_bytes(urllib.request.urlopen(req, timeout=30).read())
+        except Exception:  # noqa: BLE001
+            pass
     return f"Team logos: {got} new, {failed} unavailable, {len(list(OUT.glob('*.svg')))} cached"
 
 
