@@ -358,7 +358,7 @@ table.dboard td.editing { outline: 2px solid var(--accent); outline-offset: -3px
 .cmpsec { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 12px; display: grid; gap: 10px; }
 .cmpsec h3 { margin: 0; font-size: 1.05rem; display: flex; flex-wrap: wrap; gap: 4px 10px; align-items: baseline; }
 .cmpsec h3 small { font-size: .8rem; color: var(--muted); font-weight: 600; }
-.cmpgrid { display: grid; grid-template-columns: minmax(0, 340px) minmax(0, 1fr); gap: 20px; align-items: start; }
+.cmpgrid { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: 20px; align-items: start; }  /* the table takes the width it needs, the chart the rest */
 @media (max-width: 900px) { .cmpgrid { grid-template-columns: minmax(0, 1fr); } }
 table.cmpt th, table.cmpt td { padding: 4px 6px; font-size: .9rem; }
 table.cmpt th.ha, table.cmpt th.hb { max-width: 9em; overflow: hidden; text-overflow: ellipsis; }
@@ -370,6 +370,8 @@ table.cmpt td.win.wb { background: color-mix(in srgb, var(--mine) 14%, transpare
 table.cmpt td.dif.da { color: var(--accent); font-weight: 700; } table.cmpt td.dif.db { color: var(--mine); font-weight: 700; }
 table.cmpt tr.punted td { opacity: .4; text-decoration: line-through; }
 table.cmpt tr.tot td { border-top: 2px solid var(--line); font-weight: 700; }
+/* a strong line where the 9 categories end and the totals (Z, FPTS) begin */
+table.cmpt tr:not(.tot) + tr.tot td { border-top: 3px solid color-mix(in srgb, var(--ink) 55%, transparent); }
 table.cmpt td.lbl { font-family: var(--font-num); font-weight: 700; text-align: start; }
 .vbars { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 10px; height: 340px; padding-top: 18px; }
 .vgrp { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 6px; min-width: 0; }
