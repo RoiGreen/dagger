@@ -1114,6 +1114,7 @@ function applySettings(s) {
   }
   // Saved picks of the old Guard / Forward / Center filter are dropped
   Object.assign(st, s, { punts: new Set(s.punts || []), pos: new Set((s.pos || []).filter((x) => POSITIONS.includes(x))) });
+  st.sort = st.fmt === "pts" ? "fp" : "zTotal"; st.asc = false;  // a visit opens sorted by the league's own value
 }
 const settingsData = () => ({ ...st, punts: [...st.punts], pos: [...st.pos] });
 try {
@@ -2836,7 +2837,12 @@ document.addEventListener("click", (e) => {
     if (st.advSort === col.k) st.advAsc = !st.advAsc; else { st.advSort = col.k; st.advAsc = col.asc; }
     return update(false);
   }
-  if (t.dataset.fmt) { st.fmt = t.dataset.fmt; return update(); }
+  if (t.dataset.fmt) {
+    st.fmt = t.dataset.fmt;
+    // The table follows the league's own value: FPTS in a points league, Z in 9 categories (another chosen sort stays)
+    if (["zTotal", "fp", "rank"].includes(st.sort)) { st.sort = st.fmt === "pts" ? "fp" : "zTotal"; st.asc = false; }
+    return update();
+  }
   if (t.dataset.mode) { st.mode = t.dataset.mode; return update(); }
   if (t.dataset.pos) { st.pos.has(t.dataset.pos) ? st.pos.delete(t.dataset.pos) : st.pos.add(t.dataset.pos); return update(false); }
   if (t.dataset.punt) { st.punts.has(t.dataset.punt) ? st.punts.delete(t.dataset.punt) : st.punts.add(t.dataset.punt); return update(); }
