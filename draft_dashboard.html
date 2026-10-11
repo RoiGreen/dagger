@@ -994,9 +994,9 @@ function applySeasons() {
     // A season counts only when he reached the games minimum in it (the minimum is per season)
     // The preseason is ~5 games a team, so one game is enough there
     const chosen = ys.filter((y) => p.seasons[y]?.gp >= seasonMinGames(y)).map((y) => ({ y, ...p.seasons[y] }));
-    // With several seasons chosen, he must reach the minimum in every one he played in:
-    // a season with a few games (say 20 of 50) takes him off the board, a season he missed entirely does not
-    const short = ys.some((y) => p.seasons[y]?.gp > 0 && p.seasons[y].gp < seasonMinGames(y));
+    // With several seasons chosen, he must reach the minimum in every one of them (a missed season counts as short).
+    // Rookies are judged only on what they have played (they had no earlier seasons to miss).
+    const short = !p.rookie && ys.some((y) => !(p.seasons[y]?.gp >= seasonMinGames(y)));
     // No qualifying season: off the board, but keep numbers for his favorites / my-team entries
     p.has = chosen.length > 0 && !short;
     const lines = p.has ? chosen : Object.keys(p.seasons).map(Number).sort().map((y) => ({ y, ...p.seasons[y] }));
