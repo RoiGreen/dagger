@@ -490,6 +490,9 @@ button.game:hover { background: rgba(255,255,255,.12); border-color: rgba(255,17
 .game .sc { margin-inline-start: 5px; color: #93a0bd; }
 .game .tm.won .sc, .game .tm.won { color: #ffffff; }
 .game.fin .time { color: #93a0bd; font-size: .78rem; letter-spacing: .1em; }
+#teamFoot tr.lgavg td { font-weight: 800; border-top: 2px solid var(--line); background: var(--surface-2); }
+#teamFoot .n { letter-spacing: .08em; }
+#teamFoot td.name { text-align: right; padding-right: 74px; }  /* in line with the team names */
 td.tteam .tt { display: inline-flex; align-items: center; gap: 12px; }  /* logo, abbreviation, then the full name */
 td.tteam .tlogo { width: 28px; height: 28px; filter: none; }
 td.tteam .t { margin-inline-start: 4px; }
@@ -1033,6 +1036,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
           <table>
             <thead><tr id="teamHead"></tr></thead>
             <tbody id="teamBody"></tbody>
+            <tfoot id="teamFoot"></tfoot>
           </table>
         </div>
       </section>
@@ -2013,6 +2017,10 @@ function renderAdv() {
     `<td class="name tteam"><span class="tt">${teamLogo(t.t)}<span class="n">${esc(t.t || "")}</span><span class="t">${esc(t.name)}</span></span></td>` +
     TCOLS.map((c) => `<td style="${th[c.k](sign(c) * t[c.k])}">${c.k === "NET_RATING" && t[c.k] > 0 ? "+" : ""}${t[c.k].toFixed(1)}</td>`).join("") +
     `</tr>`).join("");
+  // League average of each column, under the 30 teams
+  const avgOf = (k) => TEAM_ROWS.reduce((a, t) => a + t[k], 0) / Math.max(TEAM_ROWS.length, 1);
+  $("teamFoot").innerHTML = `<tr class="lgavg"><td></td><td class="name"><span class="n">LEAGUE AVERAGE</span></td>` +
+    TCOLS.map((c) => { const v = avgOf(c.k); return `<td>${c.k === "NET_RATING" && v > 0 ? "+" : ""}${v.toFixed(1)}</td>`; }).join("") + `</tr>`;
 }
 
 
