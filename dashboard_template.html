@@ -2197,6 +2197,13 @@ function showToast(text) {
 }
 const pickValue = (p, rank) => `${p.name} · ${p.team26 || "FA"}${rank ? ` · #${rank}` : ""}`;
 let PICK_LOOKUP = new Map();
+// The draft has no limits: every player with numbers can be picked, whatever the table filters (games minimum,
+// positions, minutes...). Order = value: Z over the 9 categories, or FPTS in a points league.
+const draftVal = (p) => (st.fmt === "pts" ? p.F.g : (zOf(p)?.total ?? -99));
+function draftRank() {
+  const all = players.filter((p) => p.L).sort((a, b) => draftVal(b) - draftVal(a));
+  return new Map(all.map((p, i) => [p.id, i + 1]));
+}
 let editCell = null;  // {team, r}: the draft-board cell being edited
 
 // Team-name inputs are rebuilt only when the number of teams changes, so typing keeps its focus
@@ -2247,10 +2254,10 @@ function renderDraft() {
   if ($("pickTeam") !== document.activeElement) { $("pickTeam").innerHTML = teamOpts; $("pickTeam").value = String(onClock); }
 
   // Available players, best first by the current ranking
-  const rank = last.now.rank;
-  const avail = last.list.filter((p) => !draftTaken.has(p.id) && !draftMine.has(p.id)).sort((a, b) => rank.get(a.id) - rank.get(b.id));
+  const rank = draftRank();
+  const avail = players.filter((p) => rank.has(p.id) && !draftTaken.has(p.id) && !draftMine.has(p.id)).sort((a, b) => rank.get(a.id) - rank.get(b.id));
   PICK_LOOKUP = new Map(avail.map((p) => [pickValue(p, rank.get(p.id)), p.id]));
-  $("availList").innerHTML = avail.slice(0, 400).map((p) => `<option value="${esc(pickValue(p, rank.get(p.id)))}"></option>`).join("");
+  $("availList").innerHTML = avail.map((p) => `<option value="${esc(pickValue(p, rank.get(p.id)))}"></option>`).join("");
   // My favorites: available ones can be picked with one click, picked ones show who took them
   const pickedBy = new Map(picks.map((x) => [x.id, x.team]));
   const favs = players.filter((p) => fav.has(p.id))
@@ -2268,7 +2275,7 @@ function renderDraft() {
   if ($("favPick") !== document.activeElement)
     $("favPick").innerHTML = `<option value="">★ המועדפים שלי (${freeFavs.length} זמינים)</option>` + freeFavs.map(opt).join("");
   if ($("rankPick") !== document.activeElement)
-    $("rankPick").innerHTML = `<option value="">לפי דירוג (${avail.length} זמינים)</option>` + avail.slice(0, 300).map(opt).join("");
+    $("rankPick").innerHTML = `<option value="">לפי דירוג (${avail.length} זמינים)</option>` + avail.map(opt).join("");
 
   // Board: a column per team, each team's picks in the order it made them
   const byTeam = Array.from({ length: n }, () => []);
@@ -3204,8 +3211,7 @@ function autoPick(until) {
   const n = Math.max(st.teams, 1), total = n * Math.max(st.roster, 1), me = myIdx();
   // Everyone on a 2026-27 roster (and rookies), not only players who pass the table filters: a star who missed
   // games last season (below the games minimum) is still drafted. Value = Z (9 categories) or FPTS (points)
-  const val = (p) => (st.fmt === "pts" ? p.F.g : (zOf(p)?.total ?? -99));
-  const pool = players.filter((p) => p.L && (p.team26 || p.rookie)).sort((a, b) => val(b) - val(a)).map((p) => p.id);
+  const pool = players.filter((p) => p.L && (p.team26 || p.rookie)).sort((a, b) => draftVal(b) - draftVal(a)).map((p) => p.id);
   const used = new Set(picks.map((x) => x.id));
   let made = 0, at = 0;
   for (;;) {
