@@ -462,10 +462,18 @@ table.mucats tr.punted td { opacity: .4; }
 .mupicks .mtags i.need { background: color-mix(in srgb, var(--led) 26%, transparent); }
 .mupicks .mfit { font-family: var(--font-num); font-size: 1.15rem; min-width: 3em; text-align: center; color: var(--accent); }
 .mupicks li.none { color: var(--muted); background: none; border: 0; }
-.muroster h4 { margin: 0 0 6px; }
-table.murt { direction: rtl; }
-table.murt td.pn { text-align: start; }
-table.murt .injpill { margin-inline-start: 6px; }
+.muroster h4 { margin: 0 0 6px; text-align: center; }
+.muvs { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: center; min-height: 54px; margin: 18px 0 6px; }
+.muvs b { text-align: center; font-family: var(--font-display, inherit); font-size: 1.25rem; }
+.muvs img { position: absolute; left: 50%; top: 50%; transform: translate(-50%, -50%); height: 52px; width: auto; }
+.murosters .muroster h4 { display: none; }
+@media (max-width: 900px) { .muvs { display: none; } .murosters .muroster h4 { display: block; } }
+table.box.murt { width: 100%; }
+table.box.murt th, table.box.murt td { padding: 5px 3px; font-size: .8rem; }
+table.box.murt td.pn { min-width: 0; text-align: start; line-height: 1.25; }
+table.box.murt .pw { gap: 6px; }
+table.box.murt .bimg { width: 26px; height: 26px; }
+table.box.murt .injpill { display: table; margin: 2px 0 0 32px; }
 .pn[data-pcard] { cursor: pointer; }
 .tipbox { position: fixed; z-index: 50; max-width: 280px; padding: 7px 10px; border-radius: 8px; background: var(--ink); color: var(--surface);
   font-size: .82rem; font-weight: 500; line-height: 1.45; pointer-events: none; box-shadow: 0 4px 14px rgb(0 0 0 / .18); white-space: pre-line; direction: rtl; }
@@ -3063,9 +3071,16 @@ function renderMatchup() {
       <span class="mtags">${top.map((q) => `<i class="${weights[q.k] >= 1.4 ? "need" : ""}"><bdi>${q.l}</bdi></i>`).join("")}</span>
       <b class="mfit" title="ציון התאמה: תרומה בקטגוריות שחשובות במאץ'-אפ, כפול המשחקים השבוע${x.f.recent ? " · מבוסס בעיקר על 14 הימים האחרונים" : ""}">${x.f.score.toFixed(1)}</b></li>`;
   };
-  const rosterTable = (T, title) => `<div class="muroster"><h4>${esc(title)}</h4><table class="box murt"><thead><tr><th class="nosort">שחקן</th><th class="nosort">שוחקו</th><th class="nosort">נותרו</th><th class="nosort">PTS</th><th class="nosort">REB</th><th class="nosort">AST</th></tr></thead><tbody>${
+  // each player's week (played so far + projected) in all 9 categories
+  const weekCell = (r, k) => {
+    const t = (x) => r.done[x] + r.proj[x];
+    if (k === "FG_PCT") return t("FGA") ? fmt3(t("FGM") / t("FGA")) : "–";
+    if (k === "FT_PCT") return t("FTA") ? fmt3(t("FTM") / t("FTA")) : "–";
+    return fmt1(t(k));
+  };
+  const rosterTable = (T, title) => `<div class="muroster"><h4>${esc(title)}</h4><table class="box murt"><thead><tr><th class="nosort">שחקן</th><th class="nosort">שוחקו</th><th class="nosort">נותרו</th>${CATS.map((c) => `<th class="nosort">${c.l}</th>`).join("")}</tr></thead><tbody>${
     [...T.rows].sort((a, b) => b.games - a.games || (b.p.F?.g ?? 0) - (a.p.F?.g ?? 0)).map((r) => `<tr><td class="pn"><span class="pw" data-pcard="${r.p.id}">${r.p.img ? `<img class="bimg" src="${r.p.img}" alt="">` : ""}<span>${esc(r.p.name)}</span></span>${r.p.hurt ? injuryPill(r.p) : ""}</td>
-      <td>${r.played}</td><td>${fmt1(r.games).replace(/\.0$/, "")}</td><td>${fmt1(r.done.PTS + r.proj.PTS)}</td><td>${fmt1(r.done.REB + r.proj.REB)}</td><td>${fmt1(r.done.AST + r.proj.AST)}</td></tr>`).join("")
+      <td>${r.played}</td><td>${fmt1(r.games).replace(/\.0$/, "")}</td>${CATS.map((c) => `<td>${weekCell(r, c.k)}</td>`).join("")}</tr>`).join("")
   }</tbody></table></div>`;
 
   out.innerHTML = `
@@ -3097,7 +3112,8 @@ function renderMatchup() {
       <ol class="mupicks">${scored.map(pickRow).join("") || `<li class="none">אין שחקנים חופשיים עם משחקים השבוע.</li>`}</ol>
       ${mineScored.length ? `<p class="munote">מועמדים לשחרור (הכי מעט ערך בעונה, וחלש בבירור מהפיק אפ הטוב ביותר): ${mineScored.map((x) => `<span class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</span>`).join(" · ")}</p>` : ""}
     </section>
-    <div class="mugrid">${rosterTable(A, myName)}${rosterTable(B, oppName)}</div>`;
+    <div class="muvs"><b>${esc(myName)}</b>${(D.logos || {}).NBA ? `<img src="${D.logos.NBA}" alt="NBA">` : ""}<b>${esc(oppName)}</b></div>
+    <div class="mugrid murosters">${rosterTable(A, myName)}${rosterTable(B, oppName)}</div>`;
 }
 $("muOpp").addEventListener("change", (e) => { st.muOpp = Number(e.target.value); renderMatchup(); });
 
