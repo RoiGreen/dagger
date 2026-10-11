@@ -460,7 +460,9 @@ table.mucats tr.punted td { opacity: .4; }
 .mupicks .mtags { display: inline-flex; gap: 4px; margin-inline-start: auto; }
 .mupicks .mtags i { font-style: normal; font-family: var(--font-num); font-weight: 700; font-size: .78rem; padding: 0 7px; border-radius: 6px; background: var(--sunk); }
 .mupicks .mtags i.need { background: color-mix(in srgb, var(--led) 26%, transparent); }
-.mupicks .mfit { font-family: var(--font-num); font-size: 1.15rem; min-width: 3em; text-align: center; color: var(--accent); }
+.mupicks .mfit { font-family: var(--font-num); font-size: 1.15rem; min-width: 5.5rem; text-align: center; color: var(--accent); }
+.mupickhead { display: flex; justify-content: flex-end; padding-inline: 11px; margin-bottom: 4px; }
+.mupickhead span { min-width: 5.5rem; text-align: center; font-size: .8rem; font-weight: 700; color: var(--muted); }
 .mupicks li.none { color: var(--muted); background: none; border: 0; }
 .muroster h4 { margin: 0 0 6px; text-align: center; }
 .muvs { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: center; min-height: 54px; margin: 18px 0 6px; }
@@ -3012,6 +3014,8 @@ function replacement() {
     fp: band.length ? band.reduce((a, p) => a + p.F.g, 0) / band.length : 0 };
   return REPL;
 }
+// Fit score as 1-100%: a fixed scale (not relative to this week's list), so a thin week shows low numbers
+const fitPct = (score) => Math.max(1, Math.min(100, Math.round(100 * (1 - Math.exp(-Math.max(score, 0) / 12)))));
 function fitScore(p, weights) {
   const b = blendRaw(p);
   if (!b || !p.team26) return null;
@@ -3076,7 +3080,7 @@ function renderMatchup() {
       <span class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</span>${teamLogo(x.p.team26)}${x.p.hurt ? injuryPill(x.p) : ""}
       <span class="mg" title="משחקים צפויים השבוע">${fmt1(x.f.games).replace(/\.0$/, "")} משח׳</span>
       <span class="mtags">${top.map((q) => `<i class="${weights[q.k] >= 1.4 ? "need" : ""}"><bdi>${q.l}</bdi></i>`).join("")}</span>
-      <b class="mfit" title="ציון התאמה: תרומה בקטגוריות שחשובות במאץ'-אפ, כפול המשחקים השבוע${x.f.recent ? " · מבוסס בעיקר על 14 הימים האחרונים" : ""}">${x.f.score.toFixed(1)}</b></li>`;
+      <b class="mfit" title="תרומה בקטגוריות שחשובות במאץ'-אפ, כפול המשחקים השבוע${x.f.recent ? " · מבוסס בעיקר על 14 הימים האחרונים" : ""}">${fitPct(x.f.score)}%</b></li>`;
   };
   // each player's week (played so far + projected) in all 9 categories
   const weekCell = (r, k) => {
@@ -3116,6 +3120,7 @@ function renderMatchup() {
       </section>
     </div>
     <section class="cmpsec"><h3>פיק אפ מומלץ לשבוע הזה</h3>
+      ${scored.length ? `<div class="mupickhead"><span>אחוז התאמה</span></div>` : ""}
       <ol class="mupicks">${scored.map(pickRow).join("") || `<li class="none">אין שחקנים חופשיים עם משחקים השבוע.</li>`}</ol>
       ${mineScored.length ? `<p class="munote">מועמדים לשחרור (הכי מעט ערך בעונה, וחלש בבירור מהפיק אפ הטוב ביותר): ${mineScored.map((x) => `<span class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</span>`).join(" · ")}</p>` : ""}
     </section>
