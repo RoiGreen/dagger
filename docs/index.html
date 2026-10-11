@@ -290,7 +290,8 @@ tr.sel-team td { box-shadow: inset 0 -2px 0 var(--accent), inset 0 2px 0 var(--a
 .quick .qtaken { padding: 3px 10px; border-radius: 999px; background: var(--sunk); text-decoration: line-through; }
 table.dboard th, table.dboard td { font-family: var(--font-body); font-size: .82rem; white-space: nowrap; }
 table.dboard th.me, table.dboard td.me { background: color-mix(in srgb, var(--mine) 12%, transparent); }
-table.dboard .dcell { display: inline-flex; align-items: baseline; gap: 10px; }
+table.dboard .dcell { display: inline-flex; align-items: center; gap: 8px; }
+table.dboard .dimg { width: 24px; height: 24px; border-radius: 50%; object-fit: cover; background: var(--sunk); border: 2px solid var(--line); flex: none; }
 table.dboard td .pk { color: var(--accent); font-family: var(--font-num); font-weight: 700; font-variant-numeric: tabular-nums; }
 table.dboard td .dn { font-weight: 700; }
 .autobar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
@@ -519,7 +520,7 @@ td.name .n { font-weight: 700; }
 /* numbers read left to right inside the RTL page: .569 not 569., -0.42 not 0.42-, FG% not %FG */
 td:not(.name):not(.lbl):not(.acts), thead th, tfoot td { direction: ltr; unicode-bidi: plaintext; }
 table.dboard td { direction: rtl; unicode-bidi: normal; }
-.zhelp td { direction: rtl; unicode-bidi: normal; }
+.zhelp td, .zhelp td:not(.name):not(.lbl):not(.acts) { direction: rtl; unicode-bidi: normal; }
 .num, .vbar span, .cmpdelta .dv span, .catbar .v, .pickchip, table.dboard .pk { direction: ltr; unicode-bidi: isolate; }
 td.lbl, .vl, .chip, select, .cbl { unicode-bidi: plaintext; }
 td.lbl { text-align: right; }
@@ -1841,7 +1842,7 @@ function renderDraft() {
     const x = t[r];
     const pl = x && byId.get(x.id);
     const editing = editCell && editCell.team === i && editCell.r === r;
-    return `<td data-cell="${i},${r}" class="${i === me ? "me" : ""}${editing ? " editing" : ""}" title="${pl ? "עריכת הבחירה" : "הוספת שחקן לקבוצה"}">${pl ? `<span class="dcell"><span class="pk">${DRAFT.labels.get(x.id)}</span><span class="dn">${esc(pl.name)}</span></span>` : ""}</td>`;
+    return `<td data-cell="${i},${r}" class="${i === me ? "me" : ""}${editing ? " editing" : ""}" title="${pl ? "עריכת הבחירה" : "הוספת שחקן לקבוצה"}">${pl ? `<span class="dcell"><span class="pk">${DRAFT.labels.get(x.id)}</span><span class="dn">${esc(pl.name)}</span>${pl.img ? `<img class="dimg" src="${pl.img}" alt="">` : ""}</span>` : ""}</td>`;
   }).join("") + `</tr>`).join("");
   const zAll = last.now.z, m = st.mode;
   const value = (id) => { const pl = byId.get(id); if (!pl) return 0; return st.fmt === "cat" ? (zAll.get(id)?.total ?? 0) : (pl.F?.[m] ?? 0); };
