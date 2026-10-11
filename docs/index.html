@@ -345,6 +345,18 @@ table.dboard td.editing { outline: 2px solid var(--accent); outline-offset: -3px
 .cmpchips li.swapped s, .cmpchips li.swapping s { color: var(--muted); font-weight: 600; }
 .cmpchips li.swapping { grid-template-columns: auto minmax(0, 1fr) auto; }
 .cmpchips li.swapping input { min-width: 0; font: inherit; font-size: .85rem; padding: 3px 8px; border: 1px solid var(--accent); border-radius: 6px; background: var(--surface); color: var(--ink); }
+.rbal { border-top: 1px dashed var(--line); padding-top: 8px; display: grid; gap: 6px; }
+.rbh { font-size: .82rem; font-weight: 700; color: var(--muted); }
+.rbrow { display: flex; gap: 6px; }
+.rbrow select { flex: 1; min-width: 0; }
+.rbrow button { font: inherit; font-size: .82rem; font-weight: 700; padding: 6px 12px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); cursor: pointer; }
+.rbrow button:hover { border-color: var(--accent-fill); color: var(--accent); }
+.rbt { font-style: normal; font-size: .72rem; font-weight: 800; padding: 0 7px; border-radius: 999px; margin-inline-start: 6px; }
+.rbt.drop { background: color-mix(in srgb, var(--neg) 18%, transparent); color: var(--neg); }
+.rbt.il { background: var(--sunk); color: var(--muted); }
+.rbt.add { background: color-mix(in srgb, var(--pos) 18%, transparent); color: var(--pos); }
+.rbbal { text-align: center; padding: 8px 12px; border-radius: 10px; background: var(--surface); border: 1px solid var(--line); font-size: .9rem; }
+.rbbal .bad { color: var(--neg); } .rbbal .ok { color: var(--pos); }
 .cmpdelta { border: 1px dashed var(--line); border-radius: 8px; padding: 8px; display: grid; gap: 6px; font-size: .85rem; }
 .cmpdelta .dh { display: flex; justify-content: space-between; align-items: center; gap: 8px; }
 .cmpdelta .dh button { border: 0; background: none; color: var(--muted); font: inherit; font-size: .8rem; cursor: pointer; text-decoration: underline; }
@@ -405,6 +417,55 @@ table.cmpt td.lbl { font-family: var(--font-num); font-weight: 700; text-align: 
 .cmpbar-toggle button[aria-pressed="true"] { border-color: var(--accent); color: var(--accent); }
 .cmpkey { display: flex; gap: 14px; font-size: .82rem; color: var(--muted); }
 .cmpkey i { display: inline-block; width: 12px; height: 12px; border-radius: 2px; margin-inline-end: 5px; vertical-align: -1px; }
+/* weekly matchup */
+.mubar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; }
+.mupick { display: flex; align-items: center; gap: 10px; font-weight: 700; }
+.mupick select { width: auto; min-width: 200px; }
+.muweek { font-family: var(--font-num); font-weight: 700; color: var(--muted); letter-spacing: .04em; }
+.muscore { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 16px; padding: 16px 22px; border-radius: 16px; color: #eef2fa;
+  background: radial-gradient(rgba(255,255,255,.05) 1px, transparent 1.3px) 0 0 / 4px 4px, linear-gradient(180deg, #0c1427, #070b16); box-shadow: var(--shadow); }
+.muscore .mside { display: grid; gap: 2px; }
+.muscore .mside:last-child { text-align: left; }
+.muscore .mside b { font-size: 1.25rem; }
+.muscore .mside span { font-size: .82rem; color: #aab5cf; }
+.muscore .mnum { display: grid; grid-template-columns: auto auto auto; align-items: center; gap: 10px; font-family: var(--font-num); font-weight: 800; font-size: 3rem; line-height: 1; justify-items: center; }
+.muscore .mnum small { grid-column: 1 / -1; font-family: var(--font-body); font-size: .72rem; font-weight: 600; color: #93a0bd; }
+.muscore .num { color: #6f7c99; } .muscore .num.lead { color: #ffb020; text-shadow: 0 0 18px rgba(255,176,32,.5); } .muscore .sep { color: #3a4766; }
+.mugrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
+@media (max-width: 900px) { .mugrid { grid-template-columns: minmax(0, 1fr); } }
+table.mucats td.w { font-weight: 800; color: var(--pos); }
+table.mucats tr.punted td { opacity: .4; }
+.mucat { display: inline-block; font-family: var(--font-body); font-size: .78rem; font-weight: 700; padding: 1px 9px; border-radius: 999px; margin-inline: 2px; }
+.mucat.win { background: color-mix(in srgb, var(--pos) 26%, transparent); color: var(--pos); }
+.mucat.lean-w { background: color-mix(in srgb, var(--pos) 12%, transparent); color: var(--pos); }
+.mucat.toss { background: color-mix(in srgb, var(--led) 24%, transparent); color: color-mix(in srgb, var(--led) 70%, var(--ink)); }
+.mucat.lean-l { background: color-mix(in srgb, var(--neg) 12%, transparent); color: var(--neg); }
+.mucat.lose { background: color-mix(in srgb, var(--neg) 24%, transparent); color: var(--neg); }
+.munote { margin: 6px 0 0; font-size: .78rem; color: var(--muted); }
+.muadv { display: grid; gap: 10px; }
+.muadv b { margin-inline-end: 8px; }
+.muadv p { margin: 3px 0 0; font-size: .82rem; color: var(--muted); }
+.muinj { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; margin-top: 10px; }
+.muinj h4 { margin: 0 0 4px; font-size: .9rem; }
+.muinj ul { list-style: none; margin: 0; padding: 0; display: grid; gap: 4px; }
+.muinj li { display: flex; align-items: center; gap: 6px; font-size: .85rem; flex-wrap: wrap; }
+.muinj .why { color: var(--muted); } .muinj li.none { color: var(--muted); }
+.mupicks { list-style: none; margin: 0; padding: 0; display: grid; gap: 6px; }
+.mupicks li { display: flex; align-items: center; gap: 10px; padding: 6px 10px; border-radius: 10px; background: var(--surface-2); border: 1px solid var(--line); }
+.mupicks .rk { font-family: var(--font-num); font-weight: 800; color: var(--muted); min-width: 1.4em; }
+.mupicks .mimg { width: 32px; height: 32px; border-radius: 50%; object-fit: cover; background: var(--sunk); flex: none; }
+.mupicks .pn { font-weight: 700; direction: ltr; unicode-bidi: isolate; }
+.mupicks .mg { font-size: .8rem; color: var(--muted); white-space: nowrap; }
+.mupicks .mtags { display: inline-flex; gap: 4px; margin-inline-start: auto; }
+.mupicks .mtags i { font-style: normal; font-family: var(--font-num); font-weight: 700; font-size: .78rem; padding: 0 7px; border-radius: 6px; background: var(--sunk); }
+.mupicks .mtags i.need { background: color-mix(in srgb, var(--led) 26%, transparent); }
+.mupicks .mfit { font-family: var(--font-num); font-size: 1.15rem; min-width: 3em; text-align: center; color: var(--accent); }
+.mupicks li.none { color: var(--muted); background: none; border: 0; }
+.muroster h4 { margin: 0 0 6px; }
+table.murt { direction: rtl; }
+table.murt td.pn { text-align: start; }
+table.murt .injpill { margin-inline-start: 6px; }
+.pn[data-pcard] { cursor: pointer; }
 .tipbox { position: fixed; z-index: 50; max-width: 280px; padding: 7px 10px; border-radius: 8px; background: var(--ink); color: var(--surface);
   font-size: .82rem; font-weight: 500; line-height: 1.45; pointer-events: none; box-shadow: 0 4px 14px rgb(0 0 0 / .18); white-space: pre-line; direction: rtl; }
 .injpill[data-tip] { cursor: help; }
@@ -926,6 +987,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
             <button role="tab" id="tabAdv" data-tab="adv" aria-selected="false" aria-controls="viewAdv">נתונים מתקדמים</button>
             <button role="tab" id="tabDraft" data-tab="draft" aria-selected="false" aria-controls="viewDraft">חדר דראפט</button>
             <button role="tab" id="tabCmp" data-tab="cmp" aria-selected="false" aria-controls="viewCmp">השוואה</button>
+            <button role="tab" id="tabMu" data-tab="mu" aria-selected="false" aria-controls="viewMu">מאץ'-אפ שבועי</button>
           </div>
         </div>
       </div>
@@ -1033,6 +1095,14 @@ table.cmpt td.lbl { min-width: 5.5em; }
         </div>
         <datalist id="cmpSwList"></datalist>
         <div id="cmpOut"></div>
+      </section>
+
+      <section class="view" id="viewMu" role="tabpanel" aria-labelledby="tabMu" hidden>
+        <div class="mubar">
+          <div class="mupick"><span>היריב השבוע</span><select id="muOpp" aria-label="היריב השבוע"></select></div>
+          <span class="muweek" id="muWeek"></span>
+        </div>
+        <div id="muOut"></div>
       </section>
 
       <section class="view" id="viewAdv" role="tabpanel" aria-labelledby="tabAdv" hidden>
@@ -1167,8 +1237,8 @@ const hasPos = (p, x) => (p.pos || "").split("/").includes(x);
 const st = {
   fmt: "cat", mode: "g", teams: 8, roster: 13, punts: new Set(), settingsVersion: 5,
   q: "", minGp: 50, minMin: 0, catFilters: [{ cat: "PTS", val: 0 }], pos: new Set(), teamSel: [], maxAge: 42,
-  hideTaken: true, onlyMoved: false, noHurt: false, weekGames: [], formWin: "", onlyFav: false, inj: "all", rookies: "all", myPos: 1, snake: true, roles: [], leagueName: "", teamNames: [], tags: {}, tagsMigrated: false,
-  cmp: { mode: "players", a: [], b: [], ta: 0, tb: 1, tta: null, ttb: null, chart: "val", sw: { a: [], b: [] }, fold: { a: false, b: false } },
+  hideTaken: true, onlyMoved: false, noHurt: false, weekGames: [], formWin: "", muOpp: null, onlyFav: false, inj: "all", rookies: "all", myPos: 1, snake: true, roles: [], leagueName: "", teamNames: [], tags: {}, tagsMigrated: false,
+  cmp: { mode: "players", a: [], b: [], ta: 0, tb: 1, tta: null, ttb: null, chart: "val", sw: { a: [], b: [] }, fold: { a: false, b: false }, drops: [], adds: [] },
   sort: "zTotal", asc: false, tab: "board", advSort: "USG", advAsc: false, teamSort: "PACE", teamAsc: false, availSeasons: [2], vsOpp: "",
 };
 // taken / mine = everything that marks a player as gone or on my team (table tags + draft picks);
@@ -1244,7 +1314,7 @@ function applySettings(s) {
     if (!s.cmp.sw || !Array.isArray(s.cmp.sw.a) || !Array.isArray(s.cmp.sw.b)) s.cmp.sw = { a: [], b: [] };
     if (!s.cmp.fold || typeof s.cmp.fold !== "object") s.cmp.fold = { a: false, b: false };
     // Every visit opens the comparison fresh: player vs player, my team against the free-agent market
-    Object.assign(s.cmp, { mode: "players", a: [], b: [], tta: null, ttb: null, sw: { a: [], b: [] }, nba: { a: "", b: "" } });
+    Object.assign(s.cmp, { mode: "players", a: [], b: [], tta: null, ttb: null, sw: { a: [], b: [] }, nba: { a: "", b: "" }, drops: [], adds: [] });
   }
   // Saved picks of the old Guard / Forward / Center filter are dropped
   Object.assign(st, s, { punts: new Set(s.punts || []), pos: new Set((s.pos || []).filter((x) => POSITIONS.includes(x))) });
@@ -1430,7 +1500,7 @@ function render() {
   }).join("") || EMPTY_ROW(COLS.length + (statRank ? 1 : 0));
 
 
-  renderMine(); renderFav(); renderAdv(); renderDraft(); renderDist(); renderCmp();
+  renderMine(); renderFav(); renderAdv(); renderDraft(); renderDist(); renderCmp(); renderMatchup();
 }
 
 // The team the shown stats come from: his team in the latest chosen season he played
@@ -2244,9 +2314,16 @@ function cmpBase(side) {
   }
   return c[side].map((id) => PLAYER_BY_ID.get(id)).filter(Boolean);
 }
+function tradeExtras(side) {
+  const c = st.cmp;
+  if (c.mode !== "trade") return [];
+  const ids = side === "a" ? (c.drops || []).filter((d) => d.kind === "drop").map((d) => d.id) : (c.adds || []);
+  return ids.map((id) => PLAYER_BY_ID.get(id)).filter(Boolean);
+}
 // A team's roster after the swaps tried on it (drop one player, put another in his place); the draft itself is untouched
 function cmpPlayers(side) {
   const base = cmpBase(side);
+  if (st.cmp.mode === "trade") return [...base, ...tradeExtras(side)];
   if (st.cmp.mode !== "teams") return base;
   const edits = st.cmp.sw[side];
   const out = new Map(edits.filter(([o]) => o != null));
@@ -2442,12 +2519,41 @@ function renderCmpSide(side) {
           `<button type="button" data-cmpundoadd="${side}:${q.id}" title="הסרת השחקן שנוסף" aria-label="הסרת ${esc(q.name)}">↶</button></li>` : "";
       }).join("");
     } else {
-      chips.innerHTML = cmpPlayers(side).map((p) => `<li><span class="nm">${who(p)}</span>` +
+      chips.innerHTML = cmpBase(side).map((p) => `<li><span class="nm">${who(p)}</span>` +
         `<button type="button" data-cmprm="${side}:${p.id}" aria-label="הסרת ${esc(p.name)}" title="הסרה">✕</button></li>`).join("")
         || "";
     }
   }
   // What the swaps change for this team: after minus before
+  // Trade: keep my roster at its size. I get more players -> drop or IL someone; I give more -> room for a free agent
+  let rb = $("cmpRoster" + S2);
+  if (!rb) { rb = document.createElement("div"); rb.id = "cmpRoster" + S2; rb.className = "rbal"; $("cmpChips" + S2).after(rb); }
+  rb.hidden = c.mode !== "trade";
+  if (c.mode === "trade") {
+    const give = c.a.length, get = c.b.length, drops = c.drops || [], adds = c.adds || [];
+    const need = get - give - drops.length + adds.length;  // > 0: spots I still have to clear
+    const opt = (p) => `<option value="${p.id}">${esc(p.name)} · ${esc(p.pos || "–")} · ${esc(p.team26 || "FA")}</option>`;
+    if (side === "a") {
+      const out = new Set([...c.a, ...drops.map((d) => d.id)]);
+      const pool = myRoster().filter((p) => !out.has(p.id)).sort((x, y) => (rank.get(y.id) ?? 0) - (rank.get(x.id) ?? 0));
+      rb.innerHTML = `<div class="rbh">פינוי מקום בסגל שלי</div>
+        <div class="rbrow"><select data-rbsel="a"><option value="">בחר שחקן מהסגל שלי</option>${pool.map(opt).join("")}</select>
+        <button type="button" data-rbdrop="drop" title="משחרר אותו: הערך שלו נספר במה שאני מוותר עליו">דרופ</button>
+        <button type="button" data-rbdrop="il" title="פצוע שעובר ל־IL: מפנה מקום ולא נספר כוויתור">IL</button></div>
+        <ul class="cmpchips">${drops.map((d) => { const p = PLAYER_BY_ID.get(d.id); return p ? `<li><span class="nm">${esc(p.name)} <em class="rbt ${d.kind}">${d.kind === "il" ? "IL" : "דרופ"}</em></span><button type="button" data-rbrm="${d.id}" aria-label="ביטול">✕</button></li>` : ""; }).join("")}</ul>`;
+    } else {
+      const used = new Set([...c.b, ...adds]);
+      const pool = players.filter((p) => p.team26 && p.L && !taken.has(p.id) && !mine.has(p.id) && !picks.some((x) => x.id === p.id) && !used.has(p.id))
+        .sort((x, y) => (rank.get(x.id) ?? 1e9) - (rank.get(y.id) ?? 1e9)).slice(0, 300);
+      rb.innerHTML = `<div class="rbh">מקום פנוי בסגל: הוספה מהשוק החופשי</div>
+        <div class="rbrow"><select data-rbadd="b"><option value="">בחר שחקן חופשי</option>${pool.map(opt).join("")}</select></div>
+        <ul class="cmpchips">${adds.map((id) => { const p = PLAYER_BY_ID.get(id); return p ? `<li><span class="nm">${esc(p.name)} <em class="rbt add">פיק אפ</em></span><button type="button" data-rbrmadd="${id}" aria-label="ביטול">✕</button></li>` : ""; }).join("")}</ul>`;
+    }
+    const msg = need > 0 ? `<b class="bad">צריך לפנות ${need === 1 ? "מקום אחד" : `${need} מקומות`} בסגל</b> (דרופ או IL)`
+      : need < 0 ? `<b class="ok">${-need === 1 ? "נשאר מקום פנוי אחד" : `נשארו ${-need} מקומות פנויים`}</b>: אפשר להוסיף שחקן חופשי`
+      : (give || get) ? `<b class="ok">הסגל מאוזן</b>` : "";
+    if (side === "a") { let bal = $("rbBalance"); if (!bal) { bal = document.createElement("div"); bal.id = "rbBalance"; bal.className = "rbbal"; document.querySelector(".cmpsides").after(bal); } bal.innerHTML = msg; bal.hidden = !msg; }
+  } else { const bal = $("rbBalance"); if (bal) bal.hidden = true; }
   const dl = $("cmpDelta" + S2);
   dl.hidden = !(M.team && c.sw[side].length);
   if (!dl.hidden) {
@@ -2678,6 +2784,7 @@ $("viewCmp").addEventListener("click", (e) => {
   if (t.dataset.cmpmode) {
     // A pickup's two lists (drops from my team, adds from the undrafted) do not carry over to or from other modes
     if (CMP_MODES[c.mode].pickup !== CMP_MODES[t.dataset.cmpmode].pickup) { c.a = []; c.b = []; }
+    c.drops = []; c.adds = [];
     c.mode = t.dataset.cmpmode;
     const M = CMP_MODES[c.mode];
     if (M.max) { c.a = c.a.slice(-M.max); c.b = c.b.slice(-M.max); }
@@ -2694,7 +2801,7 @@ $("viewCmp").addEventListener("click", (e) => {
   else if (t.id === "cmpReset") {
     // Start over: empty both sides, back to my team vs the next one, no edits
     const n = Math.max(st.teams, 1);
-    Object.assign(c, { a: [], b: [], tta: null, ttb: null, pt: null, ta: myIdx(), tb: (myIdx() + 1) % n, sw: { a: [], b: [] }, fold: { a: false, b: false } });
+    Object.assign(c, { a: [], b: [], tta: null, ttb: null, pt: null, ta: myIdx(), tb: (myIdx() + 1) % n, sw: { a: [], b: [] }, fold: { a: false, b: false }, drops: [], adds: [] });
     cmpOpen = { a: false, b: false };
     cmpSwapping = null;
   }
@@ -2711,7 +2818,20 @@ $("viewCmp").addEventListener("click", (e) => {
   else return;
   saveSettings(); renderCmp();
 });
+$("viewCmp").addEventListener("click", (e) => {
+  const c = st.cmp, b = e.target.closest("[data-rbdrop],[data-rbrm],[data-rbrmadd]");
+  if (!b) return;
+  if (b.dataset.rbdrop) {
+    const id = Number(document.querySelector('[data-rbsel="a"]').value);
+    if (!id) return showToast("בחר קודם שחקן מהסגל שלך.");
+    c.drops = [...(c.drops || []).filter((d) => d.id !== id), { id, kind: b.dataset.rbdrop }];
+  } else if (b.dataset.rbrm) c.drops = (c.drops || []).filter((d) => d.id !== Number(b.dataset.rbrm));
+  else c.adds = (c.adds || []).filter((x) => x !== Number(b.dataset.rbrmadd));
+  saveSettings(); renderCmp();
+});
 $("viewCmp").addEventListener("change", (e) => {
+  const ad = e.target.closest("[data-rbadd]");
+  if (ad && ad.value) { st.cmp.adds = [...(st.cmp.adds || []), Number(ad.value)]; saveSettings(); return renderCmp(); }
   const tt = e.target.closest("[data-cmptt]"), tp = e.target.closest("[data-cmptp]"), ta = e.target.closest("[data-cmpteamadd]");
   const pt = e.target.closest("[data-cmppt]"), pp = e.target.closest("[data-cmppick]");
   if (pt) { st.cmp.pt = Number(pt.value); st.cmp.a = []; saveSettings(); return renderCmp(); }  // drops belong to the team they came from
@@ -2758,6 +2878,188 @@ $("viewCmp").addEventListener("input", (e) => {
 $("viewCmp").addEventListener("keydown", (e) => {
   if (e.key === "Escape" && cmpSwapping) { cmpSwapping = null; renderCmp(); }
 });
+
+// ---------- weekly matchup planner ----------
+// The fantasy week runs Monday to Sunday (US Eastern dates, like the NBA schedule)
+function weekRange() {
+  const noon = new Date(`${etDay(new Date())}T12:00:00Z`);
+  const mon = new Date(noon - ((noon.getUTCDay() + 6) % 7) * 864e5);
+  return { from: mon.toISOString().slice(0, 10), to: new Date(mon.getTime() + 6 * 864e5).toISOString().slice(0, 10) };
+}
+// Recent form counts only while it is recent (the last regular-season game within three weeks)
+const formFresh = () => !!D.formEnd && Date.now() - new Date(D.formEnd + "T12:00:00Z") < 21 * 864e5;
+// A player's per-game line for projections: 60% the last 14 days (3+ games) and 40% the chosen seasons
+function blendRaw(p) {
+  if (!p.s) return null;
+  const f = p.form?.["14"];
+  return f && f[0] >= 3 && formFresh() ? { arr: p.s.map((v, i) => 0.4 * v + 0.6 * f[1][i]), recent: true } : { arr: p.s, recent: false };
+}
+// The games a team still plays this fantasy week
+function weekGamesLeft(team) {
+  const { from, to } = weekRange(), now = Date.now();
+  return GAMES.filter((g) => (g.h === team || g.a === team) && g.d >= from && g.d <= to && g.t.getTime() + 2.5 * 3600e3 > now)
+    .map((g) => ({ g, opp: g.h === team ? g.a : g.h }));
+}
+// Chance he plays a given game: OUT = 0 until his expected return, GTD = half
+function playChance(p, g) {
+  if (!p.hurt) return 1;
+  if (p.hurt.ret && new Date(p.hurt.ret) <= g.t) return 1;
+  return p.hurt.s === "OUT" ? 0 : 0.5;
+}
+// Opponent strength: a weaker defence and a faster pace mean more numbers (kept within ±12%)
+function oppFactor(team, opp) {
+  if (!TEAM_ROWS.length) return 1;
+  const avg = (k) => TEAM_ROWS.reduce((a, t) => a + t[k], 0) / TEAM_ROWS.length;
+  const o = TEAM_STATS.get(opp), m = TEAM_STATS.get(team);
+  if (!o) return 1;
+  const pace = ((o.PACE + (m ? m.PACE : avg("PACE"))) / 2) / avg("PACE");
+  return Math.min(1.12, Math.max(0.88, pace * (o.DEF_RATING / avg("DEF_RATING"))));
+}
+// What a player has already put up this week (from his game log) and what he is expected to add
+const MU_KEYS = ["PTS", "REB", "AST", "STL", "BLK", "FG3M", "TOV", "FGM", "FGA", "FTM", "FTA"];
+function weekLine(p) {
+  const { from, to } = weekRange();
+  const done = Object.fromEntries(MU_KEYS.map((k) => [k, 0]));
+  let played = 0;
+  for (const r of p.recent || []) {
+    if (r.length < 6 || r[0] < from || r[0] > to) continue;
+    played++;
+    Object.assign(done, { PTS: done.PTS + r[6], FGM: done.FGM + r[7], FGA: done.FGA + r[8], FTM: done.FTM + r[9], FTA: done.FTA + r[10],
+      FG3M: done.FG3M + r[11], REB: done.REB + r[13], AST: done.AST + r[14], STL: done.STL + r[15], BLK: done.BLK + r[16], TOV: done.TOV + r[17] });
+  }
+  const proj = Object.fromEntries(MU_KEYS.map((k) => [k, 0]));
+  const b = blendRaw(p);
+  let games = 0, missed = 0;
+  if (b && p.team26) {
+    for (const { g, opp } of weekGamesLeft(p.team26)) {
+      const ch = playChance(p, g);
+      games += ch; missed += 1 - ch;
+      const f = ch * oppFactor(p.team26, opp);
+      for (const k of MU_KEYS) proj[k] += b.arr[ix[k]] * f;
+    }
+  }
+  return { done, proj, played, games, missed, recent: b?.recent };
+}
+function teamWeek(roster) {
+  const T = { done: Object.fromEntries(MU_KEYS.map((k) => [k, 0])), total: Object.fromEntries(MU_KEYS.map((k) => [k, 0])), games: 0, played: 0, rows: [] };
+  for (const p of roster) {
+    const w = weekLine(p);
+    for (const k of MU_KEYS) { T.done[k] += w.done[k]; T.total[k] += w.done[k] + w.proj[k]; }
+    T.games += w.games; T.played += w.played;
+    T.rows.push({ p, ...w });
+  }
+  T.total.FG_PCT = T.total.FGA ? T.total.FGM / T.total.FGA : 0;
+  T.total.FT_PCT = T.total.FTA ? T.total.FTM / T.total.FTA : 0;
+  return T;
+}
+// How each category looks: margin against the opponent, and what to do about it
+function catOutlook(k, a, b) {
+  const lowBetter = k === "TOV", pct = k.endsWith("_PCT");
+  const lead = a === b ? 0 : (a > b) !== lowBetter ? 1 : -1;
+  const gap = pct ? Math.abs(a - b) : Math.abs(a - b) / Math.max((a + b) / 2, 1);
+  const [close, lean] = pct ? [0.006, 0.02] : [0.06, 0.15];
+  const level = gap < close ? 0 : gap < lean ? 1 : 2;
+  const key = level === 0 ? "toss" : lead > 0 ? (level === 1 ? "lean-w" : "win") : (level === 1 ? "lean-l" : "lose");
+  const label = { toss: "צמוד", "lean-w": "יתרון", win: "ניצחון בטוח", "lean-l": "פיגור קטן", lose: "פיגור גדול" }[key];
+  const weight = { toss: 2, "lean-w": 1.4, "lean-l": 1.6, win: 0.4, lose: 0.3 }[key];  // where an added player helps most
+  return { key, label, weight, lead };
+}
+// Fit score: how much a player helps this team where it matters (category weights; punted categories count 0,
+// so with TOV punted a high-turnover player is not marked down), times the games he has left this week.
+function fitScore(p, weights) {
+  const b = blendRaw(p);
+  if (!b || !p.team26) return null;
+  const L = line(b.arr, "g");
+  const z = zScores([{ id: p.id, L: { g: L } }], last.now.pool, "g").get(p.id).z;
+  const parts = CATS.map((c) => ({ k: c.k, l: c.l, v: st.punts.has(c.k) ? 0 : (weights[c.k] ?? 1) * z[c.k], z: z[c.k] }));
+  const perGame = parts.reduce((a, x) => a + x.v, 0);
+  const games = weekGamesLeft(p.team26).reduce((a, { g }) => a + playChance(p, g), 0);
+  return { perGame, games, score: perGame * games, parts, recent: b.recent };
+}
+const myRoster = () => players.filter((p) => mine.has(p.id));
+const teamRoster = (t) => picks.filter((x) => x.team === t).map((x) => PLAYER_BY_ID.get(x.id)).filter(Boolean);
+
+function renderMatchup() {
+  if (st.tab !== "mu") return;
+  const n = Math.max(st.teams, 1), me = myIdx();
+  if (st.muOpp == null || st.muOpp >= n || st.muOpp === me) st.muOpp = (me + 1) % n;
+  const sel = $("muOpp");
+  if (sel !== document.activeElement) {
+    sel.innerHTML = Array.from({ length: n }, (_, i) => i).filter((i) => i !== me).map((i) => `<option value="${i}">${esc(teamName(i))}</option>`).join("");
+    sel.value = String(st.muOpp);
+  }
+  const { from, to } = weekRange();
+  const dd = (d) => { const [, m, day] = d.split("-"); return `${Number(day)}.${Number(m)}`; };
+  $("muWeek").textContent = `שבוע ${dd(from)}–${dd(to)}`;
+  const out = $("muOut");
+  const mineP = myRoster(), oppP = teamRoster(st.muOpp);
+  if (!mineP.length || !oppP.length) {
+    out.innerHTML = `<p class="gnote">${!mineP.length ? "כדי לתכנן מאץ'-אפ צריך את הסגל שלך: בחר שחקנים לקבוצה שלך בחדר הדראפט או סמן אותם \"שלי\" בטבלה." : "לקבוצה הזו אין עדיין שחקנים בחדר הדראפט."}</p>`;
+    return;
+  }
+  const A = teamWeek(mineP), B = teamWeek(oppP);
+  const cats = CATS.map((c) => {
+    const a = A.total[c.k], b = B.total[c.k];
+    return { ...c, a, b, punted: st.punts.has(c.k), o: catOutlook(c.k, a, b) };
+  });
+  const live = cats.filter((c) => !c.punted);
+  const wins = live.filter((c) => c.o.lead > 0).length, losses = live.filter((c) => c.o.lead < 0).length;
+  const f = (k, v) => (k.endsWith("_PCT") ? fmt3(v) : fmt1(v));
+  const myName = teamName(me), oppName = teamName(st.muOpp);
+  // advice
+  const by = (keys) => live.filter((c) => keys.includes(c.o.key));
+  const chase = by(["toss", "lean-l"]), hold = by(["win", "lean-w"]), drop = by(["lose"]);
+  const chip = (c) => `<span class="mucat ${c.o.key}">${c.l}</span>`;
+  // injuries that cost games this week
+  const hurtRows = (T) => T.rows.filter((r) => r.missed > 0.01).map((r) => `<li>${injuryPill(r.p)}<span class="pn" data-pcard="${r.p.id}">${esc(r.p.name)}</span><span class="why">${r.missed >= 1 ? `מפסיד ${Math.round(r.missed)} ${Math.round(r.missed) === 1 ? "משחק" : "משחקים"}` : "בספק למשחק"}</span></li>`).join("");
+  // pickups: free agents by fit score for this matchup
+  const weights = Object.fromEntries(cats.map((c) => [c.k, c.punted ? 0 : c.o.weight]));
+  const free = players.filter((p) => p.team26 && p.L && !taken.has(p.id) && !mine.has(p.id) && !picks.some((x) => x.id === p.id));
+  const scored = free.map((p) => ({ p, f: fitScore(p, weights) })).filter((x) => x.f && x.f.games > 0).sort((a, b) => b.f.score - a.f.score).slice(0, 8);
+  const mineScored = mineP.map((p) => ({ p, f: fitScore(p, weights) })).filter((x) => x.f).sort((a, b) => a.f.score - b.f.score).slice(0, 3);
+  const pickRow = (x, i) => {
+    const top = [...x.f.parts].filter((q) => q.v > 0.15).sort((a, b) => b.v - a.v).slice(0, 3);
+    return `<li><span class="rk">${i + 1}</span>${x.p.img ? `<img class="mimg" src="${x.p.img}" alt="">` : `<span class="mimg"></span>`}
+      <span class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</span>${teamLogo(x.p.team26)}${x.p.hurt ? injuryPill(x.p) : ""}
+      <span class="mg" title="משחקים צפויים השבוע">${fmt1(x.f.games).replace(/\.0$/, "")} משח׳</span>
+      <span class="mtags">${top.map((q) => `<i class="${weights[q.k] >= 1.4 ? "need" : ""}">${q.l}</i>`).join("")}</span>
+      <b class="mfit" title="ציון התאמה: תרומה בקטגוריות שחשובות במאץ'-אפ, כפול המשחקים השבוע${x.f.recent ? " · מבוסס בעיקר על 14 הימים האחרונים" : ""}">${x.f.score.toFixed(1)}</b></li>`;
+  };
+  const rosterTable = (T, title) => `<div class="muroster"><h4>${esc(title)}</h4><table class="box murt"><thead><tr><th class="nosort">שחקן</th><th class="nosort">שוחקו</th><th class="nosort">נותרו</th><th class="nosort">PTS</th><th class="nosort">REB</th><th class="nosort">AST</th></tr></thead><tbody>${
+    [...T.rows].sort((a, b) => b.games - a.games || (b.p.F?.g ?? 0) - (a.p.F?.g ?? 0)).map((r) => `<tr><td class="pn"><span class="pw" data-pcard="${r.p.id}">${r.p.img ? `<img class="bimg" src="${r.p.img}" alt="">` : ""}<span>${esc(r.p.name)}</span></span>${r.p.hurt ? injuryPill(r.p) : ""}</td>
+      <td>${r.played}</td><td>${fmt1(r.games).replace(/\.0$/, "")}</td><td>${fmt1(r.done.PTS + r.proj.PTS)}</td><td>${fmt1(r.done.REB + r.proj.REB)}</td><td>${fmt1(r.done.AST + r.proj.AST)}</td></tr>`).join("")
+  }</tbody></table></div>`;
+
+  out.innerHTML = `
+    <div class="muscore">
+      <div class="mside"><b>${esc(myName)}</b><span>${fmt1(A.games).replace(/\.0$/, "")} משחקים נותרו · ${A.played} שוחקו</span></div>
+      <div class="mnum"><span class="num${wins > losses ? " lead" : ""}">${wins}</span><span class="sep">:</span><span class="num${losses > wins ? " lead" : ""}">${losses}</span><small>תחזית סוף השבוע</small></div>
+      <div class="mside"><b>${esc(oppName)}</b><span>${fmt1(B.games).replace(/\.0$/, "")} משחקים נותרו · ${B.played} שוחקו</span></div>
+    </div>
+    <div class="mugrid">
+      <section class="cmpsec"><h3>הקטגוריות</h3>
+        <table class="box mucats"><thead><tr><th class="nosort">קטגוריה</th><th class="nosort">${esc(myName)}</th><th class="nosort">${esc(oppName)}</th><th class="nosort">מצב</th></tr></thead><tbody>${
+          cats.map((c) => `<tr class="${c.punted ? "punted" : ""}"><td class="lbl">${c.l}</td><td class="${c.o.lead > 0 && !c.punted ? "w" : ""}">${f(c.k, c.a)}</td><td class="${c.o.lead < 0 && !c.punted ? "w" : ""}">${f(c.k, c.b)}</td><td>${c.punted ? "Punt" : `<span class="mucat ${c.o.key}">${c.o.label}</span>`}</td></tr>`).join("")
+        }</tbody></table>
+        <p class="munote">עד כה + תחזית למשחקים שנותרו: ממוצע משוקלל (60% שבועיים אחרונים, 40% העונות שנבחרו), לפי חוזק ההגנה וקצב היריבה בכל משחק, בלי פצועים OUT ו־50% ל־GTD.</p>
+      </section>
+      <section class="cmpsec"><h3>המלצות</h3>
+        <div class="muadv">
+          ${chase.length ? `<div><b>לחזק</b>${chase.map(chip).join("")}<p>קטגוריות צמודות או בפיגור קטן: כאן פיק אפ יכול להכריע.</p></div>` : ""}
+          ${hold.length ? `<div><b>לשמור</b>${hold.map(chip).join("")}<p>היתרון שלך. אל תשחרר שחקנים שמחזיקים אותן.</p></div>` : ""}
+          ${drop.length ? `<div><b>לוותר</b>${drop.map(chip).join("")}<p>פיגור גדול: עדיף להשקיע במקום אחר.</p></div>` : ""}
+          <div><b>משחקים</b><p>${A.games > B.games + 0.5 ? `יש לך יתרון של ${fmt1(A.games - B.games).replace(/\.0$/, "")} משחקים: הכמות לטובתך בקטגוריות המצטברות.` : B.games > A.games + 0.5 ? `ליריב ${fmt1(B.games - A.games).replace(/\.0$/, "")} משחקים יותר: שחקן עם הרבה משחקים השבוע יכול לסגור את הפער.` : "מספר המשחקים דומה לשני הצדדים."}</p></div>
+        </div>
+        <div class="muinj"><div><h4>${esc(myName)}</h4><ul>${hurtRows(A) || `<li class="none">אין חסרים</li>`}</ul></div><div><h4>${esc(oppName)}</h4><ul>${hurtRows(B) || `<li class="none">אין חסרים</li>`}</ul></div></div>
+      </section>
+    </div>
+    <section class="cmpsec"><h3>פיק אפ מומלץ לשבוע הזה</h3>
+      <ol class="mupicks">${scored.map(pickRow).join("") || `<li class="none">אין שחקנים חופשיים עם משחקים השבוע.</li>`}</ol>
+      ${mineScored.length ? `<p class="munote">מועמדים לשחרור (הכי מעט ערך השבוע): ${mineScored.map((x) => `<span class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</span> (${x.f.score.toFixed(1)})`).join(" · ")}</p>` : ""}
+    </section>
+    <div class="mugrid">${rosterTable(A, myName)}${rosterTable(B, oppName)}</div>`;
+}
+$("muOpp").addEventListener("change", (e) => { st.muOpp = Number(e.target.value); renderMatchup(); });
 
 // ---------- header explanations on hover / keyboard focus ----------
 const tipBox = Object.assign(document.createElement("div"), { className: "tipbox", hidden: true, role: "tooltip" });
@@ -3101,11 +3403,11 @@ function syncControls() {
   $("snake").checked = st.snake;
   for (const b of document.querySelectorAll("[data-tab]")) b.setAttribute("aria-selected", b.dataset.tab === st.tab);
   // The page title follows the open tab
-  $("pageTitle").textContent = { board: "נתונים כלליים", adv: "נתונים מתקדמים", draft: "חדר הדראפט", cmp: "השוואה" }[st.tab] || "נתונים כלליים";
+  $("pageTitle").textContent = { board: "נתונים כלליים", adv: "נתונים מתקדמים", draft: "חדר הדראפט", cmp: "השוואה", mu: "מאץ'-אפ שבועי" }[st.tab] || "נתונים כלליים";
   $("pageYear").hidden = st.tab !== "draft";  // the season shows only in the draft room
-  $("viewBoard").hidden = st.tab !== "board"; $("viewAdv").hidden = st.tab !== "adv"; $("viewDraft").hidden = st.tab !== "draft"; $("viewCmp").hidden = st.tab !== "cmp";
+  $("viewBoard").hidden = st.tab !== "board"; $("viewAdv").hidden = st.tab !== "adv"; $("viewDraft").hidden = st.tab !== "draft"; $("viewCmp").hidden = st.tab !== "cmp"; $("viewMu").hidden = st.tab !== "mu";
   // The table search does nothing in the draft room (it has its own pick box), so it is hidden there
-  document.querySelector(".topsearch").hidden = st.tab === "draft" || st.tab === "cmp";
+  document.querySelector(".topsearch").hidden = st.tab === "draft" || st.tab === "cmp" || st.tab === "mu";
   $("onlyFav").checked = st.onlyFav;
   for (const b of document.querySelectorAll("[data-avs]")) b.setAttribute("aria-pressed", st.availSeasons.includes(Number(b.dataset.avs)));
   // Collapsed list shows the chosen seasons, newest first
