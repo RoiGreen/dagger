@@ -813,8 +813,8 @@ table.cmpt td.lbl { min-width: 5.5em; }
           <p class="hint" id="minCatHint">ריק או 0 = בלי סינון. + מוסיף סינון על קטגוריה נוספת, וכל הסינונים חלים יחד. הערכים לפי מצב התצוגה (אמיתי או 36 דקות).</p>
         </div>
         <div class="field">
-          <span class="lbl">משחקים בשבוע הפנטזי</span>
-          <div class="chips" role="group" aria-label="משחקים בשבוע הפנטזי">
+          <span class="lbl">משחקים שנשארו השבוע</span>
+          <div class="chips" role="group" aria-label="משחקים שנשארו בשבוע הפנטזי">
             <button class="chip" data-wg="0" aria-pressed="false">0</button>
             <button class="chip" data-wg="1" aria-pressed="false">1</button>
             <button class="chip" data-wg="2" aria-pressed="false">2</button>
@@ -1317,8 +1317,8 @@ function passes(p) {
     (!st.hideTaken || (!taken.has(p.id) && !mine.has(p.id))) &&
     (!st.onlyMoved || hasMoved(p)) &&
     (!st.noHurt || !p.hurt) &&
-    // games his team plays in the fantasy week (Monday to Sunday, this week); 5 stands for 5 or more
-    (!st.weekGames.length || st.weekGames.includes(Math.min((TEAM_WEEK.get(p.team26) || { total: 0 }).total, 5))) &&  // on ESPN's injury list now (OUT or GTD)
+    // games his team has left in this fantasy week (until Sunday); 5 stands for 5 or more
+    (!st.weekGames.length || st.weekGames.includes(Math.min(weekLeft(p.team26), 5))) &&  // on ESPN's injury list now (OUT or GTD)
     (st.inj === "all" || (st.inj === "only") === !!p.injured) &&
     (!st.roles.length || st.roles.includes(p.role)) &&
     (!st.onlyFav || fav.has(p.id)) &&
@@ -1804,6 +1804,7 @@ $("themeBtn").addEventListener("click", () => {
 });
 renderScoreboard(); syncThemeBtn();
 
+const weekLeft = (t) => { const e = TEAM_WEEK.get(t); return e ? e.total - e.played : 0; };
 function scheduleLine(p) {
   if (!p.team26) return "";
   const e = TEAM_WEEK.get(p.team26) || { total: 0, played: 0, today: null };
