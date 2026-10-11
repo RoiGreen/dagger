@@ -54,7 +54,7 @@ POSITIONS_CSV = HERE / "nba_2026_27" / "positions_espn.csv"  # ESPN fantasy posi
 # For players ESPN does not list yet (mostly rookies): the NBA's broad position turned into fantasy positions
 NBA_TO_FANTASY = {"G": "PG/SG", "F": "SF/PF", "C": "C", "G-F": "SG/SF", "F-G": "SG/SF", "F-C": "PF/C", "C-F": "PF/C"}
 INJURIES_STAMP = HERE / "nba_2026_27" / "injuries_updated.txt"
-HEADSHOTS = DATA / "headshots"  # 40x40 WebP thumbnails from headshots.py
+HEADSHOTS = DATA / "headshots_hd"  # 120x120 WebP headshots from headshots.py
 # Head-to-head: the last N regular-season games against each opponent, 2025-26 and 2026-27
 VS_GAMES = 4
 GAME_LOG_FILES = [DATA / "player_game_logs_regular.csv", CURRENT_LOGS]

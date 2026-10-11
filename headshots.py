@@ -4,7 +4,8 @@ Player headshots for the dashboard, from the NBA's official image CDN.
     python headshots.py
 
 Downloads the headshot of every player on a 2026-27 roster that is not cached yet, crops it to a
-square around the face and saves a 40x40 WebP thumbnail in ./nba_2025_26/headshots/<player id>.webp.
+square around the face and saves a 120x120 WebP in ./nba_2025_26/headshots_hd/<player id>.webp
+(sharp enough for the big comparison photos; the tables show it smaller).
 The build embeds these thumbnails in the page (claude.ai artifacts cannot load outside images).
 Run daily by daily_update.py, so new signings get a picture the next morning.
 """
@@ -18,10 +19,10 @@ import pandas as pd
 from PIL import Image
 
 HERE = Path(__file__).parent
-CACHE = HERE / "nba_2025_26" / "headshots"
+CACHE = HERE / "nba_2025_26" / "headshots_hd"
 ROSTER = HERE / "nba_2025_26" / "player_index_2026_27.csv"
 URL = "https://cdn.nba.com/headshots/nba/latest/260x190/{}.png"
-SIZE = 40
+SIZE = 120
 
 
 def thumbnail(png: bytes) -> Image.Image:
@@ -40,7 +41,7 @@ def ensure_headshots(player_ids) -> str:
         try:
             req = urllib.request.Request(URL.format(pid), headers={"User-Agent": "Mozilla/5.0"})
             png = urllib.request.urlopen(req, timeout=30).read()
-            thumbnail(png).save(CACHE / f"{pid}.webp", "WEBP", quality=70)
+            thumbnail(png).save(CACHE / f"{pid}.webp", "WEBP", quality=74)
             got += 1
         except Exception:  # noqa: BLE001 - no picture just means no avatar for that player
             failed += 1

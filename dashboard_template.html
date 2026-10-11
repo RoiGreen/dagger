@@ -525,6 +525,56 @@ td.lbl, .vl, .chip, select, .cbl { unicode-bidi: plaintext; }
 td.lbl { text-align: right; }
 :root[data-theme="light"] td.rank.top { color: var(--accent); text-shadow: none; }
 
+/* comparison face-off: two sides and a night scoreboard between them */
+.faceoff { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 340px) minmax(0, 1fr); gap: 14px; align-items: stretch; }
+.face { position: relative; display: grid; justify-items: center; align-content: center; gap: 6px; padding: 18px 14px 16px; text-align: center;
+  border-radius: 16px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); overflow: hidden; }
+.face::before { content: ""; position: absolute; inset-inline: 0; top: 0; height: 4px; background: var(--side); }
+.face.sa { --side: var(--accent-fill); } .face.sb { --side: var(--mine); }
+.face.leads { box-shadow: var(--shadow), 0 0 0 2px color-mix(in srgb, var(--side) 55%, transparent); }
+.face .ph { position: relative; width: 104px; height: 104px; border-radius: 50%; padding: 3px; background: conic-gradient(var(--tc, var(--side)), var(--side), var(--tc, var(--side))); }
+.face .ph img { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: var(--sunk); }
+.face .ph .injpill { position: absolute; bottom: -4px; inset-inline-start: 50%; translate: 50% 0; white-space: nowrap; }
+.face .fn { font-size: 1.15rem; font-weight: 800; margin-top: 4px; }
+.face .fm { font-size: .82rem; color: var(--muted); font-weight: 600; }
+.face .fs { display: flex; gap: 16px; margin-top: 4px; }
+.face .fs span { display: grid; gap: 0; }
+.face .fs small { font-family: var(--font-num); font-weight: 700; font-size: .68rem; letter-spacing: .14em; color: var(--muted); }
+.face .fs b { font-size: 1.15rem; font-weight: 800; }
+.face.multi .stack { display: flex; justify-content: center; padding-inline-start: 14px; }
+.face .mini { width: 46px; height: 46px; border-radius: 50%; margin-inline-start: -14px; border: 2px solid var(--surface); background: var(--sunk); overflow: hidden; display: grid; place-items: center; }
+.face .mini img { width: 100%; height: 100%; object-fit: cover; }
+.face .mini.more { font-weight: 800; font-size: .85rem; color: var(--muted); }
+.vsboard { display: grid; align-content: center; justify-items: center; gap: 4px; padding: 14px 16px; border-radius: 16px; color: #eef2fa; text-align: center;
+  background: radial-gradient(rgba(255,255,255,.05) 1px, transparent 1.3px) 0 0 / 4px 4px, linear-gradient(180deg, #0c1427, #070b16);
+  border: 1px solid #1d2944; box-shadow: var(--shadow); }
+.vsboard .k { font-size: .76rem; color: #93a0bd; font-weight: 600; }
+.vsboard .score { display: flex; align-items: center; gap: 12px; font-family: var(--font-num); font-weight: 800; font-size: 3rem; line-height: 1; direction: rtl; }
+.vsboard .score .num { color: #6f7c99; min-width: 1ch; }
+.vsboard .score .num.lead { color: #ffb020; text-shadow: 0 0 18px rgba(255,176,32,.55); }
+.vsboard .score .sep { color: #3a4766; }
+.vsboard .vwho { font-size: .82rem; font-weight: 700; color: #eef2fa; }
+.vsboard .lines { width: 100%; display: grid; gap: 2px; margin-top: 6px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,.08); }
+.vsboard .ln { display: grid; grid-template-columns: 1fr auto auto; gap: 14px; align-items: baseline; direction: rtl; }
+.vsboard .ln .lk { text-align: start; font-family: var(--font-num); font-weight: 700; letter-spacing: .1em; font-size: .78rem; color: #93a0bd; }
+.vsboard .ln b { font-family: var(--font-num); font-size: 1.15rem; font-weight: 800; color: #93a0bd; min-width: 3.4em; }
+.vsboard .ln b.lead { color: #eef2fa; }
+.vsboard .fv { font-size: .72rem; color: #aab5cf; text-align: start; margin-bottom: 4px; }
+.vsboard .note { font-size: .72rem; color: #ffb020; margin-top: 4px; }
+@media (max-width: 760px) {
+  .faceoff { grid-template-columns: 1fr 1fr; }
+  .vsboard { grid-column: 1 / -1; grid-row: 2; }
+  .face .ph { width: 78px; height: 78px; }
+  .face .fs { gap: 10px; }
+}
+/* winner of each category, next to its name */
+.lbw { display: inline-flex; align-items: center; gap: 6px; }
+.lbw .lt { direction: ltr; unicode-bidi: isolate; }
+.wmark { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; background: var(--sunk); border: 2px solid var(--side); flex: none; }
+.wmark.wa, .wdot.wa { --side: var(--accent-fill); } .wmark.wb, .wdot.wb { --side: var(--mine); }
+.wdot { width: 10px; height: 10px; border-radius: 50%; background: var(--side); flex: none; }
+table.cmpt td.lbl { min-width: 5.5em; }
+
 /* draft room and comparison */
 .dconsole, .cmpside, .cmpsec, .cmpsum .card, .dsetup { border-radius: 14px; box-shadow: var(--shadow); }
 .clock { background: var(--surface-2); border: 1px solid var(--line); }
@@ -2036,7 +2086,7 @@ function cmpBars(rows, A, B, kind) {
     return `<div class="vgrp${r.punted ? " punted" : ""}" title="${esc(r.tip || r.l)}"><div class="vpair">${col("a", va)}${col("b", vb)}</div><span class="vl">${r.l}</span></div>`;
   }).join("") + `</div>`;
 }
-function cmpTable(rows, A, B, nameA, nameB) {
+function cmpTable(rows, A, B, nameA, nameB, mark = () => "") {
   let wa = 0, wb = 0;
   const body = rows.map((r) => {
     const va = A[r.k], vb = B[r.k];
@@ -2045,11 +2095,31 @@ function cmpTable(rows, A, B, nameA, nameB) {
     if (r.cat && !r.punted) { if (win === "a") wa++; else if (win === "b") wb++; }
     const diff = va == null || vb == null ? "–" : r.fmt(Math.abs(va - vb));
     const cls = (side) => win === side ? ` class="win w${side}"` : "";
-    return `<tr class="${r.punted ? "punted" : ""}${r.tot ? " tot" : ""}"><td class="lbl" title="${esc(r.tip || "")}">${r.l}</td>` +
+    return `<tr class="${r.punted ? "punted" : ""}${r.tot ? " tot" : ""}"><td class="lbl" title="${esc(r.tip || "")}"><span class="lbw"><span class="lt">${r.l}</span>${win && !r.punted ? mark(win) : ""}</span></td>` +
       `<td${cls("a")}>${va == null ? "–" : r.fmt(va)}</td><td${cls("b")}>${vb == null ? "–" : r.fmt(vb)}</td>` +
       `<td class="dif${win ? " d" + win : ""}">${win ? diff : "="}</td></tr>`;
   }).join("");
   return { wa, wb, html: `<table class="cmpt"><thead><tr><th class="nosort">קטגוריה</th><th class="nosort ha">${esc(nameA)}</th><th class="nosort hb">${esc(nameB)}</th><th class="nosort">הפרש</th></tr></thead><tbody>${body}</tbody></table>` };
+}
+
+// One side of the face-off: a big photo for a single player, overlapping photos for several
+function cmpFace(L, side, name, leads) {
+  const rank = last.now.rank;
+  if (L.length === 1) {
+    const p = L[0], r = rank.get(p.id), z = zOf(p);
+    return `<div class="face s${side}${leads ? " leads" : ""}" style="--tc:${teamTint(p.team26)}">
+      <div class="ph">${p.img ? `<img src="${p.img}" alt="">` : ""}${p.hurt ? injuryPill(p) : ""}</div>
+      <div class="fn">${esc(p.name)}</div>
+      <div class="fm"><span class="num">${esc(p.pos || "–")}</span> · <span class="num">${esc(p.team26 || "FA")}</span>${r ? ` · <span class="num">#${r}</span>` : ""}</div>
+      <div class="fs"><span><small>Z</small><b class="num">${z ? z.total.toFixed(2) : "–"}</b></span><span><small>FPTS</small><b class="num">${fmt1(p.F[st.mode])}</b></span><span><small>GP</small><b class="num">${p.gp ?? "–"}</b></span></div>
+    </div>`;
+  }
+  const shown = L.slice(0, 7);
+  return `<div class="face s${side} multi${leads ? " leads" : ""}">
+    <div class="stack">${shown.map((p) => `<span class="mini" title="${esc(p.name)}">${p.img ? `<img src="${p.img}" alt="">` : ""}</span>`).join("")}${L.length > 7 ? `<span class="mini more num">+${L.length - 7}</span>` : ""}</div>
+    <div class="fn">${esc(name)}</div>
+    <div class="fm">${L.length ? `${L.length} שחקנים` : "ללא שחקנים"}</div>
+  </div>`;
 }
 
 function renderCmp() {
@@ -2084,20 +2154,39 @@ function renderCmp() {
     { k: "Z", l: "Z", tot: true, fmt: (v) => v.toFixed(2), tip: "סכום ה־Z של הקטגוריות (בלי Punt)" },
     { k: "FPTS", l: "FPTS", tot: true, fmt: fmt1 }], A, B, nA, nB);
   const advRows = CMP_ADV.map((r) => ({ ...r, fmt: r.k === "AVAIL" ? (v) => Math.round(v * 100) + "%" : r.k === "ASTTOV" ? (v) => v.toFixed(2) : fmt1 }));
-  const adv = cmpTable(advRows, A, B, nA, nB);
+  // Winner mark: the player's photo when each side is one player, otherwise the side's colour
+  const one = LA.length === 1 && LB.length === 1;
+  const mark = (side) => {
+    const p = one ? (side === "a" ? LA[0] : LB[0]) : null;
+    return p && p.img ? `<img class="wmark w${side}" src="${p.img}" alt="${esc(p.name)}" title="${esc(p.name)}">`
+      : `<i class="wdot w${side}" title="${esc(side === "a" ? nA : nB)}"></i>`;
+  };
+  gen.html = cmpTable([...catRows,
+    { k: "Z", l: "Z", tot: true, fmt: (v) => v.toFixed(2), tip: "סכום ה־Z של הקטגוריות (בלי Punt)" },
+    { k: "FPTS", l: "FPTS", tot: true, fmt: fmt1 }], A, B, nA, nB, mark).html;
+  const adv = cmpTable(advRows, A, B, nA, nB, mark);
   const lead = (x, y) => x > y ? nA : y > x ? nB : "שוויון";
   // "הפרש 1.03 לטובת X"; a gap that rounds to zero is a tie
   const favor = (d, f) => f(Math.abs(d)) === f(0) ? "שוויון" : `הפרש ${f(Math.abs(d))} לטובת ${esc(d > 0 ? nA : nB)}`;
   const chart = c.chart === "z" ? "z" : "val";
 
   out.innerHTML = `
-    <div class="cmpsum">
-      <div class="card"><span class="k">קטגוריות (מתוך ${CATS.length - st.punts.size})</span><span class="v"><span class="num">${gen.wa}</span> : <span class="num">${gen.wb}</span></span><span class="k">${gen.wa === gen.wb ? "שוויון" : `${esc(lead(gen.wa, gen.wb))} מוביל`}</span></div>
-      <div class="card"><span class="k">Z</span><span class="v"><span class="num">${A.Z.toFixed(2)}</span> : <span class="num">${B.Z.toFixed(2)}</span></span><span class="k">${favor(A.Z - B.Z, (v) => v.toFixed(2))}</span></div>
-      <div class="card"><span class="k">FPTS ${per}${avg ? " לשחקן" : ""}</span><span class="v"><span class="num">${fmt1(A.FPTS)}</span> : <span class="num">${fmt1(B.FPTS)}</span></span><span class="k">${favor(A.FPTS - B.FPTS, fmt1)}</span></div>
-      ${several ? `<div class="card"><span class="k">שחקנים</span><span class="v">${LA.length} : ${LB.length}</span><span class="k">${LA.length !== LB.length && !avg ? "צד עם יותר שחקנים צובר יותר" : "&nbsp;"}</span></div>` : ""}
+    <div class="faceoff">
+      ${cmpFace(LA, "a", nA, gen.wa > gen.wb)}
+      <div class="vsboard">
+        <div class="k">קטגוריות · מתוך ${CATS.length - st.punts.size}</div>
+        <div class="score"><span class="num${gen.wa > gen.wb ? " lead" : ""}">${gen.wa}</span><span class="sep">:</span><span class="num${gen.wb > gen.wa ? " lead" : ""}">${gen.wb}</span></div>
+        <div class="vwho">${gen.wa === gen.wb ? "שוויון" : `${esc(lead(gen.wa, gen.wb))} מוביל`}</div>
+        <div class="lines">
+          <div class="ln"><span class="lk">Z</span><b class="num${A.Z > B.Z ? " lead" : ""}">${A.Z.toFixed(2)}</b><b class="num${B.Z > A.Z ? " lead" : ""}">${B.Z.toFixed(2)}</b></div>
+          <div class="fv">${favor(A.Z - B.Z, (v) => v.toFixed(2))}</div>
+          <div class="ln"><span class="lk">FPTS${avg ? " לשחקן" : ""}</span><b class="num${A.FPTS > B.FPTS ? " lead" : ""}">${fmt1(A.FPTS)}</b><b class="num${B.FPTS > A.FPTS ? " lead" : ""}">${fmt1(B.FPTS)}</b></div>
+          <div class="fv">${favor(A.FPTS - B.FPTS, fmt1)}</div>
+        </div>
+        ${several && LA.length !== LB.length && !avg ? `<div class="note">${LA.length} מול ${LB.length} שחקנים: צד עם יותר שחקנים צובר יותר</div>` : ""}
+      </div>
+      ${cmpFace(LB, "b", nB, gen.wb > gen.wa)}
     </div>
-    <div class="cmpkey"><span><i style="background:var(--accent)"></i>${esc(nA)}</span><span><i style="background:var(--mine)"></i>${esc(nB)}</span></div>
     <section class="cmpsec">
       <h3>נתונים כלליים
         ${teamish ? `<span class="cmpbar-toggle" role="group" aria-label="סה״כ או ממוצע">
