@@ -61,6 +61,42 @@ GAME_LOG_FILES = [DATA / "player_game_logs_regular.csv", CURRENT_LOGS]
 SEASON_FILES = HERE / "nba_2025_26" / "rookies"
 
 
+# Per-game fantasy-point weights (ESPN points league), for the team distribution panel
+DIST_FP = {"PTS": 1, "FG3M": 1, "FGA": -1, "FGM": 2, "FTA": -1, "FTM": 1, "REB": 1, "AST": 2, "STL": 4, "BLK": 4, "TOV": -2}
+
+
+def team_distribution() -> dict:
+    """For every season and team: in each game, how the team's fantasy points split between the players who played
+    (the game's top 3 = key, 4-8 = rotation, 9+ = bench), averaged over the team's games. No games minimum:
+    whoever played that night counts. Teams are the teams of that season."""
+    files = {2023: DATA / "player_game_logs_regular_2023_24.csv", 2024: DATA / "player_game_logs_regular_2024_25.csv",
+             2025: DATA / "player_game_logs_regular.csv", PRESEASON: PRESEASON_LOGS, CURRENT: CURRENT_LOGS}
+    out = {}
+    for season, f in files.items():
+        if not f.exists() or f.stat().st_size < 200:
+            continue
+        df = pd.read_csv(f, usecols=["TEAM_ABBREVIATION", "GAME_ID", "PLAYER_NAME", "MIN", *DIST_FP])
+        df = df[df["MIN"] > 0].copy()
+        if df.empty:
+            continue
+        df["FP"] = sum(df[c] * w for c, w in DIST_FP.items()).clip(lower=0)
+        game = df.groupby(["TEAM_ABBREVIATION", "GAME_ID"])["FP"]
+        df["total"] = game.transform("sum")
+        df = df[df["total"] > 0].copy()
+        df["rank"] = game.rank(method="first", ascending=False).loc[df.index]
+        df["share"] = df["FP"] / df["total"]
+        df["role"] = pd.cut(df["rank"], [0, 3, 8, 1000], labels=["key", "rot", "bench"])
+        per_game = df.groupby(["TEAM_ABBREVIATION", "GAME_ID", "role"], observed=False)["share"].sum().unstack(fill_value=0)
+        mean = per_game.groupby(level=0).mean()
+        games = per_game.groupby(level=0).size()
+        top = (df.groupby(["TEAM_ABBREVIATION", "PLAYER_NAME"])["FP"].sum().sort_values(ascending=False)
+               .groupby(level=0).head(3).reset_index().groupby("TEAM_ABBREVIATION")["PLAYER_NAME"].apply(list))
+        out[str(season)] = {t: [int(games[t]), round(float(r.key), 4), round(float(r.rot), 4), round(float(r.bench), 4),
+                                ", ".join(top.get(t, []))] for t, r in mean.iterrows()}
+    print(f"Team distribution from game logs: {', '.join(f'{k}: {len(v)} teams' for k, v in out.items())}")
+    return out
+
+
 def availability(roster: pd.DataFrame) -> dict[int, list]:
     """Games played per season for every player; None for seasons before he reached the NBA,
     0 for a season he was in the league but did not play (a full-season injury)."""
@@ -335,7 +371,8 @@ def main() -> None:
              for r in sched_df.itertuples() if isinstance(r.homeTeam_teamTricode, str)]
     payload = json.dumps({"stats": STATS, "seasons": seasons, "preseason": PRESEASON, "current": CURRENT,
                           "curMaxGp": cur_max_gp, "players": players,
-                          "teamSeasons": team_seasons, "injUpdated": inj_updated, "vsGames": VS_GAMES, "sched": sched},
+                          "teamSeasons": team_seasons, "injUpdated": inj_updated, "vsGames": VS_GAMES, "sched": sched,
+                          "dist": team_distribution()},
                          ensure_ascii=False, separators=(",", ":"))
     html = html.replace("/*__DATA__*/null", payload)
     OUT.write_text(html, encoding="utf-8")

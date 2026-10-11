@@ -779,7 +779,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
 
       <section class="panel" aria-labelledby="hDist" id="distPanel">
         <h2 id="hDist">פיזור חשיבות</h2>
-        <p class="hint">מחושב לפי נקודות פנטזי (FPTS) למשחק. נספרים שחקנים עם 5 משחקים לפחות בעונות שנבחרו. איך תפוקת הפנטזי של כל קבוצה מתחלקת ברוטציה בריאה של 2026-27. ככל שהחלק של שחקני המפתח קטן יותר, יש יותר מקום לשחקני רוטציה. לחיצה על קבוצה או על תפקיד מסננת את הטבלה. אפשר לבחור כמה תפקידים יחד, ולשלב עם קבוצה.</p>
+        <p class="hint">בכל משחק בעונות שנבחרו: איך נקודות הפנטזי (FPTS) של הקבוצה התחלקו בין מי ששיחק. 3 המובילים במשחק = מפתח, 4-8 = רוטציה, 9+ = ספסל. ממוצע על כל המשחקים. לחיצה על קבוצה או על תפקיד מסננת את הטבלה.</p>
         <div class="dist-legend" role="group" aria-label="סינון לפי תפקיד בקבוצה">
           <button data-role="key" aria-pressed="false"><i class="seg-key"></i>מפתח (1-3)</button>
           <button data-role="rotation" aria-pressed="false"><i class="seg-rot"></i>רוטציה (4-8)</button>
@@ -1594,28 +1594,34 @@ let DIST_ROWS = [];
 // and a team needs this many such players to get a bar
 const DIST_MIN_GAMES = 5, DIST_MIN_PLAYERS = 8;
 function computeDist() {
-  const byTeam = new Map(), allTeams = new Set();
+  // Team bars: game by game, built from the logs (no games minimum), the chosen seasons weighted by games
+  const ys = chosenSeasons().map(String), acc = new Map(), allTeams = new Set();
+  for (const p of players) if (p.team26) allTeams.add(p.team26);
+  for (const y of ys) {
+    for (const [t, [g, key, rot, bench, names]] of Object.entries((D.dist || {})[y] || {})) {
+      const a = acc.get(t) || { g: 0, key: 0, rot: 0, bench: 0, players: "" };
+      a.g += g; a.key += key * g; a.rot += rot * g; a.bench += bench * g; a.players = names;  // names from the latest chosen season
+      acc.set(t, a);
+      allTeams.add(t);
+    }
+  }
+  DIST_ROWS = [...allTeams].map((t) => {
+    const a = acc.get(t);
+    return a && a.g ? { t, key: a.key / a.g, rot: a.rot / a.g, bench: a.bench / a.g, players: a.players, games: a.g } : { t, short: true, n: 0 };
+  });
+  DIST_ROWS.sort((a, b) => (a.short - b.short) || ((b.key || 0) - (a.key || 0)));
+  // Player roles for the role filter: rank inside his 2026-27 team by fantasy points, everyone who has played counts
+  const byTeam = new Map();
   for (const p of players) {
     p.role = null;
-    if (p.team26) allTeams.add(p.team26);
-    if (!p.has || !p.team26) continue;
-    if (!p.rookie && p.gpTotal < DIST_MIN_GAMES) continue;
+    if (!p.team26 || !(p.rookie || Object.values(p.seasons || {}).some((s) => s.gp > 0))) continue;
     if (!byTeam.has(p.team26)) byTeam.set(p.team26, []);
     byTeam.get(p.team26).push(p);
   }
-  DIST_ROWS = [];
-  for (const t of allTeams) {
-    const ps = byTeam.get(t) || [];
-    if (ps.length < DIST_MIN_PLAYERS) { DIST_ROWS.push({ t, short: true, n: ps.length }); continue; }
+  for (const ps of byTeam.values()) {
     ps.sort((a, b) => b.F.g - a.F.g);
     ps.forEach((p, i) => { p.role = i < 3 ? "key" : i < 8 ? "rotation" : "bench"; });
-    const top = ps.slice(0, 13).map((p) => Math.max(p.F.g, 0));  // the 13-man active roster
-    const total = top.reduce((a, b) => a + b, 0);
-    if (!total) continue;
-    const share = (a, b) => top.slice(a, b).reduce((x, y) => x + y, 0) / total;
-    DIST_ROWS.push({ t, key: share(0, 3), rot: share(3, 8), bench: share(8, 13), players: ps.slice(0, 3).map((p) => p.name).join(", ") });
   }
-  DIST_ROWS.sort((a, b) => (a.short - b.short) || ((b.key || 0) - (a.key || 0)));
 }
 const ADV_COLS = [
   { k: "rank", l: "#", asc: true }, { k: "name", l: "Player Name", asc: true },
@@ -1776,12 +1782,12 @@ function renderDist() {
   const rows = [...(chosen.length ? [...full].sort(byImportance) : full), ...short];
   const segs = chosen.length ? chosen : ROLE_SEGS;
   $("distList").innerHTML = rows.map((d) => d.short
-    ? `<button data-distteam="${esc(d.t)}" aria-pressed="${st.teamSel.includes(d.t)}" title="${esc(d.t)}: רק ${d.n} שחקנים עם ${DIST_MIN_GAMES}+ משחקים בעונות שנבחרו">
+    ? `<button data-distteam="${esc(d.t)}" aria-pressed="${st.teamSel.includes(d.t)}" title="${esc(d.t)}: אין משחקים בעונות שנבחרו">
       <span class="abbr">${esc(d.t)}</span>
       <span class="bar"><span style="width:100%;color:var(--muted)">אין מספיק נתונים</span></span>
     </button>`
     : `<button data-distteam="${esc(d.t)}" aria-pressed="${st.teamSel.includes(d.t)}"
-       title="${esc(d.t)}: מפתח ${pct(d.key)} (${esc(d.players)}) · רוטציה ${pct(d.rot)} · ספסל ${pct(d.bench)}">
+       title="${esc(d.t)}, ${d.games} משחקים: מפתח ${pct(d.key)} (${esc(d.players)}) · רוטציה ${pct(d.rot)} · ספסל ${pct(d.bench)}">
       <span class="abbr">${esc(d.t)}</span>
       <span class="bar">${segs.map((s) => `<span class="${s.cls}" style="width:${d[s.k] * 100}%">${pct(d[s.k])}</span>`).join("")}</span>
     </button>`).join("");
