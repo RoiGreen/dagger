@@ -1082,6 +1082,11 @@ function applySettings(s) {
   if (s && !Array.isArray(s.teamNames)) s.teamNames = [];
   if (s && (typeof s.tags !== "object" || s.tags === null || Array.isArray(s.tags))) delete s.tags;
   if (!s || typeof s !== "object") return;
+  // A new visit starts clean: season 2025-26, no search, filters, sorting or comparison from last time.
+  // What the user built stays: league setup (format, teams, roster, Punt), draft settings, table marks
+  // (favorites and draft picks are stored apart from the settings).
+  for (const k of ["q", "minGp", "minMin", "catFilters", "pos", "teamSel", "maxAge", "hideTaken", "onlyMoved", "noHurt", "onlyFav",
+    "inj", "rookies", "roles", "sort", "asc", "tab", "advSort", "advAsc", "teamSort", "teamAsc", "availSeasons", "vsOpp", "mode", "cmp"]) delete s[k];
   if (s.onlyInj && !s.inj) s.inj = "only";
   if (!Array.isArray(s.roles)) s.roles = s.role ? [s.role] : [];
   if (!Array.isArray(s.teamSel)) s.teamSel = s.team ? [s.team] : [];
