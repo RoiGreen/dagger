@@ -2201,6 +2201,8 @@ function renderCmp() {
     return w[w.length - 1] || n; };
   const favor = (d, f) => f(Math.abs(d)) === f(0) ? "שוויון" : `<span class="fn2" title="${esc(d > 0 ? nA : nB)}">${esc(shortName(d > 0 ? "a" : "b"))}</span><span class="num">+${f(Math.abs(d))}</span>`;
   const chart = c.chart === "z" ? "z" : "val";
+  // One language per line: an English (player) name gets "Lead", a Hebrew side name gets "מוביל"
+  const leadLine = (n) => (/[֐-׿]/.test(n) ? `${esc(n)} מוביל` : `<span dir="ltr">${esc(n)} Lead</span>`);
   // Bars in each player's team colour (one player per side); if the two look alike, side B takes its team's other colour
   const barColors = (() => {
     if (LA.length !== 1 || LB.length !== 1) return "";
@@ -2230,7 +2232,7 @@ function renderCmp() {
       <div class="vsboard">
         <div class="k">קטגוריות · מתוך ${CATS.length - st.punts.size}</div>
         <div class="score"><span class="num${gen.wa > gen.wb ? " lead" : ""}">${gen.wa}</span><span class="sep">:</span><span class="num${gen.wb > gen.wa ? " lead" : ""}">${gen.wb}</span></div>
-        <div class="vwho">${gen.wa === gen.wb ? "שוויון" : `${esc(lead(gen.wa, gen.wb))} מוביל`}</div>
+        <div class="vwho">${gen.wa === gen.wb ? "שוויון" : leadLine(lead(gen.wa, gen.wb))}</div>
         <div class="wins">${["a", "b"].map((side) => `<div class="wcol w${side}"><div class="wh">${esc(side === "a" ? nA : nB)}</div>${catWins(side)}</div>`).join("")}</div>
         ${several && LA.length !== LB.length && !avg ? `<div class="note">${LA.length} מול ${LB.length} שחקנים: צד עם יותר שחקנים צובר יותר</div>` : ""}
       </div>
