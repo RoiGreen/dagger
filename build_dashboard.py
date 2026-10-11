@@ -97,6 +97,31 @@ def team_distribution() -> dict:
     return out
 
 
+BOX_DAYS = 21  # regular-season box scores kept in the page (the whole preseason is small enough)
+
+
+def box_scores() -> dict:
+    """2026-27 box scores by game id: per team, one row per player who played
+    [name, player id, MIN, PTS, REB, AST, STL, BLK, 3PM, FGM, FGA, FTM, FTA, TOV]. Regular season: the last BOX_DAYS days."""
+    out = {}
+    for f, recent_only in [(PRESEASON_LOGS, False), (CURRENT_LOGS, True)]:
+        if not f.exists() or f.stat().st_size < 200:
+            continue
+        df = pd.read_csv(f, dtype={"GAME_ID": str})
+        df = df[df["MIN"] > 0].copy()
+        if df.empty:
+            continue
+        df["GAME_DATE"] = pd.to_datetime(df["GAME_DATE"].astype(str).str[:10])
+        if recent_only:
+            df = df[df["GAME_DATE"] >= df["GAME_DATE"].max() - pd.Timedelta(days=BOX_DAYS)]
+        for (gid, team), g in df.sort_values("MIN", ascending=False).groupby(["GAME_ID", "TEAM_ABBREVIATION"], sort=False):
+            out.setdefault(str(gid).zfill(10), {})[team] = [
+                [r.PLAYER_NAME, int(r.PLAYER_ID), round(float(r.MIN)), int(r.PTS), int(r.REB), int(r.AST), int(r.STL), int(r.BLK),
+                 int(r.FG3M), int(r.FGM), int(r.FGA), int(r.FTM), int(r.FTA), int(r.TOV)] for r in g.itertuples()]
+    print(f"Box scores: {len(out)} games")
+    return out
+
+
 def availability(roster: pd.DataFrame) -> dict[int, list]:
     """Games played per season for every player; None for seasons before he reached the NBA,
     0 for a season he was in the league but did not play (a full-season injury)."""
@@ -366,13 +391,17 @@ def main() -> None:
     inj_updated = INJURIES_STAMP.read_text(encoding="utf-8").strip() if INJURIES_STAMP.exists() else None
     # 2026-27 schedule for the weekly games line: [UTC tip-off, home, away, preseason?]
     sched_df = pd.read_csv(DATA / "schedule_2026_27.csv", low_memory=False,
-                           usecols=["gameId", "gameDateTimeUTC", "homeTeam_teamTricode", "awayTeam_teamTricode"])
-    sched = [[r.gameDateTimeUTC, r.homeTeam_teamTricode, r.awayTeam_teamTricode, int(str(r.gameId).zfill(10)[2] == "1")]
+                           usecols=["gameId", "gameDateTimeUTC", "homeTeam_teamTricode", "awayTeam_teamTricode",
+                                    "gameStatus", "homeTeam_score", "awayTeam_score"])
+    # [UTC tip-off, home, away, preseason?, game id, final? (1/0), home score, away score]
+    sched = [[r.gameDateTimeUTC, r.homeTeam_teamTricode, r.awayTeam_teamTricode, int(str(r.gameId).zfill(10)[2] == "1"),
+              str(r.gameId).zfill(10), int(r.gameStatus == 3),
+              int(r.homeTeam_score) if r.gameStatus == 3 else None, int(r.awayTeam_score) if r.gameStatus == 3 else None]
              for r in sched_df.itertuples() if isinstance(r.homeTeam_teamTricode, str)]
     payload = json.dumps({"stats": STATS, "seasons": seasons, "preseason": PRESEASON, "current": CURRENT,
                           "curMaxGp": cur_max_gp, "players": players,
                           "teamSeasons": team_seasons, "injUpdated": inj_updated, "vsGames": VS_GAMES, "sched": sched,
-                          "dist": team_distribution()},
+                          "dist": team_distribution(), "box": box_scores()},
                          ensure_ascii=False, separators=(",", ":"))
     html = html.replace("/*__DATA__*/null", payload)
     OUT.write_text(html, encoding="utf-8")

@@ -482,6 +482,53 @@ header.jumbo { display: block; position: relative; overflow: hidden; border-radi
 .game .sw { width: 5px; height: 14px; border-radius: 2px; background: linear-gradient(var(--c1) 0 60%, var(--c2) 60%); box-shadow: 0 0 0 1px rgba(255,255,255,.15); }
 .game .at { color: #6f7c99; font-weight: 600; }
 .game .time { color: #ffb020; }
+button.game { cursor: pointer; font: inherit; font-family: var(--font-num); font-weight: 700; font-size: .9rem; }
+button.game:hover { background: rgba(255,255,255,.12); border-color: rgba(255,176,32,.5); }
+.game .sc { margin-inline-start: 5px; color: #93a0bd; }
+.game .tm.won .sc, .game .tm.won { color: #ffffff; }
+.game.fin .time { color: #93a0bd; font-size: .78rem; letter-spacing: .1em; }
+.daynav { display: inline-flex; align-items: center; gap: 4px; flex: none; }
+.dbtn { border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); color: #eef2fa; border-radius: 7px; min-width: 26px; height: 26px;
+  font: inherit; font-weight: 800; cursor: pointer; display: grid; place-items: center; padding: 0 6px; }
+.dbtn:disabled { opacity: .3; cursor: default; }
+.dbtn.today { font-size: .78rem; font-weight: 700; }
+.ticker .lbl { min-width: 6.5em; justify-content: center; }
+.ticker .lbl:not(.live)::before { display: none; }
+/* game window */
+.gmodal { position: fixed; inset: 0; z-index: 70; display: grid; place-items: center; padding: 16px; background: rgba(4, 8, 18, .62); backdrop-filter: blur(3px); direction: rtl; }
+.gcard { position: relative; width: min(980px, 100%); max-height: calc(100vh - 32px); overflow: auto; border-radius: 16px; background: var(--surface);
+  border: 1px solid var(--line); box-shadow: 0 24px 60px rgba(0,0,0,.45); padding: 0 0 16px; display: grid; gap: 12px; }
+.gclose { position: absolute; top: 12px; inset-inline-start: 12px; z-index: 2; width: 32px; height: 32px; border-radius: 8px; border: 1px solid rgba(255,255,255,.2);
+  background: rgba(255,255,255,.08); color: #eef2fa; cursor: pointer; font-size: 1rem; }
+.ghead { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; padding: 22px 56px; color: #eef2fa;
+  background: radial-gradient(rgba(255,255,255,.05) 1px, transparent 1.3px) 0 0 / 4px 4px, linear-gradient(180deg, #0c1427, #070b16); }
+.gteam { display: flex; align-items: center; gap: 12px; font-family: var(--font-num); font-weight: 800; font-size: 1.6rem; letter-spacing: .04em; direction: ltr; }
+.ghead .gteam:first-child { justify-content: flex-end; }
+.gteam .sw, .gbox h4 .sw, table.lead .sw, .ginj h4 .sw { display: inline-block; width: 7px; height: 22px; border-radius: 2px; background: linear-gradient(var(--c1) 0 60%, var(--c2) 60%); vertical-align: middle; margin-inline-end: 6px; }
+.gsc { font-size: 2.4rem; color: #93a0bd; } .gsc.won { color: #ffb020; text-shadow: 0 0 16px rgba(255,176,32,.45); }
+.gmid { text-align: center; font-family: var(--font-num); font-weight: 700; letter-spacing: .14em; color: #aab5cf; display: grid; gap: 2px; }
+.gmid small { font-family: var(--font-body); letter-spacing: 0; font-size: .75rem; }
+.gbox { padding: 0 16px; display: grid; gap: 6px; }
+.gbox h4, .ginj h4 { margin: 0; font-family: var(--font-num); font-weight: 800; font-size: 1.05rem; letter-spacing: .06em; direction: ltr; text-align: end; }
+table.box th, table.box td { padding: 5px 7px; font-size: .9rem; }
+table.box td.pn { text-align: start; font-family: var(--font-body); font-weight: 700; direction: ltr; unicode-bidi: plaintext; }
+table.box tr.star td { background: color-mix(in srgb, var(--led) 14%, transparent); }
+table.box tfoot td { font-weight: 800; border-top: 2px solid var(--line); }
+.gprev { padding: 0 16px; display: grid; gap: 14px; }
+table.lead td { padding: 6px 10px; }
+table.lead td.la { text-align: end; } table.lead td.lh { text-align: start; }
+table.lead .pn { font-family: var(--font-body); font-weight: 700; direction: ltr; unicode-bidi: isolate; }
+table.lead .lv { font-weight: 800; margin-inline: 8px; }
+table.lead td.lc { font-family: var(--font-num); font-weight: 800; color: var(--muted); letter-spacing: .08em; width: 5em; }
+table.lead .injpill { margin-inline: 6px; }
+.ginj { display: grid; grid-template-columns: 1fr 1fr; gap: 16px; }
+.ginj ul { list-style: none; margin: 6px 0 0; padding: 0; display: grid; gap: 4px; }
+.ginj li { display: flex; align-items: center; gap: 8px; font-size: .88rem; }
+.ginj li .pn { font-weight: 700; direction: ltr; unicode-bidi: isolate; }
+.ginj li .why { color: var(--muted); }
+.ginj li.none { color: var(--muted); }
+.gnote { padding: 0 16px; color: var(--muted); }
+@media (max-width: 700px) { .ghead { padding: 18px 48px; } .gteam { font-size: 1.2rem; } .gsc { font-size: 1.7rem; } .ginj { grid-template-columns: 1fr; } }
 @media (max-width: 900px) {
   .jumbo-in { grid-template-columns: 1fr auto; }
   .board { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; }
@@ -632,6 +679,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
 </div>
 
 <div class="toast" id="toast" role="status" hidden></div>
+<div class="gmodal" id="gameModal" hidden><div class="gcard" id="gameCard" role="dialog" aria-modal="true" aria-label="משחק"></div></div>
 <div class="wrap">
   <header class="top jumbo">
     <div class="jumbo-in">
@@ -1441,7 +1489,7 @@ function injuryPill(p) {
 
 // ---------- this fantasy week's games (Monday to Sunday, NBA game days in US Eastern time) ----------
 const etDay = (d) => d.toLocaleDateString("en-CA", { timeZone: "America/New_York" });  // YYYY-MM-DD
-const GAMES = (D.sched || []).map(([utc, h, a, pre]) => { const t = new Date(utc); return { t, h, a, pre, d: etDay(t) }; });
+const GAMES = (D.sched || []).map(([utc, h, a, pre, id, fin, hs, as]) => { const t = new Date(utc); return { t, h, a, pre, d: etDay(t), id, fin, hs, as }; });
 let TEAM_WEEK = new Map();
 function computeWeek() {
   const now = Date.now(), today = etDay(new Date());
@@ -1519,13 +1567,102 @@ function renderScoreboard() {
   } else season = "";
   $("scoreboard").innerHTML = season + tile("TONIGHT", tonight.length, tonight.some((g) => g.pre) ? "משחקי הכנה" : "משחקים") +
     tile("OUT", out, "בחוץ", "red") + tile("GTD", gtd, "בספק");
-  const tk = $("ticker");
-  tk.hidden = !tonight.length;
-  const sw = (t) => { const c = TEAM_COLORS[t] || ["#888", "#555"]; return `<i class="sw" style="--c1:${c[0]};--c2:${c[1]}"></i>`; };
-  tk.innerHTML = `<span class="lbl">TONIGHT</span>` + tonight.map((g) =>
-    `<span class="game"><span class="tm">${sw(g.a)}${esc(g.a)}</span><span class="at">@</span><span class="tm">${sw(g.h)}${esc(g.h)}</span>` +
-    `<span class="time">${g.t.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" })}</span></span>`).join("");
+  renderTicker();
 }
+// ---------- games bar: any day's games; past games show the final score and open the box score, coming ones a preview ----------
+const GAME_DAYS = [...new Set(GAMES.map((g) => g.d))].sort();
+let tickerDay = null;  // ET date shown in the bar (null = today, or the nearest day with games)
+function defaultTickerDay() {
+  const today = etDay(new Date());
+  return GAME_DAYS.find((d) => d >= today) || GAME_DAYS[GAME_DAYS.length - 1] || today;
+}
+const dayLabel = (d) => new Date(d + "T12:00:00Z").toLocaleDateString("he-IL", { weekday: "short", day: "numeric", month: "numeric", timeZone: "UTC" });
+function renderTicker() {
+  const tk = $("ticker");
+  if (!GAME_DAYS.length) { tk.hidden = true; return; }
+  tk.hidden = false;
+  const day = tickerDay || defaultTickerDay(), today = etDay(new Date());
+  const i = GAME_DAYS.indexOf(day), prev = GAME_DAYS[i - 1], next = GAME_DAYS[i + 1];
+  const games = GAMES.filter((g) => g.d === day).sort((a, b) => a.t - b.t);
+  const sw = (t) => { const c = TEAM_COLORS[t] || ["#888", "#555"]; return `<i class="sw" style="--c1:${c[0]};--c2:${c[1]}"></i>`; };
+  const side = (t, s, won) => `<span class="tm${won ? " won" : ""}">${sw(t)}${esc(t)}${s != null ? `<b class="sc">${s}</b>` : ""}</span>`;
+  tk.innerHTML = `<span class="daynav">
+      <button type="button" class="dbtn" data-tday="${prev || ""}" ${prev ? "" : "disabled"} aria-label="יום קודם" title="יום קודם">›</button>
+      <span class="lbl${day === today ? " live" : ""}">${day === today ? "TONIGHT" : esc(dayLabel(day))}</span>
+      <button type="button" class="dbtn" data-tday="${next || ""}" ${next ? "" : "disabled"} aria-label="יום הבא" title="יום הבא">‹</button>
+      ${day !== defaultTickerDay() ? `<button type="button" class="dbtn today" data-tday="${defaultTickerDay()}">היום</button>` : ""}
+    </span>` + games.map((g) => `<button type="button" class="game${g.fin ? " fin" : ""}" data-gid="${g.id}">` +
+      side(g.a, g.fin ? g.as : null, g.fin && g.as > g.hs) + `<span class="at">@</span>` + side(g.h, g.fin ? g.hs : null, g.fin && g.hs > g.as) +
+      `<span class="time">${g.fin ? "FINAL" : g.t.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" })}${g.pre ? " · הכנה" : ""}</span></button>`).join("");
+}
+$("ticker").addEventListener("click", (e) => {
+  const d = e.target.closest("[data-tday]");
+  if (d && d.dataset.tday) { tickerDay = d.dataset.tday; return renderTicker(); }
+  const g = e.target.closest("[data-gid]");
+  if (g) openGame(g.dataset.gid);
+});
+
+// ---------- one game: box score (played) or preview (coming) ----------
+const BOX_COLS = ["MIN", "PTS", "REB", "AST", "STL", "BLK", "3PM", "FG", "FT", "TOV", "FPTS"];
+function boxTable(team, rows) {
+  const fp = (r) => r[3] + r[8] + 2 * r[9] - r[10] + r[11] - r[12] + r[4] + 2 * r[5] + 4 * r[6] + 4 * r[7] - 2 * r[13];
+  const best = Math.max(...rows.map(fp));
+  const tot = (i) => rows.reduce((a, r) => a + r[i], 0);
+  const line = (r, cls = "") => `<tr class="${cls}${fp(r) === best && !cls ? " star" : ""}"><td class="pn">${esc(r[0])}</td>` +
+    [r[2], r[3], r[4], r[5], r[6], r[7], r[8], `${r[9]}-${r[10]}`, `${r[11]}-${r[12]}`, r[13], fp(r)].map((v) => `<td>${v}</td>`).join("") + `</tr>`;
+  const total = ["סה״כ", 0, "", tot(3), tot(4), tot(5), tot(6), tot(7), tot(8), tot(9), tot(10), tot(11), tot(12), tot(13)];
+  return `<div class="gbox"><h4>${sideTag(team)}</h4><div class="tbl-wrap short"><table class="box"><thead><tr><th class="nosort">שחקן</th>${BOX_COLS.map((c) => `<th class="nosort">${c}</th>`).join("")}</tr></thead>
+    <tbody>${rows.map((r) => line(r)).join("")}</tbody><tfoot>${line([...total.slice(0, 2), 240, ...total.slice(3)], "sum").replace(/<td>240<\/td>/, "<td></td>")}</tfoot></table></div></div>`;
+}
+const sideTag = (t) => { const c = TEAM_COLORS[t] || ["#888", "#555"]; return `<i class="sw" style="--c1:${c[0]};--c2:${c[1]}"></i>${esc(t)}`; };
+// Coming game: each team's leader in every category, injured players flagged, and the injury report
+function previewTeam(team) {
+  const roster = players.filter((p) => p.team26 === team && p.has && p.L);
+  const cats = [
+    { l: "PTS", v: (p) => p.L.g.PTS, f: fmt1 }, { l: "REB", v: (p) => p.L.g.REB, f: fmt1 }, { l: "AST", v: (p) => p.L.g.AST, f: fmt1 },
+    { l: "STL", v: (p) => p.L.g.STL, f: fmt1 }, { l: "BLK", v: (p) => p.L.g.BLK, f: fmt1 }, { l: "3PM", v: (p) => p.L.g.FG3M, f: fmt1 },
+    { l: "FG%", v: (p) => (p.L.g.FGA >= 5 ? p.L.g.FG_PCT : null), f: fmt3 }, { l: "FT%", v: (p) => (p.L.g.FTA >= 2 ? p.L.g.FT_PCT : null), f: fmt3 },
+    { l: "FPTS", v: (p) => p.F.g, f: fmt1 },
+  ];
+  return cats.map((c) => {
+    const best = roster.filter((p) => c.v(p) != null).sort((a, b) => c.v(b) - c.v(a))[0];
+    return { l: c.l, p: best, v: best ? c.f(c.v(best)) : "–" };
+  });
+}
+function injuryList(team) {
+  const hurt = players.filter((p) => p.team26 === team && p.hurt).sort((a, b) => (a.hurt.s === "OUT" ? 0 : 1) - (b.hurt.s === "OUT" ? 0 : 1));
+  return hurt.length ? hurt.map((p) => `<li>${injuryPill(p)}<span class="pn">${esc(p.name)}</span><span class="why">${esc(injuryHe(p.hurt.inj) || "")}</span></li>`).join("")
+    : `<li class="none">אין פצועים</li>`;
+}
+function openGame(gid) {
+  const g = GAMES.find((x) => x.id === gid);
+  if (!g) return;
+  const box = (D.box || {})[gid];
+  const when = g.t.toLocaleString("he-IL", { weekday: "long", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
+  const head = `<div class="ghead">
+      <div class="gteam">${sideTag(g.a)}${g.fin ? `<b class="gsc${g.as > g.hs ? " won" : ""}">${g.as}</b>` : ""}</div>
+      <div class="gmid">${g.fin ? "FINAL" : esc(when)}${g.pre ? `<small>משחק הכנה</small>` : ""}</div>
+      <div class="gteam">${g.fin ? `<b class="gsc${g.hs > g.as ? " won" : ""}">${g.hs}</b>` : ""}${sideTag(g.h)}</div>
+    </div>`;
+  let body;
+  if (g.fin && box) {
+    body = [g.a, g.h].filter((t) => box[t]).map((t) => boxTable(t, box[t])).join("");
+  } else if (g.fin) {
+    body = `<p class="gnote">ה־Box Score של המשחק הזה כבר לא שמור באתר.</p>`;
+  } else {
+    const A = previewTeam(g.a), H = previewTeam(g.h);
+    const who = (x) => x.p ? `<span class="pn">${esc(x.p.name)}</span>${x.p.hurt ? injuryPill(x.p) : ""}` : "–";
+    body = `<div class="gprev"><table class="lead"><thead><tr><th class="nosort">${sideTag(g.a)}</th><th class="nosort"></th><th class="nosort">${sideTag(g.h)}</th></tr></thead><tbody>` +
+      A.map((a, i) => { const h = H[i];
+        return `<tr><td class="la">${who(a)}<b class="lv">${a.v}</b></td><td class="lc">${a.l}</td><td class="lh"><b class="lv">${h.v}</b>${who(h)}</td></tr>`; }).join("") +
+      `</tbody></table>
+      <div class="ginj"><div><h4>${sideTag(g.a)}</h4><ul>${injuryList(g.a)}</ul></div><div><h4>${sideTag(g.h)}</h4><ul>${injuryList(g.h)}</ul></div></div></div>`;
+  }
+  $("gameCard").innerHTML = `<button type="button" class="gclose" data-gclose="1" aria-label="סגירה">✕</button>${head}${body}`;
+  $("gameModal").hidden = false;
+}
+$("gameModal").addEventListener("click", (e) => { if (e.target.id === "gameModal" || e.target.closest("[data-gclose]")) $("gameModal").hidden = true; });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("gameModal").hidden = true; });
 function syncThemeBtn() { $("themeBtn").textContent = isDark() ? "☀" : "☾"; }
 $("themeBtn").addEventListener("click", () => {
   const next = isDark() ? "light" : "dark";
