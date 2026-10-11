@@ -1687,9 +1687,19 @@ function boxTable(team, rows) {
 }
 const sideTag = (t) => `${teamLogo(t)}${esc(t)}`;
 // Coming game: each team's leader in every category, injured players flagged, and the injury report
+const PREVIEW_FROM_ROUND = 15, PREVIEW_MIN_GAMES = 10;
 function previewTeam(team) {
   // Players ruled OUT are skipped: the leader shown is the next one who can play (GTD stays, with its badge)
-  const roster = players.filter((p) => p.team26 === team && p.has && p.L && !(p.hurt && p.hurt.s === "OUT"));
+  const healthy = (p) => p.team26 === team && !(p.hurt && p.hurt.s === "OUT");
+  // From round 15 of the 2026-27 regular season (preseason not counted), leaders come from this season only,
+  // among players with 10+ games in it; before that, from the seasons chosen in the filter
+  const cur = D.seasons.includes(D.current) && D.curMaxGp >= PREVIEW_FROM_ROUND;
+  const roster = cur
+    ? players.filter((p) => healthy(p) && p.seasons?.[D.current]?.gp >= PREVIEW_MIN_GAMES).map((p) => {
+        const L = { g: line(p.seasons[D.current].s, "g") };
+        return { ...p, L, F: { g: fpts(L.g) } };
+      })
+    : players.filter((p) => healthy(p) && p.has && p.L);
   const cats = [
     { l: "PTS", v: (p) => p.L.g.PTS, f: fmt1 }, { l: "REB", v: (p) => p.L.g.REB, f: fmt1 }, { l: "AST", v: (p) => p.L.g.AST, f: fmt1 },
     { l: "STL", v: (p) => p.L.g.STL, f: fmt1 }, { l: "BLK", v: (p) => p.L.g.BLK, f: fmt1 }, { l: "3PM", v: (p) => p.L.g.FG3M, f: fmt1 },
