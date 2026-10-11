@@ -100,8 +100,14 @@ def team_distribution() -> dict:
 def team_logos() -> dict:
     """The 30 team logos (team_logos.py), embedded as data URIs: artifacts cannot load outside images."""
     folder = DATA / "team_logos"
-    return {f.stem: "data:image/svg+xml;base64," + base64.b64encode(f.read_bytes()).decode()
-            for f in sorted(folder.glob("*.svg"))} if folder.exists() else {}
+    if not folder.exists():
+        return {}
+    out = {f.stem: "data:image/svg+xml;base64," + base64.b64encode(f.read_bytes()).decode() for f in sorted(folder.glob("*.svg"))}
+    league = folder / "NBA.svg"
+    if league.exists():  # the NBA wordmark is white: a navy-lettered copy for light backgrounds
+        dark = league.read_text(encoding="utf-8").replace('fill="#fffffe"', 'fill="#17223b"', 1)
+        out["NBA_light"] = "data:image/svg+xml;base64," + base64.b64encode(dark.encode()).decode()
+    return out
 
 
 RECENT_GAMES = 30  # games in the player card
