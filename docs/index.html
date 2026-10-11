@@ -1935,6 +1935,7 @@ function cmpFreeForTeams() {
 let cmpSwapping = null;  // {side, id}: the player whose replacement is being picked
 let cmpOpen = { a: false, b: false };  // team lists opened in this visit (they start folded)
 let CMP_SW_LOOKUP = new Map();
+let CMP_TP = { a: new Map(), b: new Map() };  // typed player box: list text -> player id
 function pickupRoster() {
   return picks.filter((x) => x.team === st.cmp.pt).map((x) => PLAYER_BY_ID.get(x.id)).filter(Boolean);
 }
@@ -1996,7 +1997,9 @@ function renderCmpSide(side) {
     }
   } else if (c.mode === "trade" || c.mode === "players") {
     if (box.dataset.mode !== "trade") {
-      box.innerHTML = `<select data-cmptt="${side}" aria-label="בחר קבוצה"></select><select data-cmptp="${side}" aria-label="בחר שחקן"></select>`;
+      // The player box takes typing: the list narrows to matching names of the chosen team
+      box.innerHTML = `<select data-cmptt="${side}" aria-label="בחר קבוצה"></select>` +
+        `<input data-cmptp="${side}" list="cmpTp${side}" autocomplete="off" aria-label="בחר שחקן"><datalist id="cmpTp${side}"></datalist>`;
       box.dataset.mode = "trade";
     }
     const n = Math.max(st.teams, 1), key = "tt" + side;
@@ -2020,8 +2023,11 @@ function renderCmpSide(side) {
       : picks.filter((x) => x.team === Number(c[key])).map((x) => PLAYER_BY_ID.get(x.id)).filter(Boolean);
     const pool = from.filter((p) => !added.has(p.id)).sort((a, b) => (rank.get(a.id) ?? 1e9) - (rank.get(b.id) ?? 1e9));
     if (psel !== document.activeElement) {
-      psel.innerHTML = `<option value="">${!c[key] ? "בחר קבוצה קודם" : pool.length ? "בחר שחקן" : "אין שחקנים בקבוצה הזו"}</option>` +
-        pool.slice(0, 500).map((p) => `<option value="${p.id}">${rank.has(p.id) ? `#${rank.get(p.id)} ` : ""}${esc(p.name)} · ${esc(p.pos || "–")} · ${esc(p.team26 || "FA")}</option>`).join("");
+      psel.placeholder = !c[key] ? "בחר קבוצה קודם" : pool.length ? "בחר שחקן" : "אין שחקנים בקבוצה הזו";
+      psel.disabled = !c[key] || !pool.length;
+      const label = (p) => `${p.name} · ${p.pos || "–"} · ${p.team26 || "FA"}${rank.has(p.id) ? ` · #${rank.get(p.id)}` : ""}`;
+      CMP_TP[side] = new Map(pool.map((p) => [label(p), p.id]));
+      $("cmpTp" + side).innerHTML = pool.slice(0, 500).map((p) => `<option value="${esc(label(p))}"></option>`).join("");
     }
   } else {
     const n = Math.max(st.teams, 1);
@@ -2337,12 +2343,6 @@ $("viewCmp").addEventListener("change", (e) => {
     saveSettings(); return renderCmp();
   }
   if (tt) { st.cmp["tt" + tt.dataset.cmptt] = tt.value; saveSettings(); return renderCmp(); }
-  if (tp) {
-    const side = tp.dataset.cmptp, id = Number(tp.value);
-    if (id && !st.cmp[side].includes(id)) st.cmp[side] = [...st.cmp[side], id].slice(-CMP_MODES[st.cmp.mode].max);  // one player each in "player vs player"
-    tp.blur();
-    saveSettings(); return renderCmp();
-  }
   const sel = e.target.closest("[data-cmpteam]");
   if (!sel) return;
   st.cmp[sel.dataset.cmpteam === "a" ? "ta" : "tb"] = Number(sel.value);
@@ -2352,6 +2352,14 @@ $("viewCmp").addEventListener("change", (e) => {
 });
 // Picking a replacement from the list makes the swap right away
 $("viewCmp").addEventListener("input", (e) => {
+  const tp = e.target.closest("[data-cmptp]");
+  if (tp && CMP_TP[tp.dataset.cmptp].has(tp.value)) {
+    // A name picked from the list (or typed in full) joins the side
+    const side = tp.dataset.cmptp, id = CMP_TP[side].get(tp.value);
+    if (!st.cmp[side].includes(id)) st.cmp[side] = [...st.cmp[side], id].slice(-CMP_MODES[st.cmp.mode].max);  // one player each in "player vs player"
+    tp.value = ""; tp.blur();
+    saveSettings(); return renderCmp();
+  }
   const swin = e.target.closest("[data-cmpswin]");
   if (swin && CMP_SW_LOOKUP.has(swin.value) && cmpSwapping) {
     const { side, id } = cmpSwapping;
