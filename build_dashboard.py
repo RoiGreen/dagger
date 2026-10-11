@@ -104,6 +104,49 @@ def team_logos() -> dict:
             for f in sorted(folder.glob("*.svg"))} if folder.exists() else {}
 
 
+RECENT_GAMES = 10  # games in the player card
+
+
+def attach_recent(players: list[dict]) -> None:
+    """Each player's last RECENT_GAMES team games (2025-26 regular season, then 2026-27 preseason and regular season),
+    games he sat out included: [date, opponent, home 1/0, team pts, opp pts, MIN, PTS, FGM, FGA, FTM, FTA, 3PM, 3PA,
+    REB, AST, STL, BLK, TOV], or [date, opponent, home, team pts, opp pts] for a game he did not play."""
+    cols = ["PLAYER_ID", "TEAM_ABBREVIATION", "GAME_ID", "GAME_DATE", "MATCHUP", "MIN", "PTS", "FGM", "FGA", "FTM", "FTA",
+            "FG3M", "FG3A", "REB", "AST", "STL", "BLK", "TOV"]
+    frames = [pd.read_csv(f, usecols=cols, dtype={"GAME_ID": str}) for f in [DATA / "player_game_logs_regular.csv", PRESEASON_LOGS, CURRENT_LOGS]
+              if f.exists() and f.stat().st_size > 200]
+    logs = pd.concat(frames, ignore_index=True)
+    logs["GAME_DATE"] = logs["GAME_DATE"].astype(str).str[:10]
+    # one row per team game: date, opponent, home, both scores
+    tg = logs.groupby(["GAME_ID", "TEAM_ABBREVIATION"]).agg(date=("GAME_DATE", "first"), matchup=("MATCHUP", "first"), pts=("PTS", "sum")).reset_index()
+    tg["opp"] = tg["matchup"].str.split().str[-1]
+    tg["home"] = tg["matchup"].str.contains("vs").astype(int)
+    opp_pts = tg.set_index(["GAME_ID", "TEAM_ABBREVIATION"])["pts"]
+    tg["opp_pts"] = [int(opp_pts.get((g, o), 0)) for g, o in zip(tg["GAME_ID"], tg["opp"])]
+    team_games = {t: g.sort_values("date") for t, g in tg.groupby("TEAM_ABBREVIATION")}
+    tg_idx = tg.set_index(["GAME_ID", "TEAM_ABBREVIATION"])
+    played = logs[logs["MIN"] > 0].sort_values("GAME_DATE")
+    by_player = {pid: g for pid, g in played.groupby("PLAYER_ID")}
+    for p in players:
+        g = by_player.get(p["id"])
+        if g is None:
+            continue
+        rows = {}
+        for r in g.itertuples():
+            t = tg_idx.loc[(r.GAME_ID, r.TEAM_ABBREVIATION)]
+            rows[r.GAME_ID] = [r.GAME_DATE, t.opp, int(t.home), int(t.pts), int(t.opp_pts), round(float(r.MIN)), int(r.PTS), int(r.FGM), int(r.FGA),
+                               int(r.FTM), int(r.FTA), int(r.FG3M), int(r.FG3A), int(r.REB), int(r.AST), int(r.STL), int(r.BLK), int(r.TOV)]
+        # games his latest team played after he joined it, without him
+        last = g.iloc[-1]
+        team = last.TEAM_ABBREVIATION
+        joined = g[g["TEAM_ABBREVIATION"] == team]["GAME_DATE"].min()
+        for t in team_games[team][team_games[team]["date"] >= joined].itertuples():
+            if t.GAME_ID not in rows:
+                rows[t.GAME_ID] = [t.date, t.opp, int(t.home), int(t.pts), int(t.opp_pts)]
+        p["recent"] = sorted(rows.values(), key=lambda x: x[0])[-RECENT_GAMES:][::-1]
+    print(f"Recent games for {sum(1 for p in players if 'recent' in p)} players")
+
+
 BOX_DAYS = 21  # regular-season box scores kept in the page (the whole preseason is small enough)
 
 
@@ -364,6 +407,7 @@ def main() -> None:
     attach_positions(players)
     attach_injuries(players)
     attach_vs(players)
+    attach_recent(players)
     # Embedded, because claude.ai artifacts cannot load images from other sites
     with_img = 0
     for p in players:

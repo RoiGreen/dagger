@@ -514,7 +514,26 @@ button.game:hover { background: rgba(255,255,255,.12); border-color: rgba(255,17
 .gmid small { font-family: var(--font-body); letter-spacing: 0; font-size: .75rem; }
 .gbox { padding: 0 16px; display: grid; gap: 6px; }
 .gbox h4, .ginj h4 { margin: 0; font-family: var(--font-num); font-weight: 800; font-size: 1.05rem; letter-spacing: .06em; direction: ltr; text-align: end; }
-table.box { direction: ltr; }  /* box score reads left to right: the player first, as in English */
+table.box { direction: ltr; }
+.pcl, [data-pcard] { cursor: pointer; }
+.pcl:hover, table.box [data-pcard]:hover span { text-decoration: underline; text-underline-offset: 3px; }
+.phead { grid-template-columns: 1fr; }
+.pinfo { display: flex; align-items: center; gap: 14px; }
+.pimg { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.2); }
+.pnm { font-size: 1.4rem; font-weight: 800; direction: ltr; text-align: right; }
+.pmeta { display: flex; align-items: center; gap: 8px; color: #aab5cf; font-weight: 600; }
+.psec { padding: 0 16px; display: grid; gap: 8px; }
+.psec h4 { margin: 0; font-size: .95rem; }
+.nglist { display: flex; flex-wrap: wrap; gap: 8px; }
+.ng { display: flex; align-items: center; gap: 8px; padding: 6px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface-2); font-size: .85rem; direction: ltr; }
+.ng b { font-family: var(--font-num); letter-spacing: .04em; }
+.ng span { color: var(--muted); direction: rtl; } .ng .at { color: var(--muted); }
+table.plog td.dt { font-weight: 800; white-space: nowrap; }
+table.plog td.op { white-space: nowrap; color: var(--muted); }
+table.plog .res { font-weight: 800; } table.plog .res.w { color: var(--pos); } table.plog .res.l { color: var(--neg); }
+table.plog td.fp { font-weight: 800; }
+table.plog tr.dnp td { color: var(--muted); }
+table.plog td.dnpt { font-family: var(--font-body); font-size: .82rem; direction: rtl; }  /* box score reads left to right: the player first, as in English */
 table.box th, table.box td { padding: 5px 7px; font-size: .9rem; direction: ltr; unicode-bidi: normal; }
 table.box th:first-child { text-align: center; }
 table.box td.pn { text-align: center; min-width: 15em; }
@@ -1374,7 +1393,7 @@ function nameCell(p) {
     : `${rk}${inj}${esc(p.team26)}`;
   const lab = DRAFT.labels.get(p.id);
   const chip = lab ? `<span class="pickchip" title="בחירה ${DRAFT.overall.get(p.id)} בדראפט">${lab}</span>` : "";
-  return `<td class="name" style="--tc:${teamTint(p.team26)}"><div class="nc">${p.img ? `<img class="avatar" src="${p.img}" alt="" loading="lazy">` : `<span class="avatar"></span>`}<div class="nmeta"><div class="nline"><span class="n">${esc(p.name)}</span>${chip}<span class="t">${esc(p.pos || "–")} · ${team}</span>${injuryPill(p)}</div>${scheduleLine(p)}</div></div></td>`;
+  return `<td class="name" style="--tc:${teamTint(p.team26)}"><div class="nc">${p.img ? `<img class="avatar" src="${p.img}" alt="" loading="lazy">` : `<span class="avatar"></span>`}<div class="nmeta"><div class="nline"><span class="n pcl" data-pcard="${p.id}" title="המשחקים האחרונים והבאים">${esc(p.name)}</span>${chip}<span class="t">${esc(p.pos || "–")} · ${team}</span>${injuryPill(p)}</div>${scheduleLine(p)}</div></div></td>`;
 }
 
 // Availability: share of the 82 games played over the last three seasons he was in the league
@@ -1619,7 +1638,7 @@ function boxTable(team, rows) {
   const tot = (i) => rows.reduce((a, r) => a + r[i], 0);
   // the player's photo on the left, the name centred in the rest of the cell
   const face = (r) => { const p = PLAYER_BY_ID.get(r[1]); return p && p.img ? `<img class="bimg" src="${p.img}" alt="">` : `<span class="bimg"></span>`; };
-  const line = (r, cls = "") => `<tr class="${cls}${fp(r) === best && !cls ? " star" : ""}"><td class="pn"><span class="pw">${cls ? "" : face(r)}<span>${esc(r[0])}</span></span></td>` +
+  const line = (r, cls = "") => `<tr class="${cls}${fp(r) === best && !cls ? " star" : ""}"><td class="pn"><span class="pw"${!cls && PLAYER_BY_ID.has(r[1]) ? ` data-pcard="${r[1]}"` : ""}>${cls ? "" : face(r)}<span>${esc(r[0])}</span></span></td>` +
     [r[2], r[3], r[4], r[5], r[6], r[7], `${r[8]}-${r[14] ?? "?"}`, `${r[9]}-${r[10]}`, `${r[11]}-${r[12]}`, r[13], fp(r)].map((v) => `<td>${v}</td>`).join("") + `</tr>`;
   const total = ["Total", 0, "", tot(3), tot(4), tot(5), tot(6), tot(7), tot(8), tot(9), tot(10), tot(11), tot(12), tot(13), tot(14)];
   return `<div class="gbox" data-gbox="${team}"><div class="tbl-wrap short"><table class="box"><thead><tr><th class="nosort">Player</th>${BOX_COLS.map((c) => `<th class="nosort">${c}</th>`).join("")}</tr></thead>
@@ -1675,6 +1694,40 @@ function openGame(gid) {
   $("gameCard").innerHTML = `<button type="button" class="gclose" data-gclose="1" aria-label="סגירה">✕</button>${head}${body}`;
   $("gameModal").hidden = false;
 }
+// ---------- player card: last games and the next ones ----------
+function openPlayer(id) {
+  const p = PLAYER_BY_ID.get(id);
+  if (!p) return;
+  const now = new Date();
+  const next = p.team26 ? GAMES.filter((g) => (g.h === p.team26 || g.a === p.team26) && !g.fin && g.t > new Date(now - 3 * 3600e3)).sort((a, b) => a.t - b.t).slice(0, 5) : [];
+  const pct = (m, a) => (a ? fmt3(m / a) : "–");
+  const fp = (r) => r[6] + r[11] + 2 * r[7] - r[8] + r[9] - r[10] + r[13] + 2 * r[14] + 4 * r[15] + 4 * r[16] - 2 * r[17];
+  const day = (d) => { const [y, m, dd] = d.split("-"); return `${dd}/${m}`; };
+  const recent = (p.recent || []).map((r) => {
+    const won = r[3] > r[4], res = `<span class="res ${won ? "w" : "l"}">${r[3]}-${r[4]}</span>`;
+    const head = `<td class="dt">${day(r[0])}</td><td class="op">${r[2] ? "" : "@"}${teamLogo(r[1])}</td>`;
+    if (r.length < 6) return `<tr class="dnp">${head}<td>${res}</td><td colspan="14" class="dnpt">לא שיחק במשחק זה</td></tr>`;
+    return `<tr>${head}<td>${res}</td>` + [r[5], r[6], `${r[7]}/${r[8]}`, pct(r[7], r[8]), `${r[9]}/${r[10]}`, pct(r[9], r[10]),
+      `${r[11]}/${r[12]}`, pct(r[11], r[12]), r[13], r[14], r[15], r[16], r[17], fp(r)].map((v, i) => `<td${i === 13 ? ' class="fp"' : ""}>${v}</td>`).join("") + `</tr>`;
+  }).join("");
+  const upcoming = next.map((g) => {
+    const home = g.h === p.team26, opp = home ? g.a : g.h;
+    return `<div class="ng">${home ? "" : "<span class=\"at\">@</span>"}${teamLogo(opp)}<b>${esc(opp)}</b><span>${g.t.toLocaleString("he-IL", { weekday: "short", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" })}</span></div>`;
+  }).join("");
+  $("gameCard").innerHTML = `<button type="button" class="gclose" data-gclose="1" aria-label="סגירה">✕</button>
+    <div class="ghead phead"><div class="pinfo">${p.img ? `<img class="pimg" src="${p.img}" alt="">` : ""}<div><div class="pnm">${esc(p.name)}</div>
+      <div class="pmeta">${p.team26 ? teamLogo(p.team26) : ""}<span>${esc(TEAM_NAMES[p.team26] || p.team26 || "FA")} · ${esc(p.pos || "–")}</span>${p.hurt ? injuryPill(p) : ""}</div></div></div></div>
+    ${upcoming ? `<div class="psec"><h4>המשחקים הבאים</h4><div class="nglist">${upcoming}</div></div>` : ""}
+    <div class="psec"><h4>המשחקים האחרונים</h4>${recent ? `<div class="tbl-wrap short"><table class="box plog"><thead><tr>
+      ${["Date", "Opp", "Result", "MIN", "PTS", "FG", "FG%", "FT", "FT%", "3PT", "3P%", "REB", "AST", "STL", "BLK", "TOV", "FPTS"].map((c) => `<th class="nosort">${c}</th>`).join("")}
+      </tr></thead><tbody>${recent}</tbody></table></div>` : `<p class="gnote">אין עדיין משחקים.</p>`}</div>`;
+  $("gameModal").hidden = false;
+}
+document.addEventListener("click", (e) => {
+  const el = e.target.closest("[data-pcard]");
+  if (el) { e.stopPropagation(); openPlayer(Number(el.dataset.pcard)); }
+}, true);
+
 $("gameModal").addEventListener("click", (e) => {
   const tab = e.target.closest("[data-gtab]");
   if (tab) {
