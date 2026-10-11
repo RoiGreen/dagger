@@ -558,6 +558,8 @@ td.lbl { text-align: right; }
 .vsboard .score .num { color: #6f7c99; min-width: 1ch; }
 .vsboard .score .num.lead { color: #ffb020; text-shadow: 0 0 18px rgba(255,176,32,.55); }
 .vsboard .score .sep { color: #3a4766; }
+.vsboard .score.fp { font-size: 2.4rem; }
+.vsboard .vwho .gap { color: #ffb020; margin-inline-start: 6px; }
 .vsboard .vwho { font-size: .82rem; font-weight: 700; color: #eef2fa; }
 /* categories won by each side, right (A) and left (B) */
 .vsboard .wins { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.08); }
@@ -1943,6 +1945,19 @@ function pickupRoster() {
   return picks.filter((x) => x.team === st.cmp.pt).map((x) => PLAYER_BY_ID.get(x.id)).filter(Boolean);
 }
 // avg: the team's numbers per player instead of its totals (percentages and rates stay as they are)
+// Fantasy points by source, with the league's weights; the parts add up to FPTS (punted parts drop out)
+const FP_PARTS = [
+  { k: "PTS", l: "PTS", v: (o) => o.PTS, off: "PTS" },
+  { k: "FG3M", l: "3PM", v: (o) => o.FG3M, off: "FG3M" },
+  { k: "REB", l: "REB", v: (o) => o.REB, off: "REB" },
+  { k: "AST", l: "AST", v: (o) => 2 * o.AST, off: "AST" },
+  { k: "STL", l: "STL", v: (o) => 4 * o.STL, off: "STL" },
+  { k: "BLK", l: "BLK", v: (o) => 4 * o.BLK, off: "BLK" },
+  { k: "FG", l: "FG", v: (o) => 2 * o.FGM - o.FGA, off: "FG_PCT", tip: "קליעות מהשדה: 2 לכל קליעה, ‎-1 לכל זריקה" },
+  { k: "FT", l: "FT", v: (o) => o.FTM - o.FTA, off: "FT_PCT", tip: "עונשין: 1 לכל קליעה, ‎-1 לכל זריקה" },
+  { k: "TOV", l: "TOV", v: (o) => -2 * o.TOV, off: "TOV", tip: "‎-2 לכל איבוד" },
+];
+const fpParts = () => FP_PARTS.filter((x) => !st.punts.has(x.off));
 function cmpTotals(list, avg = false) {
   const m = st.mode, o = { n: list.length };
   for (const k of ["PTS", "REB", "AST", "STL", "BLK", "FG3M", "TOV", "FGM", "FGA", "FTM", "FTA"]) o[k] = list.reduce((a, p) => a + p.L[m][k], 0);
@@ -1969,6 +1984,7 @@ function cmpTotals(list, avg = false) {
     for (const k of ["PTS", "REB", "AST", "STL", "BLK", "FG3M", "TOV", "FGM", "FGA", "FTM", "FTA", "Z", "FPTS", "MIN"]) o[k] /= list.length;
     for (const k of Object.keys(o.z)) o.z[k] /= list.length;
   }
+  o.fp = Object.fromEntries(FP_PARTS.map((x) => [x.k, x.v(o)]));
   return o;
 }
 
@@ -2121,17 +2137,20 @@ function renderCmpSide(side) {
 function cmpBars(rows, A, B, kind, colors = "") {
   // kind "val": each pair scaled to the larger of the two; "z": columns up or down from a 0 line in the middle,
   // all scaled to the largest |Z| shown
-  const zmax = kind === "z" ? Math.max(0.5, ...rows.flatMap((r) => [Math.abs(A.z[r.k]), Math.abs(B.z[r.k])])) : 0;
-  return `<div class="vbars${kind === "z" ? " z" : ""}" style="${colors}">` + rows.map((r) => {
-    const va = kind === "z" ? A.z[r.k] : A[r.k], vb = kind === "z" ? B.z[r.k] : B[r.k];
-    const fmtv = (v) => v == null ? "–" : kind === "z" ? (v >= 0 ? "+" : "") + v.toFixed(2) : r.fmt(v);
-    const lowBetter = kind !== "z" && r.k === "TOV";
+  // "fp" (points leagues): each source's fantasy points, also around a zero line (shooting and turnovers can be negative)
+  const pick = (T, k) => (kind === "z" ? T.z[k] : kind === "fp" ? T.fp[k] : T[k]);
+  const zline = kind === "z" || kind === "fp";
+  const zmax = zline ? Math.max(0.5, ...rows.flatMap((r) => [Math.abs(pick(A, r.k)), Math.abs(pick(B, r.k))])) : 0;
+  return `<div class="vbars${zline ? " z" : ""}" style="${colors}">` + rows.map((r) => {
+    const va = pick(A, r.k), vb = pick(B, r.k);
+    const fmtv = (v) => v == null ? "–" : kind === "z" ? (v >= 0 ? "+" : "") + v.toFixed(2) : kind === "fp" ? (v >= 0 ? "+" : "") + v.toFixed(1) : r.fmt(v);
+    const lowBetter = kind === "val" && r.k === "TOV";
     const best = va == null || vb == null || va === vb ? "" : (va > vb) !== lowBetter ? "a" : "b";
     const col = (side, v) => {
       let h, b;
-      if (kind === "z") { h = Math.abs(v ?? 0) / zmax * 50; b = (v ?? 0) >= 0 ? 50 : 50 - h; }
+      if (zline) { h = Math.abs(v ?? 0) / zmax * 50; b = (v ?? 0) >= 0 ? 50 : 50 - h; }
       else { h = Math.abs(v ?? 0) / (Math.max(Math.abs(va ?? 0), Math.abs(vb ?? 0)) || 1) * 88; b = 0; }  // headroom for the label
-      const neg = kind === "z" && (v ?? 0) < 0 ? " neg" : "";
+      const neg = zline && (v ?? 0) < 0 ? " neg" : "";
       return `<div class="vcol"><div class="vbar ${side}${neg}${best === side ? " best" : ""}" style="--h:${h.toFixed(1)}%;--b:${b.toFixed(1)}%"><span>${fmtv(v)}</span></div></div>`;
     };
     return `<div class="vgrp${r.punted ? " punted" : ""}" title="${esc(r.tip || r.l)}"><div class="vpair">${col("a", va)}${col("b", vb)}</div><span class="vl">${r.l}</span></div>`;
@@ -2162,7 +2181,9 @@ function cmpFace(L, side, name, leads) {
       <div class="ph${p.hurt ? " hurt" : ""}">${p.img ? `<img src="${p.img}" alt="">` : ""}${p.hurt ? injuryPill(p) : ""}</div>
       <div class="fn">${esc(p.name)}</div>
       <div class="fm"><span class="num">${esc(p.pos || "–")}</span> · <span class="num">${esc(p.team26 || "FA")}</span>${r ? ` · <span class="num">#${r}</span>` : ""}</div>
-      <div class="fs"><span><small>Z</small><b class="num">${z ? z.total.toFixed(2) : "–"}</b></span><span><small>FPTS</small><b class="num">${fmt1(p.F[st.mode])}</b></span><span><small>GP</small><b class="num">${p.gp ?? "–"}</b></span></div>
+      <div class="fs">${st.fmt === "pts"
+        ? `<span><small>FPTS</small><b class="num">${fmt1(p.F[st.mode])}</b></span><span><small>Z</small><b class="num">${z ? z.total.toFixed(2) : "–"}</b></span>`
+        : `<span><small>Z</small><b class="num">${z ? z.total.toFixed(2) : "–"}</b></span><span><small>FPTS</small><b class="num">${fmt1(p.F[st.mode])}</b></span>`}<span><small>GP</small><b class="num">${p.gp ?? "–"}</b></span></div>
     </div>`;
   }
   const shown = L.slice(0, 7);
@@ -2224,7 +2245,9 @@ function renderCmp() {
     const w = L[0].name.split(" ").filter((x) => !/^(Jr\.?|Sr\.?|II|III|IV)$/.test(x));
     return w[w.length - 1] || n; };
   const favor = (d, f) => f(Math.abs(d)) === f(0) ? "שוויון" : `<span class="fn2" title="${esc(d > 0 ? nA : nB)}">${esc(shortName(d > 0 ? "a" : "b"))}</span><span class="num">+${f(Math.abs(d))}</span>`;
-  const chart = c.chart === "z" ? "z" : "val";
+  const pts = st.fmt === "pts";
+  // Points league: the second chart is fantasy points by source instead of Z
+  const chart = pts ? (c.chart === "fp" ? "fp" : "val") : (c.chart === "z" ? "z" : "val");
   // One language per line: an English (player) name gets "Lead", a Hebrew side name gets "מוביל"
   const leadLine = (n) => (/[֐-׿]/.test(n) ? `${esc(n)} מוביל` : `<span dir="ltr">${esc(n)} Lead</span>`);
   // Player vs player: each side wears its team's jersey colour (photo ring, bars, names, winner marks, table).
@@ -2242,6 +2265,17 @@ function renderCmp() {
     const cb = ca && jb.find((h) => shows(h) && far(h, ca));
     return ca && cb ? `--sa:${ca};--sb:${cb}` : "";
   })();
+  // Points league: the sources where each side earns more fantasy points, "AST 21.4-6.2"
+  const fpWins = (side) => {
+    const rows = fpParts().filter((x) => {
+      const a = A.fp[x.k], b = B.fp[x.k];
+      return Math.abs(a - b) >= 0.05 && (a > b) === (side === "a");
+    });
+    return rows.map((x) => { const mine = side === "a" ? A.fp[x.k] : B.fp[x.k], other = side === "a" ? B.fp[x.k] : A.fp[x.k];
+      const lead = `<b>${fmt1(mine)}</b>`, rest = `<i>${fmt1(other)}</i>`;
+      // " / " between the two: a source can be negative (shooting, turnovers), and "-1.2--1.3" would not read
+      return `<div class="wr" title="${esc(x.tip || "")}"><span class="wk">${x.l}</span><span class="num">${side === "a" ? `${rest} / ${lead}` : `${lead} / ${rest}`}</span></div>`; }).join("") || `<div class="wr none">–</div>`;
+  };
   const catWins = (side) => {
     const rows = CATS.filter((k) => !st.punts.has(k.k)).filter((k) => {
       const a = A[k.k], b = B[k.k];
@@ -2260,10 +2294,19 @@ function renderCmp() {
     <div class="faceoff">
       ${cmpFace(LA, "a", nA, gen.wa > gen.wb)}
       <div class="vsboard">
+        ${pts ? `
+        <div class="k">FPTS ${per}${avg ? " לשחקן" : ""}</div>
+        <div class="score fp"><span class="num${A.FPTS > B.FPTS ? " lead" : ""}">${fmt1(A.FPTS)}</span><span class="sep">:</span><span class="num${B.FPTS > A.FPTS ? " lead" : ""}">${fmt1(B.FPTS)}</span></div>
+        <div class="vwho">${fmt1(A.FPTS) === fmt1(B.FPTS) ? "שוויון" : (() => {
+          const n = A.FPTS > B.FPTS ? nA : nB, gap = `<span class="num gap">+${fmt1(Math.abs(A.FPTS - B.FPTS))}</span>`;
+          // the whole line in one direction: "Nikola Jokić Lead +10.9" / "אני נותן מוביל +10.9"
+          return /[֐-׿]/.test(n) ? `${esc(n)} מוביל ${gap}` : `<span dir="ltr">${esc(n)} Lead ${gap}</span>`;
+        })()}</div>
+        <div class="wins">${["a", "b"].map((side) => `<div class="wcol w${side}"><div class="wh">${esc(side === "a" ? nA : nB)}</div>${fpWins(side)}</div>`).join("")}</div>` : `
         <div class="k">קטגוריות · מתוך ${CATS.length - st.punts.size}</div>
         <div class="score"><span class="num${gen.wa > gen.wb ? " lead" : ""}">${gen.wa}</span><span class="sep">:</span><span class="num${gen.wb > gen.wa ? " lead" : ""}">${gen.wb}</span></div>
         <div class="vwho">${gen.wa === gen.wb ? "שוויון" : leadLine(lead(gen.wa, gen.wb))}</div>
-        <div class="wins">${["a", "b"].map((side) => `<div class="wcol w${side}"><div class="wh">${esc(side === "a" ? nA : nB)}</div>${catWins(side)}</div>`).join("")}</div>
+        <div class="wins">${["a", "b"].map((side) => `<div class="wcol w${side}"><div class="wh">${esc(side === "a" ? nA : nB)}</div>${catWins(side)}</div>`).join("")}</div>`}
         ${several && LA.length !== LB.length && !avg ? `<div class="note">${LA.length} מול ${LB.length} שחקנים: צד עם יותר שחקנים צובר יותר</div>` : ""}
       </div>
       ${cmpFace(LB, "b", nB, gen.wb > gen.wa)}
@@ -2276,11 +2319,12 @@ function renderCmp() {
         </span>` : ""}
         <span class="cmpbar-toggle" role="group" aria-label="תצוגת הגרף">
           <button type="button" data-cmpchart="val" aria-pressed="${chart === "val"}">ערכים</button>
-          <button type="button" data-cmpchart="z" aria-pressed="${chart === "z"}">Z</button>
+          ${pts ? `<button type="button" data-cmpchart="fp" aria-pressed="${chart === "fp"}" title="כמה נקודות פנטזי כל אחד מקבל מכל מקור">FPTS</button>`
+            : `<button type="button" data-cmpchart="z" aria-pressed="${chart === "z"}">Z</button>`}
         </span></h3>
       <div class="cmpgrid">
         <div class="tbl-wrap short">${gen.html}</div>
-        ${cmpBars(catRows, A, B, chart)}
+        ${chart === "fp" ? cmpBars(fpParts().map((x) => ({ k: x.k, l: x.l, tip: x.tip })), A, B, "fp") : cmpBars(catRows, A, B, chart)}
       </div>
     </section>
     <section class="cmpsec">
