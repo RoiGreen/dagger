@@ -1687,7 +1687,8 @@ function boxTable(team, rows) {
 const sideTag = (t) => `${teamLogo(t)}${esc(t)}`;
 // Coming game: each team's leader in every category, injured players flagged, and the injury report
 function previewTeam(team) {
-  const roster = players.filter((p) => p.team26 === team && p.has && p.L);
+  // Players ruled OUT are skipped: the leader shown is the next one who can play (GTD stays, with its badge)
+  const roster = players.filter((p) => p.team26 === team && p.has && p.L && !(p.hurt && p.hurt.s === "OUT"));
   const cats = [
     { l: "PTS", v: (p) => p.L.g.PTS, f: fmt1 }, { l: "REB", v: (p) => p.L.g.REB, f: fmt1 }, { l: "AST", v: (p) => p.L.g.AST, f: fmt1 },
     { l: "STL", v: (p) => p.L.g.STL, f: fmt1 }, { l: "BLK", v: (p) => p.L.g.BLK, f: fmt1 }, { l: "3PM", v: (p) => p.L.g.FG3M, f: fmt1 },
