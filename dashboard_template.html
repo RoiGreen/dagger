@@ -517,9 +517,16 @@ button.game:hover { background: rgba(255,255,255,.12); border-color: rgba(255,17
 table.box { direction: ltr; }
 .pcl, [data-pcard] { cursor: pointer; }
 .pcl:hover, table.box [data-pcard]:hover span { text-decoration: underline; text-underline-offset: 3px; }
-.phead { grid-template-columns: 1fr; }
+.phead { grid-template-columns: 1fr; background: radial-gradient(rgba(255,255,255,.05) 1px, transparent 1.3px) 0 0 / 4px 4px,
+  linear-gradient(135deg, color-mix(in srgb, var(--jc) 85%, #000) 0%, color-mix(in srgb, var(--jc) 45%, #070b16) 100%); }  /* the team's jersey colour */
+.pinfo > div { display: grid; gap: 4px; }
+.phead .pnm, .phead .pmeta { color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,.55); }
+.plogwrap { max-height: min(62vh, 640px); overflow: auto; border-top: 3px solid var(--jc); }
+table.plog tr.nx td { background: color-mix(in srgb, var(--jc) 10%, transparent); font-weight: 700; }
+table.plog td.tip { font-weight: 800; color: var(--ink); }
+table.plog tr.sep td { padding: 0; height: 4px; background: var(--jc); }
 .pinfo { display: flex; align-items: center; gap: 14px; }
-.pimg { width: 64px; height: 64px; border-radius: 50%; object-fit: cover; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.2); }
+.pimg { width: 88px; height: 88px; border-radius: 50%; object-fit: cover; background: rgba(255,255,255,.08); border: 2px solid rgba(255,255,255,.2); }
 .pnm { font-size: 1.4rem; font-weight: 800; direction: ltr; text-align: right; }
 .pmeta { display: flex; align-items: center; gap: 8px; color: #aab5cf; font-weight: 600; }
 .psec { padding: 0 16px; display: grid; gap: 8px; }
@@ -1702,7 +1709,7 @@ function openPlayer(id) {
   const next = p.team26 ? GAMES.filter((g) => (g.h === p.team26 || g.a === p.team26) && !g.fin && g.t > new Date(now - 3 * 3600e3)).sort((a, b) => a.t - b.t).slice(0, 5) : [];
   const pct = (m, a) => (a ? fmt3(m / a) : "–");
   const fp = (r) => r[6] + r[11] + 2 * r[7] - r[8] + r[9] - r[10] + r[13] + 2 * r[14] + 4 * r[15] + 4 * r[16] - 2 * r[17];
-  const day = (d) => { const [y, m, dd] = d.split("-"); return `${dd}/${m}`; };
+  const day = (d) => { const [y, m, dd] = d.split("-"); return `${dd}/${m}/${y.slice(2)}`; };
   const recent = (p.recent || []).map((r) => {
     const won = r[3] > r[4], res = `<span class="res ${won ? "w" : "l"}">${r[3]}-${r[4]}</span>`;
     const head = `<td class="dt">${day(r[0])}</td><td class="op">${r[2] ? "" : "@"}${teamLogo(r[1])}</td>`;
@@ -1710,17 +1717,20 @@ function openPlayer(id) {
     return `<tr>${head}<td>${res}</td>` + [r[5], r[6], `${r[7]}/${r[8]}`, pct(r[7], r[8]), `${r[9]}/${r[10]}`, pct(r[9], r[10]),
       `${r[11]}/${r[12]}`, pct(r[11], r[12]), r[13], r[14], r[15], r[16], r[17], fp(r)].map((v, i) => `<td${i === 13 ? ' class="fp"' : ""}>${v}</td>`).join("") + `</tr>`;
   }).join("");
+  // Coming games head the table: date, opponent and tip-off time (Israel)
   const upcoming = next.map((g) => {
     const home = g.h === p.team26, opp = home ? g.a : g.h;
-    return `<div class="ng">${home ? "" : "<span class=\"at\">@</span>"}${teamLogo(opp)}<b>${esc(opp)}</b><span>${g.t.toLocaleString("he-IL", { weekday: "short", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" })}</span></div>`;
+    const tip = g.t.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
+    return `<tr class="nx"><td class="dt">${day(g.t.toLocaleDateString("en-CA", { timeZone: "Asia/Jerusalem" }))}</td><td class="op">${home ? "" : "@"}${teamLogo(opp)}</td><td class="tip">${tip}</td><td colspan="14" class="dnpt">משחק הבא</td></tr>`;
   }).join("");
+  const jc = (JERSEY[p.team26] || [])[0] || "#1d2944";
   $("gameCard").innerHTML = `<button type="button" class="gclose" data-gclose="1" aria-label="סגירה">✕</button>
-    <div class="ghead phead"><div class="pinfo">${p.img ? `<img class="pimg" src="${p.img}" alt="">` : ""}<div><div class="pnm">${esc(p.name)}</div>
+    <div class="ghead phead" style="--jc:${jc}"><div class="pinfo">${p.img ? `<img class="pimg" src="${p.img}" alt="">` : ""}<div><div class="pnm">${esc(p.name)}</div>
       <div class="pmeta">${p.team26 ? teamLogo(p.team26) : ""}<span>${esc(TEAM_NAMES[p.team26] || p.team26 || "FA")} · ${esc(p.pos || "–")}</span>${p.hurt ? injuryPill(p) : ""}</div></div></div></div>
-    ${upcoming ? `<div class="psec"><h4>המשחקים הבאים</h4><div class="nglist">${upcoming}</div></div>` : ""}
-    <div class="psec"><h4>המשחקים האחרונים</h4>${recent ? `<div class="tbl-wrap short"><table class="box plog"><thead><tr>
+    <div class="psec">${recent || upcoming ? `<div class="tbl-wrap plogwrap"><table class="box plog"><thead><tr>
       ${["Date", "Opp", "Result", "MIN", "PTS", "FG", "FG%", "FT", "FT%", "3PT", "3P%", "REB", "AST", "STL", "BLK", "TOV", "FPTS"].map((c) => `<th class="nosort">${c}</th>`).join("")}
-      </tr></thead><tbody>${recent}</tbody></table></div>` : `<p class="gnote">אין עדיין משחקים.</p>`}</div>`;
+      </tr></thead><tbody>${upcoming}${upcoming && recent ? `<tr class="sep"><td colspan="17"></td></tr>` : ""}${recent}</tbody></table></div>` : `<p class="gnote">אין עדיין משחקים.</p>`}</div>`;
+  $("gameCard").style.setProperty("--jc", jc);
   $("gameModal").hidden = false;
 }
 document.addEventListener("click", (e) => {

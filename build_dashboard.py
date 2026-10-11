@@ -104,7 +104,7 @@ def team_logos() -> dict:
             for f in sorted(folder.glob("*.svg"))} if folder.exists() else {}
 
 
-RECENT_GAMES = 10  # games in the player card
+RECENT_GAMES = 30  # games in the player card
 
 
 def attach_recent(players: list[dict]) -> None:
