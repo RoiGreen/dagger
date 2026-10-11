@@ -363,11 +363,12 @@ table.dboard td.editing { outline: 2px solid var(--accent); outline-offset: -3px
 table.cmpt th, table.cmpt td { padding: 4px 6px; font-size: .9rem; }
 table.cmpt th.ha, table.cmpt th.hb { max-width: 9em; overflow: hidden; text-overflow: ellipsis; }
 table.cmpt thead th { cursor: default; }
-table.cmpt th.ha { color: var(--accent); } table.cmpt th.hb { color: var(--mine); }
+#cmpOut { --sa: var(--accent-fill); --sb: var(--mine); }
+table.cmpt th.ha { color: color-mix(in srgb, var(--sa) 78%, var(--ink)); } table.cmpt th.hb { color: color-mix(in srgb, var(--sb) 78%, var(--ink)); }
 table.cmpt td.win { font-weight: 700; }
-table.cmpt td.win.wa { background: color-mix(in srgb, var(--accent) 14%, transparent); }
-table.cmpt td.win.wb { background: color-mix(in srgb, var(--mine) 14%, transparent); }
-table.cmpt td.dif.da { color: var(--accent); font-weight: 700; } table.cmpt td.dif.db { color: var(--mine); font-weight: 700; }
+table.cmpt td.win.wa { background: color-mix(in srgb, var(--sa) 18%, transparent); }
+table.cmpt td.win.wb { background: color-mix(in srgb, var(--sb) 18%, transparent); }
+table.cmpt td.dif.da { color: color-mix(in srgb, var(--sa) 78%, var(--ink)); font-weight: 700; } table.cmpt td.dif.db { color: color-mix(in srgb, var(--sb) 78%, var(--ink)); font-weight: 700; }
 table.cmpt tr.punted td { opacity: .4; text-decoration: line-through; }
 table.cmpt tr.tot td { border-top: 2px solid var(--line); font-weight: 700; }
 /* a strong line where the 9 categories end and the totals (Z, FPTS) begin */
@@ -533,9 +534,9 @@ td.lbl { text-align: right; }
 .face { position: relative; display: grid; justify-items: center; align-content: center; gap: 6px; padding: 18px 14px 16px; text-align: center;
   border-radius: 16px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); overflow: hidden; }
 .face::before { content: ""; position: absolute; inset-inline: 0; top: 0; height: 4px; background: var(--side); }
-.face.sa { --side: var(--accent-fill); } .face.sb { --side: var(--mine); }
+.face.sa { --side: var(--sa); } .face.sb { --side: var(--sb); }
 .face.leads { box-shadow: var(--shadow), 0 0 0 2px color-mix(in srgb, var(--side) 55%, transparent); }
-.face .ph { position: relative; width: 104px; height: 104px; border-radius: 50%; padding: 3px; background: conic-gradient(var(--tc, var(--side)), var(--side), var(--tc, var(--side))); }
+.face .ph { position: relative; width: 104px; height: 104px; border-radius: 50%; padding: 4px; background: var(--side); }
 .face .ph img { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: var(--sunk); }
 .face .ph .injpill { position: absolute; top: calc(100% + 6px); inset-inline-start: 50%; translate: 50% 0; white-space: nowrap; }
 .face .ph.hurt { width: 124px; height: 124px; margin-bottom: 26px; }
@@ -563,7 +564,7 @@ td.lbl { text-align: right; }
 .vsboard .wcol { display: grid; gap: 3px; align-content: start; }
 .vsboard .wcol.wb { border-inline-start: 1px solid rgba(255,255,255,.08); padding-inline-start: 18px; }
 .vsboard .wh { font-size: .78rem; font-weight: 700; margin-bottom: 3px; }
-.vsboard .wa .wh { color: #ff8a2a; } .vsboard .wb .wh { color: #6aa2ff; }
+.vsboard .wa .wh { color: color-mix(in srgb, var(--sa) 75%, #ffffff); } .vsboard .wb .wh { color: color-mix(in srgb, var(--sb) 75%, #ffffff); }
 .vsboard .wr .num { text-align: center; }
 .vsboard .wr { display: grid; grid-template-columns: 3.2em minmax(0, 1fr); gap: 10px; font-family: var(--font-num); font-weight: 700; font-size: .95rem; color: #eef2fa; }
 .vsboard .wr .wk { color: #93a0bd; letter-spacing: .06em; direction: ltr; unicode-bidi: isolate; }
@@ -572,7 +573,7 @@ td.lbl { text-align: right; }
 /* who each number column belongs to: full names over the two columns (a long name wraps) */
 .vsboard .ln.lh { align-items: end; padding-bottom: 4px; }
 .vsboard .nh { justify-self: center; text-align: center; width: max-content; max-width: 9.5em; font-size: .78rem; font-weight: 700; line-height: 1.2; }
-.vsboard .nh.na { color: #ff8a2a; } .vsboard .nh.nb { color: #6aa2ff; }
+.vsboard .nh.na { color: color-mix(in srgb, var(--sa) 75%, #ffffff); } .vsboard .nh.nb { color: color-mix(in srgb, var(--sb) 75%, #ffffff); }
 .vsboard .ln { display: grid; grid-template-columns: minmax(0, 1fr) 3.8em 4.2em 3.8em minmax(0, 1fr); gap: 8px; align-items: baseline; direction: rtl; padding-block: 3px; }
 .vsboard .ln .lk { text-align: center; font-family: var(--font-num); font-weight: 700; letter-spacing: .1em; font-size: .78rem; color: #93a0bd; }
 .vsboard .ln b { font-family: var(--font-num); font-size: 1.15rem; font-weight: 800; color: #93a0bd; text-align: center; }
@@ -591,7 +592,7 @@ td.lbl { text-align: right; }
 .lbw { display: inline-flex; align-items: center; gap: 6px; }
 .lbw .lt { direction: ltr; unicode-bidi: isolate; }
 .wmark { width: 22px; height: 22px; border-radius: 50%; object-fit: cover; background: var(--sunk); border: 2px solid var(--side); flex: none; }
-.wmark.wa, .wdot.wa { --side: var(--accent-fill); } .wmark.wb, .wdot.wb { --side: var(--mine); }
+.wmark.wa, .wdot.wa { --side: var(--sa); } .wmark.wb, .wdot.wb { --side: var(--sb); }
 .wdot { width: 10px; height: 10px; border-radius: 50%; background: var(--side); flex: none; }
 table.cmpt td.lbl { min-width: 5.5em; }
 
@@ -601,8 +602,8 @@ table.cmpt td.lbl { min-width: 5.5em; }
 .clock .big { font-size: 1.1rem; }
 .pickbtn { background: var(--accent-fill); color: #1a0b00; }
 .cmpsum .card .v { font-size: 1.3rem; }
-.vbar.a { --c: var(--bca, color-mix(in srgb, var(--accent-fill) 85%, transparent)); }
-.vbar.b { --c: var(--bcb, color-mix(in srgb, var(--mine) 75%, transparent)); }
+.vbar.a { --c: color-mix(in srgb, var(--sa) 90%, transparent); }
+.vbar.b { --c: color-mix(in srgb, var(--sb) 90%, transparent); }
 
 @media (prefers-reduced-motion: no-preference) { .seg button, .chip, .act button { transition: background-color .12s, color .12s; } }
 </style></head><body>
@@ -1457,6 +1458,19 @@ const TEAM_COLORS = {
   POR: ["#E03A3E", "#000000"], SAC: ["#5A2D81", "#63727A"], SAS: ["#C4CED4", "#000000"], TOR: ["#CE1141", "#000000"],
   UTA: ["#002B5C", "#F9A01B"], WAS: ["#002B5C", "#E31837"],
 };
+// Jersey colours for the comparison: [signature jersey, away / alternate jersey, third option]
+const JERSEY = {
+  ATL: ["#E03A3E", "#C1D32F", "#26282A"], BOS: ["#007A33", "#BA9653", "#000000"], BKN: ["#000000", "#FFFFFF", "#777D84"],
+  CHA: ["#00788C", "#1D1160", "#A1A1A4"], CHI: ["#CE1141", "#000000", "#FFFFFF"], CLE: ["#860038", "#FDBB30", "#041E42"],
+  DAL: ["#00538C", "#B8C4CA", "#002B5E"], DEN: ["#0E2240", "#FEC524", "#8B2131"], DET: ["#C8102E", "#1D42BA", "#BEC0C2"],
+  GSW: ["#1D428A", "#FFC72C", "#FFFFFF"], HOU: ["#CE1141", "#000000", "#C4CED4"], IND: ["#002D62", "#FDBB30", "#BEC0C2"],
+  LAC: ["#C8102E", "#1D428A", "#BEC0C2"], LAL: ["#FDB927", "#552583", "#000000"], MEM: ["#5D76A9", "#12173F", "#F5B112"],
+  MIA: ["#98002E", "#F9A01B", "#000000"], MIL: ["#00471B", "#EEE1C6", "#0077C0"], MIN: ["#0C2340", "#78BE20", "#236192"],
+  NOP: ["#0C2340", "#C8102E", "#85714D"], NYK: ["#006BB6", "#F58426", "#BEC0C2"], OKC: ["#007AC1", "#EF3B24", "#002D62"],
+  ORL: ["#0077C0", "#000000", "#C4CED4"], PHI: ["#006BB6", "#ED174C", "#002B5C"], PHX: ["#E56020", "#1D1160", "#63727A"],
+  POR: ["#E03A3E", "#000000", "#FFFFFF"], SAC: ["#5A2D81", "#63727A", "#000000"], SAS: ["#C4CED4", "#000000", "#FFFFFF"],
+  TOR: ["#CE1141", "#000000", "#A1A1A4"], UTA: ["#002B5C", "#F9A01B", "#00471B"], WAS: ["#002B5C", "#E31837", "#C4CED4"],
+};
 const isDark = () => document.documentElement.dataset.theme !== "light";
 function luminance(hex) {
   return [1, 3, 5].map((i) => parseInt(hex.slice(i, i + 2), 16) / 255)
@@ -2134,7 +2148,7 @@ function cmpFace(L, side, name, leads) {
   const rank = last.now.rank;
   if (L.length === 1) {
     const p = L[0], r = rank.get(p.id), z = zOf(p);
-    return `<div class="face s${side}${leads ? " leads" : ""}" style="--tc:${teamTint(p.team26)}">
+    return `<div class="face s${side}${leads ? " leads" : ""}">
       <div class="ph${p.hurt ? " hurt" : ""}">${p.img ? `<img src="${p.img}" alt="">` : ""}${p.hurt ? injuryPill(p) : ""}</div>
       <div class="fn">${esc(p.name)}</div>
       <div class="fm"><span class="num">${esc(p.pos || "–")}</span> · <span class="num">${esc(p.team26 || "FA")}</span>${r ? ` · <span class="num">#${r}</span>` : ""}</div>
@@ -2203,17 +2217,20 @@ function renderCmp() {
   const chart = c.chart === "z" ? "z" : "val";
   // One language per line: an English (player) name gets "Lead", a Hebrew side name gets "מוביל"
   const leadLine = (n) => (/[֐-׿]/.test(n) ? `${esc(n)} מוביל` : `<span dir="ltr">${esc(n)} Lead</span>`);
-  // Bars in each player's team colour (one player per side); if the two look alike, side B takes its team's other colour
-  const barColors = (() => {
+  // Player vs player: each side wears its team's jersey colour (photo ring, bars, names, winner marks, table).
+  // The signature jersey first; when it barely shows on the background or looks like the other side's colour,
+  // the next jersey (away / alternate) is used. Otherwise the default orange / blue stay.
+  const sideColors = (() => {
     if (LA.length !== 1 || LB.length !== 1) return "";
-    const ta = LA[0].team26, tb = LB[0].team26;
-    if (!TEAM_COLORS[ta] || !TEAM_COLORS[tb]) return "";
-    const ca = teamTint(ta);
-    const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
-    const far = (x, y) => Math.hypot(...rgb(x).map((v, i) => v - rgb(y)[i])) > 110;
+    const ja = JERSEY[LA[0].team26], jb = JERSEY[LB[0].team26];
+    if (!ja || !jb) return "";
     const bg = isDark() ? "#0e1525" : "#ffffff";
-    const cb = [teamTint(tb), ...TEAM_COLORS[tb]].find((h) => far(h, ca) && contrastOf(h, bg) >= 1.6);
-    return cb ? `--bca:${ca};--bcb:${cb}` : `--bca:${ca}`;  // same-coloured teams: B keeps the default blue
+    const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+    const far = (x, y) => Math.hypot(...rgb(x).map((v, i) => v - rgb(y)[i])) > 120;
+    const shows = (h) => contrastOf(h, bg) >= 1.4;
+    const ca = ja.find(shows);
+    const cb = ca && jb.find((h) => shows(h) && far(h, ca));
+    return ca && cb ? `--sa:${ca};--sb:${cb}` : "";
   })();
   const catWins = (side) => {
     const rows = CATS.filter((k) => !st.punts.has(k.k)).filter((k) => {
@@ -2226,6 +2243,7 @@ function renderCmp() {
       return `<div class="wr"><span class="wk">${k.l}</span><span class="num">${f(k, mine)}-${f(k, other)}</span></div>`; }).join("") || `<div class="wr none">–</div>`;
   };
 
+  out.style.cssText = sideColors;
   out.innerHTML = `
     <div class="faceoff">
       ${cmpFace(LA, "a", nA, gen.wa > gen.wb)}
@@ -2250,14 +2268,14 @@ function renderCmp() {
         </span></h3>
       <div class="cmpgrid">
         <div class="tbl-wrap short">${gen.html}</div>
-        ${cmpBars(catRows, A, B, chart, barColors)}
+        ${cmpBars(catRows, A, B, chart)}
       </div>
     </section>
     <section class="cmpsec">
       <h3>נתונים מתקדמים</h3>
       <div class="cmpgrid">
         <div class="tbl-wrap short">${adv.html}</div>
-        ${cmpBars(advRows, A, B, "val", barColors)}
+        ${cmpBars(advRows, A, B, "val")}
       </div>
     </section>`;
 }
