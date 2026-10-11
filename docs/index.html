@@ -1,4 +1,5 @@
-<!doctype html><html lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>html{color-scheme:light dark}body{margin:0;font:14px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif}img{max-width:100%}[hidden]{display:none!important}</style><title>Fantasy 2026-2027</title>
+<!doctype html><html lang="he"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover"><style>html{color-scheme:light dark}body{margin:0;font:14px/1.45 system-ui,-apple-system,'Segoe UI',sans-serif}img{max-width:100%}[hidden]{display:none!important}</style><meta charset="utf-8">
+<title>Fantasy 2026-2027</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&family=Saira+Condensed:wght@500;600;700;800&display=swap">
@@ -2323,7 +2324,7 @@ function tradeExtras(side) {
 // A team's roster after the swaps tried on it (drop one player, put another in his place); the draft itself is untouched
 function cmpPlayers(side) {
   const base = cmpBase(side);
-  if (st.cmp.mode === "trade") return [...base, ...tradeExtras(side)];
+  if (st.cmp.mode === "trade") { const seen = new Set(); return [...base, ...tradeExtras(side)].filter((p) => !seen.has(p.id) && seen.add(p.id)); }
   if (st.cmp.mode !== "teams") return base;
   const edits = st.cmp.sw[side];
   const out = new Map(edits.filter(([o]) => o != null));
@@ -2453,7 +2454,9 @@ function renderCmpSide(side) {
       : c[key] === "free" ? players.filter((p) => p.L && !picks.some((x) => x.id === p.id))
       : picks.filter((x) => x.team === Number(c[key])).map((x) => PLAYER_BY_ID.get(x.id)).filter(Boolean))
       .filter((p) => !nba || p.team26 === nba);
-    const pool = from.filter((p) => !added.has(p.id)).sort((a, b) => (rank.get(a.id) ?? 1e9) - (rank.get(b.id) ?? 1e9));
+    // in a trade, players already moved (dropped from my roster / added as free agents) are not offered again
+    const moved = c.mode === "trade" ? new Set([...(c.drops || []).map((d) => d.id), ...(c.adds || [])]) : new Set();
+    const pool = from.filter((p) => !added.has(p.id) && !moved.has(p.id)).sort((a, b) => (rank.get(a.id) ?? 1e9) - (rank.get(b.id) ?? 1e9));
     if (psel !== document.activeElement) {
       psel.placeholder = !c[key] ? "בחר קבוצה קודם" : pool.length ? "בחר שחקן" : "אין שחקנים בקבוצה הזו";
       psel.disabled = !c[key] || !pool.length;
@@ -2796,6 +2799,7 @@ $("viewCmp").addEventListener("click", (e) => {
   else if (t.dataset.cmpagg) c.agg = t.dataset.cmpagg;
   else if (t.id === "cmpSwap") {
     [c.a, c.b] = [c.b, c.a]; [c.ta, c.tb] = [c.tb, c.ta];
+    c.drops = []; c.adds = [];  // roster moves belong to my side: start them over after a swap
     c.sw = { a: c.sw.b, b: c.sw.a }; c.fold = { a: c.fold.b, b: c.fold.a }; cmpOpen = { a: cmpOpen.b, b: cmpOpen.a };
   }
   else if (t.id === "cmpReset") {
@@ -2824,6 +2828,7 @@ $("viewCmp").addEventListener("click", (e) => {
   if (b.dataset.rbdrop) {
     const id = Number(document.querySelector('[data-rbsel="a"]').value);
     if (!id) return showToast("בחר קודם שחקן מהסגל שלך.");
+    if (b.dataset.rbdrop === "il" && !PLAYER_BY_ID.get(id)?.hurt) return showToast("ל־IL אפשר להעביר רק שחקן פצוע.");
     c.drops = [...(c.drops || []).filter((d) => d.id !== id), { id, kind: b.dataset.rbdrop }];
   } else if (b.dataset.rbrm) c.drops = (c.drops || []).filter((d) => d.id !== Number(b.dataset.rbrm));
   else c.adds = (c.adds || []).filter((x) => x !== Number(b.dataset.rbrmadd));
@@ -2881,10 +2886,24 @@ $("viewCmp").addEventListener("keydown", (e) => {
 
 // ---------- weekly matchup planner ----------
 // The fantasy week runs Monday to Sunday (US Eastern dates, like the NBA schedule)
-function weekRange() {
-  const noon = new Date(`${etDay(new Date())}T12:00:00Z`);
+const REG_START = (GAMES.filter((g) => !g.pre).map((g) => g.d).sort()[0]) || "9999";
+// The latest day already in the game logs: a game is "done" once it is there, and "left" until then
+const LOG_END = D.formEnd && D.formEnd >= REG_START ? D.formEnd : "0000";
+function weekOf(day) {
+  const noon = new Date(`${day}T12:00:00Z`);
   const mon = new Date(noon - ((noon.getUTCDay() + 6) % 7) * 864e5);
   return { from: mon.toISOString().slice(0, 10), to: new Date(mon.getTime() + 6 * 864e5).toISOString().slice(0, 10) };
+}
+// The fantasy week to plan: this one while it still has regular-season games, else the next week with games
+function weekRange() {
+  let w = weekOf(etDay(new Date()));
+  for (let i = 0; i < 30; i++) {
+    const left = GAMES.some((g) => !g.pre && g.d >= w.from && g.d <= w.to && g.d > LOG_END && g.t.getTime() + 2.5 * 3600e3 > Date.now());
+    const any = GAMES.some((g) => !g.pre && g.d >= w.from && g.d <= w.to);
+    if (left || (any && LOG_END >= w.from)) return { ...w, next: i > 0 };
+    w = weekOf(new Date(new Date(w.to + "T12:00:00Z").getTime() + 864e5).toISOString().slice(0, 10));
+  }
+  return { ...weekOf(etDay(new Date())), next: false };
 }
 // Recent form counts only while it is recent (the last regular-season game within three weeks)
 const formFresh = () => !!D.formEnd && Date.now() - new Date(D.formEnd + "T12:00:00Z") < 21 * 864e5;
@@ -2895,9 +2914,11 @@ function blendRaw(p) {
   return f && f[0] >= 3 && formFresh() ? { arr: p.s.map((v, i) => 0.4 * v + 0.6 * f[1][i]), recent: true } : { arr: p.s, recent: false };
 }
 // The games a team still plays this fantasy week
+// Regular-season games of the week not yet in the game logs (a game played after the last update still counts here)
+let WEEK = null;
 function weekGamesLeft(team) {
-  const { from, to } = weekRange(), now = Date.now();
-  return GAMES.filter((g) => (g.h === team || g.a === team) && g.d >= from && g.d <= to && g.t.getTime() + 2.5 * 3600e3 > now)
+  const { from, to } = WEEK || weekRange();
+  return GAMES.filter((g) => !g.pre && (g.h === team || g.a === team) && g.d >= from && g.d <= to && g.d > LOG_END)
     .map((g) => ({ g, opp: g.h === team ? g.a : g.h }));
 }
 // Chance he plays a given game: OUT = 0 until his expected return, GTD = half
@@ -2918,11 +2939,11 @@ function oppFactor(team, opp) {
 // What a player has already put up this week (from his game log) and what he is expected to add
 const MU_KEYS = ["PTS", "REB", "AST", "STL", "BLK", "FG3M", "TOV", "FGM", "FGA", "FTM", "FTA"];
 function weekLine(p) {
-  const { from, to } = weekRange();
+  const { from, to } = WEEK || weekRange();
   const done = Object.fromEntries(MU_KEYS.map((k) => [k, 0]));
   let played = 0;
   for (const r of p.recent || []) {
-    if (r.length < 6 || r[0] < from || r[0] > to) continue;
+    if (r.length < 6 || r[0] < from || r[0] > to || r[0] < REG_START) continue;
     played++;
     Object.assign(done, { PTS: done.PTS + r[6], FGM: done.FGM + r[7], FGA: done.FGA + r[8], FTM: done.FTM + r[9], FTA: done.FTA + r[10],
       FG3M: done.FG3M + r[11], REB: done.REB + r[13], AST: done.AST + r[14], STL: done.STL + r[15], BLK: done.BLK + r[16], TOV: done.TOV + r[17] });
@@ -2966,14 +2987,27 @@ function catOutlook(k, a, b) {
 }
 // Fit score: how much a player helps this team where it matters (category weights; punted categories count 0,
 // so with TOV punted a high-turnover player is not marked down), times the games he has left this week.
+// Replacement level: the average of the players ranked just after everyone a league can roster
+let REPL = null;
+function replacement() {
+  if (REPL) return REPL;
+  const size = Math.max(1, st.teams * st.roster), rank = last.now.rank;
+  const band = last.list.filter((p) => !p.rookie && rank.get(p.id) > size && rank.get(p.id) <= size + 25);
+  const zs = band.map((p) => last.now.z.get(p.id).z);
+  REPL = { z: Object.fromEntries(CATS.map((c) => [c.k, zs.length ? zs.reduce((a, z) => a + z[c.k], 0) / zs.length : 0])),
+    fp: band.length ? band.reduce((a, p) => a + p.F.g, 0) / band.length : 0 };
+  return REPL;
+}
 function fitScore(p, weights) {
   const b = blendRaw(p);
   if (!b || !p.team26) return null;
-  const L = line(b.arr, "g");
+  const L = line(b.arr, "g"), R = replacement();
   const z = zScores([{ id: p.id, L: { g: L } }], last.now.pool, "g").get(p.id).z;
-  const parts = CATS.map((c) => ({ k: c.k, l: c.l, v: st.punts.has(c.k) ? 0 : (weights[c.k] ?? 1) * z[c.k], z: z[c.k] }));
-  const perGame = parts.reduce((a, x) => a + x.v, 0);
-  const games = weekGamesLeft(p.team26).reduce((a, { g }) => a + playChance(p, g), 0);
+  const pts = st.fmt === "pts";
+  // value over a replacement-level player, so more games always means more value
+  const parts = CATS.map((c) => ({ k: c.k, l: c.l, v: st.punts.has(c.k) || pts ? 0 : (weights[c.k] ?? 1) * (z[c.k] - R.z[c.k]), z: z[c.k] }));
+  const perGame = pts ? (fpts(L) - R.fp) / 10 : parts.reduce((a, x) => a + x.v, 0);
+  const games = p.team26 ? weekGamesLeft(p.team26).reduce((a, { g }) => a + playChance(p, g), 0) : 0;
   return { perGame, games, score: perGame * games, parts, recent: b.recent };
 }
 const myRoster = () => players.filter((p) => mine.has(p.id));
@@ -2981,6 +3015,7 @@ const teamRoster = (t) => picks.filter((x) => x.team === t).map((x) => PLAYER_BY
 
 function renderMatchup() {
   if (st.tab !== "mu") return;
+  WEEK = weekRange(); REPL = null;
   const n = Math.max(st.teams, 1), me = myIdx();
   if (st.muOpp == null || st.muOpp >= n || st.muOpp === me) st.muOpp = (me + 1) % n;
   const sel = $("muOpp");
@@ -2990,7 +3025,7 @@ function renderMatchup() {
   }
   const { from, to } = weekRange();
   const dd = (d) => { const [, m, day] = d.split("-"); return `${Number(day)}.${Number(m)}`; };
-  $("muWeek").textContent = `שבוע ${dd(from)}–${dd(to)}`;
+  $("muWeek").textContent = `${WEEK.next ? "השבוע הבא" : "שבוע"} ${dd(from)}–${dd(to)}`;
   const out = $("muOut");
   const mineP = myRoster(), oppP = teamRoster(st.muOpp);
   if (!mineP.length || !oppP.length) {
@@ -3009,20 +3044,24 @@ function renderMatchup() {
   // advice
   const by = (keys) => live.filter((c) => keys.includes(c.o.key));
   const chase = by(["toss", "lean-l"]), hold = by(["win", "lean-w"]), drop = by(["lose"]);
-  const chip = (c) => `<span class="mucat ${c.o.key}">${c.l}</span>`;
+  const chip = (c) => `<span class="mucat ${c.o.key}"><bdi>${c.l}</bdi></span>`;
   // injuries that cost games this week
-  const hurtRows = (T) => T.rows.filter((r) => r.missed > 0.01).map((r) => `<li>${injuryPill(r.p)}<span class="pn" data-pcard="${r.p.id}">${esc(r.p.name)}</span><span class="why">${r.missed >= 1 ? `מפסיד ${Math.round(r.missed)} ${Math.round(r.missed) === 1 ? "משחק" : "משחקים"}` : "בספק למשחק"}</span></li>`).join("");
+  const hurtRows = (T) => T.rows.filter((r) => r.missed > 0.01).map((r) => `<li>${injuryPill(r.p)}<span class="pn" data-pcard="${r.p.id}">${esc(r.p.name)}</span><span class="why">${r.p.hurt?.s === "OUT" ? `מפסיד ${Math.round(r.missed)} ${Math.round(r.missed) === 1 ? "משחק" : "משחקים"}` : "בספק"}</span></li>`).join("");
   // pickups: free agents by fit score for this matchup
   const weights = Object.fromEntries(cats.map((c) => [c.k, c.punted ? 0 : c.o.weight]));
   const free = players.filter((p) => p.team26 && p.L && !taken.has(p.id) && !mine.has(p.id) && !picks.some((x) => x.id === p.id));
-  const scored = free.map((p) => ({ p, f: fitScore(p, weights) })).filter((x) => x.f && x.f.games > 0).sort((a, b) => b.f.score - a.f.score).slice(0, 8);
-  const mineScored = mineP.map((p) => ({ p, f: fitScore(p, weights) })).filter((x) => x.f).sort((a, b) => a.f.score - b.f.score).slice(0, 3);
+  const scored = free.map((p) => ({ p, f: fitScore(p, weights) })).filter((x) => x.f && x.f.games > 0 && x.f.score > 0).sort((a, b) => b.f.score - a.f.score).slice(0, 8);
+  // release candidates: the lowest season value on my roster (equal category weights), only if the best pickup beats him clearly
+  const even = Object.fromEntries(CATS.map((c) => [c.k, 1]));
+  const bestFree = free.map((p) => fitScore(p, even)).filter(Boolean).reduce((m, f) => Math.max(m, f.perGame), -1e9);
+  const mineScored = mineP.map((p) => ({ p, f: fitScore(p, even) || { perGame: -1e9, score: 0 } }))
+    .filter((x) => x.f.perGame < bestFree - 0.5).sort((a, b) => a.f.perGame - b.f.perGame).slice(0, 3);
   const pickRow = (x, i) => {
     const top = [...x.f.parts].filter((q) => q.v > 0.15).sort((a, b) => b.v - a.v).slice(0, 3);
     return `<li><span class="rk">${i + 1}</span>${x.p.img ? `<img class="mimg" src="${x.p.img}" alt="">` : `<span class="mimg"></span>`}
       <span class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</span>${teamLogo(x.p.team26)}${x.p.hurt ? injuryPill(x.p) : ""}
       <span class="mg" title="משחקים צפויים השבוע">${fmt1(x.f.games).replace(/\.0$/, "")} משח׳</span>
-      <span class="mtags">${top.map((q) => `<i class="${weights[q.k] >= 1.4 ? "need" : ""}">${q.l}</i>`).join("")}</span>
+      <span class="mtags">${top.map((q) => `<i class="${weights[q.k] >= 1.4 ? "need" : ""}"><bdi>${q.l}</bdi></i>`).join("")}</span>
       <b class="mfit" title="ציון התאמה: תרומה בקטגוריות שחשובות במאץ'-אפ, כפול המשחקים השבוע${x.f.recent ? " · מבוסס בעיקר על 14 הימים האחרונים" : ""}">${x.f.score.toFixed(1)}</b></li>`;
   };
   const rosterTable = (T, title) => `<div class="muroster"><h4>${esc(title)}</h4><table class="box murt"><thead><tr><th class="nosort">שחקן</th><th class="nosort">שוחקו</th><th class="nosort">נותרו</th><th class="nosort">PTS</th><th class="nosort">REB</th><th class="nosort">AST</th></tr></thead><tbody>${
@@ -3033,7 +3072,9 @@ function renderMatchup() {
   out.innerHTML = `
     <div class="muscore">
       <div class="mside"><b>${esc(myName)}</b><span>${fmt1(A.games).replace(/\.0$/, "")} משחקים נותרו · ${A.played} שוחקו</span></div>
-      <div class="mnum"><span class="num${wins > losses ? " lead" : ""}">${wins}</span><span class="sep">:</span><span class="num${losses > wins ? " lead" : ""}">${losses}</span><small>תחזית סוף השבוע</small></div>
+      ${st.fmt === "pts" ? (() => { const fa = fpts(A.total), fb = fpts(B.total);
+        return `<div class="mnum"><span class="num${fa > fb ? " lead" : ""}">${Math.round(fa)}</span><span class="sep">:</span><span class="num${fb > fa ? " lead" : ""}">${Math.round(fb)}</span><small>FPTS · תחזית סוף השבוע</small></div>`; })()
+      : `<div class="mnum"><span class="num${wins > losses ? " lead" : ""}">${wins}</span><span class="sep">:</span><span class="num${losses > wins ? " lead" : ""}">${losses}</span><small>תחזית סוף השבוע</small></div>`}
       <div class="mside"><b>${esc(oppName)}</b><span>${fmt1(B.games).replace(/\.0$/, "")} משחקים נותרו · ${B.played} שוחקו</span></div>
     </div>
     <div class="mugrid">
@@ -3055,7 +3096,7 @@ function renderMatchup() {
     </div>
     <section class="cmpsec"><h3>פיק אפ מומלץ לשבוע הזה</h3>
       <ol class="mupicks">${scored.map(pickRow).join("") || `<li class="none">אין שחקנים חופשיים עם משחקים השבוע.</li>`}</ol>
-      ${mineScored.length ? `<p class="munote">מועמדים לשחרור (הכי מעט ערך השבוע): ${mineScored.map((x) => `<span class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</span> (${x.f.score.toFixed(1)})`).join(" · ")}</p>` : ""}
+      ${mineScored.length ? `<p class="munote">מועמדים לשחרור (הכי מעט ערך בעונה, וחלש בבירור מהפיק אפ הטוב ביותר): ${mineScored.map((x) => `<span class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</span>`).join(" · ")}</p>` : ""}
     </section>
     <div class="mugrid">${rosterTable(A, myName)}${rosterTable(B, oppName)}</div>`;
 }
