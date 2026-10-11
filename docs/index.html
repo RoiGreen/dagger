@@ -995,9 +995,10 @@ function applySeasons() {
     // A season counts only when he reached the games minimum in it (the minimum is per season)
     // The preseason is ~5 games a team, so one game is enough there
     const chosen = ys.filter((y) => p.seasons[y]?.gp >= seasonMinGames(y)).map((y) => ({ y, ...p.seasons[y] }));
-    // With several seasons chosen, he must reach the minimum in every one of them (a missed season counts as short).
+    // With several seasons chosen, he must reach the minimum in every past season among them (a missed season counts
+    // as short). The 2026-27 preseason and regular season never take a player off: they only add when he qualifies.
     // Rookies are judged only on what they have played (they had no earlier seasons to miss).
-    const short = !p.rookie && ys.some((y) => !(p.seasons[y]?.gp >= seasonMinGames(y)));
+    const short = !p.rookie && ys.some((y) => y !== D.preseason && y !== D.current && !(p.seasons[y]?.gp >= seasonMinGames(y)));
     // No qualifying season: off the board, but keep numbers for his favorites / my-team entries
     p.has = chosen.length > 0 && !short;
     const lines = p.has ? chosen : Object.keys(p.seasons).map(Number).sort().map((y) => ({ y, ...p.seasons[y] }));
