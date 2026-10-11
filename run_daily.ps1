@@ -5,6 +5,7 @@
 
 Set-Location -LiteralPath $PSScriptRoot
 $env:PYTHONIOENCODING = "utf-8"
+$env:PYTHONUNBUFFERED = "1"     # print lines as they happen (the log streams them)
 $env:GIT_TERMINAL_PROMPT = "0"   # never wait for a password prompt in the hidden window: fail and retry instead
 New-Item -ItemType Directory -Force -Path "logs" | Out-Null
 $log = Join-Path $PSScriptRoot "logs\daily_update.log"
@@ -14,8 +15,8 @@ function Log($message) {
 }
 function Run($label, $exe, [string[]]$arguments) {
     Log "$label..."
-    $output = & $exe @arguments 2>&1 | Out-String
-    if ($output.Trim()) { $output.TrimEnd() | Out-File -FilePath $log -Append -Encoding utf8 }
+    # Each output line goes to the log as it comes, so a run that is cut off still shows how far it got
+    & $exe @arguments 2>&1 | ForEach-Object { "$_" | Out-File -FilePath $log -Append -Encoding utf8 }
     if ($LASTEXITCODE -ne 0) { Log "$label failed (exit $LASTEXITCODE)"; exit 1 }
 }
 
