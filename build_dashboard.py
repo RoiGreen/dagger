@@ -109,7 +109,7 @@ BOX_DAYS = 21  # regular-season box scores kept in the page (the whole preseason
 
 def box_scores() -> dict:
     """2026-27 box scores by game id: per team, one row per player who played
-    [name, player id, MIN, PTS, REB, AST, STL, BLK, 3PM, FGM, FGA, FTM, FTA, TOV]. Regular season: the last BOX_DAYS days."""
+    [name, player id, MIN, PTS, REB, AST, STL, BLK, 3PM, FGM, FGA, FTM, FTA, TOV, 3PA]. Regular season: the last BOX_DAYS days."""
     out = {}
     for f, recent_only in [(PRESEASON_LOGS, False), (CURRENT_LOGS, True)]:
         if not f.exists() or f.stat().st_size < 200:
@@ -124,7 +124,7 @@ def box_scores() -> dict:
         for (gid, team), g in df.sort_values("MIN", ascending=False).groupby(["GAME_ID", "TEAM_ABBREVIATION"], sort=False):
             out.setdefault(str(gid).zfill(10), {})[team] = [
                 [r.PLAYER_NAME, int(r.PLAYER_ID), round(float(r.MIN)), int(r.PTS), int(r.REB), int(r.AST), int(r.STL), int(r.BLK),
-                 int(r.FG3M), int(r.FGM), int(r.FGA), int(r.FTM), int(r.FTA), int(r.TOV)] for r in g.itertuples()]
+                 int(r.FG3M), int(r.FGM), int(r.FGA), int(r.FTM), int(r.FTA), int(r.TOV), int(r.FG3A)] for r in g.itertuples()]
     print(f"Box scores: {len(out)} games")
     return out
 
