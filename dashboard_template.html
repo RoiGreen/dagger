@@ -519,6 +519,9 @@ table.box { direction: ltr; }
 .pcl:hover, table.box [data-pcard]:hover span { text-decoration: underline; text-underline-offset: 3px; }
 .pstats { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 14px; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.22); direction: rtl;  /* PTS first, on the right */ }
 .pstats div { display: grid; justify-items: center; min-width: 3.4em; }
+.pstats .pv { display: inline-flex; align-items: baseline; gap: 5px; direction: ltr; }  /* numbers read left to right; the rank sits to their right */
+.pstats .pv i { font-style: normal; font-family: var(--font-num); font-weight: 700; font-size: .85rem; color: #ffb020; text-shadow: 0 1px 2px rgba(0,0,0,.5); }
+.pstats small { direction: ltr; unicode-bidi: isolate; }
 .pstats b { font-family: var(--font-num); font-size: 1.65rem; font-weight: 800; color: #fff; text-shadow: 0 1px 3px rgba(0,0,0,.5); }
 .pstats small { font-family: var(--font-num); font-weight: 700; font-size: .82rem; letter-spacing: .1em; color: rgba(255,255,255,.75); }
 .phead { grid-template-columns: 1fr; background: radial-gradient(rgba(255,255,255,.05) 1px, transparent 1.3px) 0 0 / 4px 4px,
@@ -1708,6 +1711,21 @@ function openGame(gid) {
   $("gameModal").hidden = false;
 }
 // ---------- player card: last games and the next ones ----------
+// The 9 categories with the player's place in the league: among everyone on the board for the chosen seasons
+// (shooting percentages among players who shoot enough: 5 FGA / 2 FTA a game); fewer turnovers ranks higher
+const CARD_CATS = [
+  { l: "PTS", v: (p) => p.L.g.PTS, f: fmt1 }, { l: "REB", v: (p) => p.L.g.REB, f: fmt1 }, { l: "AST", v: (p) => p.L.g.AST, f: fmt1 },
+  { l: "STL", v: (p) => p.L.g.STL, f: fmt1 }, { l: "BLK", v: (p) => p.L.g.BLK, f: fmt1 }, { l: "3PM", v: (p) => p.L.g.FG3M, f: fmt1 },
+  { l: "FG%", v: (p) => p.L.g.FG_PCT, f: fmt3, ok: (p) => p.L.g.FGA >= 5 }, { l: "FT%", v: (p) => p.L.g.FT_PCT, f: fmt3, ok: (p) => p.L.g.FTA >= 2 },
+  { l: "TOV", v: (p) => p.L.g.TOV, f: fmt1, low: true },
+];
+function leagueRank(p, c) {
+  if (!p.has || (c.ok && !c.ok(p))) return null;
+  const pool = last.list.filter((x) => !x.rookie && (!c.ok || c.ok(x)));
+  const mine = c.v(p);
+  const rank = 1 + pool.filter((x) => (c.low ? c.v(x) < mine : c.v(x) > mine)).length;
+  return { rank, of: pool.length };
+}
 function openPlayer(id) {
   const p = PLAYER_BY_ID.get(id);
   if (!p) return;
@@ -1731,9 +1749,8 @@ function openPlayer(id) {
   $("gameCard").innerHTML = `<button type="button" class="gclose" data-gclose="1" aria-label="סגירה">✕</button>
     <div class="ghead phead" style="--jc:${jc}"><div class="pinfo">${p.img ? `<img class="pimg" src="${p.img}" alt="">` : ""}<div><div class="pnm">${esc(p.name)}</div>
       <div class="pmeta">${p.team26 ? teamLogo(p.team26) : ""}<span>${esc(TEAM_NAMES[p.team26] || p.team26 || "FA")} · ${esc(p.pos || "–")}</span>${p.hurt ? injuryPill(p) : ""}</div></div></div>
-      ${p.L ? `<div class="pstats">${[["PTS", fmt1(p.L.g.PTS)], ["REB", fmt1(p.L.g.REB)], ["AST", fmt1(p.L.g.AST)], ["STL", fmt1(p.L.g.STL)], ["BLK", fmt1(p.L.g.BLK)],
-        ["3PM", fmt1(p.L.g.FG3M)], ["FG%", fmt3(p.L.g.FG_PCT)], ["FT%", fmt3(p.L.g.FT_PCT)], ["TOV", fmt1(p.L.g.TOV)]]
-        .map(([k, v]) => `<div><b>${v}</b><small>${k}</small></div>`).join("")}</div>` : ""}</div>
+      ${p.L ? `<div class="pstats">${CARD_CATS.map((c) => { const r = leagueRank(p, c);
+        return `<div><span class="pv"><b>${c.f(c.v(p))}</b>${r ? `<i title="מקום ${r.rank} מתוך ${r.of} בליגה">#${r.rank}</i>` : ""}</span><small>${c.l}</small></div>`; }).join("")}</div>` : ""}</div>
     <div class="psec"><h4>המשחקים האחרונים</h4>${recent ? `<div class="tbl-wrap plogwrap"><table class="box plog"><thead><tr>
       ${["Date", "Opp", "Result", "MIN", "PTS", "FG", "FG%", "FT", "FT%", "3PT", "3P%", "REB", "AST", "STL", "BLK", "TOV", "FPTS"].map((c) => `<th class="nosort">${c}</th>`).join("")}
       </tr></thead><tbody>${recent}</tbody></table></div>` : `<p class="gnote">אין עדיין משחקים.</p>`}</div>
