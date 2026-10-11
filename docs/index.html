@@ -558,6 +558,15 @@ td.lbl { text-align: right; }
 .vsboard .score .num.lead { color: #ffb020; text-shadow: 0 0 18px rgba(255,176,32,.55); }
 .vsboard .score .sep { color: #3a4766; }
 .vsboard .vwho { font-size: .82rem; font-weight: 700; color: #eef2fa; }
+/* categories won by each side, right (A) and left (B) */
+.vsboard .wins { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; margin-top: 10px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.08); }
+.vsboard .wcol { display: grid; gap: 3px; align-content: start; }
+.vsboard .wcol.wb { border-inline-start: 1px solid rgba(255,255,255,.08); padding-inline-start: 18px; }
+.vsboard .wh { font-size: .78rem; font-weight: 700; margin-bottom: 3px; }
+.vsboard .wa .wh { color: #ff8a2a; } .vsboard .wb .wh { color: #6aa2ff; }
+.vsboard .wr { display: flex; justify-content: space-between; gap: 10px; font-family: var(--font-num); font-weight: 700; font-size: .95rem; color: #eef2fa; }
+.vsboard .wr .wk { color: #93a0bd; letter-spacing: .06em; direction: ltr; unicode-bidi: isolate; }
+.vsboard .wr.none { color: #6f7c99; justify-content: center; }
 .vsboard .lines { width: 100%; display: grid; gap: 2px; margin-top: 10px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.08); }
 /* who each number column belongs to: full names over the two columns (a long name wraps) */
 .vsboard .ln.lh { align-items: end; padding-bottom: 4px; }
@@ -2190,6 +2199,16 @@ function renderCmp() {
     return w[w.length - 1] || n; };
   const favor = (d, f) => f(Math.abs(d)) === f(0) ? "שוויון" : `<span class="fn2" title="${esc(d > 0 ? nA : nB)}">${esc(shortName(d > 0 ? "a" : "b"))}</span><span class="num">+${f(Math.abs(d))}</span>`;
   const chart = c.chart === "z" ? "z" : "val";
+  const catWins = (side) => {
+    const rows = CATS.filter((k) => !st.punts.has(k.k)).filter((k) => {
+      const a = A[k.k], b = B[k.k];
+      if (a == null || b == null || Math.abs(a - b) < 1e-9) return false;
+      return ((a > b) !== (k.k === "TOV")) === (side === "a");
+    });
+    const f = (k, v) => (k.k.endsWith("_PCT") ? fmt3(v) : fmt1(v));
+    return rows.map((k) => { const mine = side === "a" ? A[k.k] : B[k.k], other = side === "a" ? B[k.k] : A[k.k];
+      return `<div class="wr"><span class="wk">${k.l}</span><span class="num">${f(k, mine)}-${f(k, other)}</span></div>`; }).join("") || `<div class="wr none">–</div>`;
+  };
 
   out.innerHTML = `
     <div class="faceoff">
@@ -2198,11 +2217,7 @@ function renderCmp() {
         <div class="k">קטגוריות · מתוך ${CATS.length - st.punts.size}</div>
         <div class="score"><span class="num${gen.wa > gen.wb ? " lead" : ""}">${gen.wa}</span><span class="sep">:</span><span class="num${gen.wb > gen.wa ? " lead" : ""}">${gen.wb}</span></div>
         <div class="vwho">${gen.wa === gen.wb ? "שוויון" : `${esc(lead(gen.wa, gen.wb))} מוביל`}</div>
-        <div class="lines">
-          <div class="ln lh"><span></span><span class="nh na">${esc(nA)}</span><span></span><span class="nh nb">${esc(nB)}</span><span></span></div>
-          <div class="ln"><span class="fv">${favor(A.Z - B.Z, (v) => v.toFixed(2))}</span><b class="num${A.Z > B.Z ? " lead" : ""}">${A.Z.toFixed(2)}</b><span class="lk">Z</span><b class="num${B.Z > A.Z ? " lead" : ""}">${B.Z.toFixed(2)}</b><span></span></div>
-          <div class="ln"><span class="fv">${favor(A.FPTS - B.FPTS, fmt1)}</span><b class="num${A.FPTS > B.FPTS ? " lead" : ""}">${fmt1(A.FPTS)}</b><span class="lk">FPTS${avg ? " לשחקן" : ""}</span><b class="num${B.FPTS > A.FPTS ? " lead" : ""}">${fmt1(B.FPTS)}</b><span></span></div>
-        </div>
+        <div class="wins">${["a", "b"].map((side) => `<div class="wcol w${side}"><div class="wh">${esc(side === "a" ? nA : nB)}</div>${catWins(side)}</div>`).join("")}</div>
         ${several && LA.length !== LB.length && !avg ? `<div class="note">${LA.length} מול ${LB.length} שחקנים: צד עם יותר שחקנים צובר יותר</div>` : ""}
       </div>
       ${cmpFace(LB, "b", nB, gen.wb > gen.wa)}
