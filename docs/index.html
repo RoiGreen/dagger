@@ -1424,7 +1424,7 @@ function nameCell(p) {
     : `${rk}${inj}${esc(p.team26)}`;
   const lab = DRAFT.labels.get(p.id);
   const chip = lab ? `<span class="pickchip" title="בחירה ${DRAFT.overall.get(p.id)} בדראפט">${lab}</span>` : "";
-  return `<td class="name" style="--tc:${teamTint(p.team26)}"><div class="nc">${p.img ? `<img class="avatar" src="${p.img}" alt="" loading="lazy">` : `<span class="avatar"></span>`}<div class="nmeta"><div class="nline"><span class="n pcl" data-pcard="${p.id}" title="המשחקים האחרונים והבאים">${esc(p.name)}</span>${chip}<span class="t">${esc(p.pos || "–")} · ${team}</span>${injuryPill(p)}</div>${scheduleLine(p)}</div></div></td>`;
+  return `<td class="name" style="--tc:${teamTint(p.team26)}"><div class="nc">${p.img ? `<img class="avatar" src="${p.img}" alt="" loading="lazy">` : `<span class="avatar"></span>`}<div class="nmeta"><div class="nline"><span class="n pcl" data-pcard="${p.id}">${esc(p.name)}</span>${chip}<span class="t">${esc(p.pos || "–")} · ${team}</span>${injuryPill(p)}</div>${scheduleLine(p)}</div></div></td>`;
 }
 
 // Availability: share of the 82 games played over the last three seasons he was in the league
