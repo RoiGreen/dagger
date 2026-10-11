@@ -490,6 +490,9 @@ button.game:hover { background: rgba(255,255,255,.12); border-color: rgba(255,17
 .game .sc { margin-inline-start: 5px; color: #93a0bd; }
 .game .tm.won .sc, .game .tm.won { color: #ffffff; }
 .game.fin .time { color: #93a0bd; font-size: .78rem; letter-spacing: .1em; }
+td.tteam .tt { display: inline-flex; align-items: center; gap: 12px; }  /* logo, abbreviation, then the full name */
+td.tteam .tlogo { width: 28px; height: 28px; filter: none; }
+td.tteam .t { margin-inline-start: 4px; }
 .nbalogo { height: 30px; width: auto; flex: none; margin-inline-end: 4px; }
 .sitenote { text-align: center; font-size: .75rem; color: var(--muted); margin: 8px 0 0; }
 .daynav { display: inline-flex; align-items: center; gap: 4px; flex: none; }
@@ -2007,7 +2010,7 @@ function renderAdv() {
     }).join("");
   $("teamBody").innerHTML = teams.map((t) =>
     `<tr class="${st.teamSel.includes(t.t) ? "sel-team" : ""}"><td class="rank" style="color:var(--accent)">${teamRank(sign(tcol) * t[tcol.k])}</td>` +
-    `<td class="name"><span class="n">${esc(t.t || "")}</span><span class="t">${esc(t.name)}</span></td>` +
+    `<td class="name tteam"><span class="tt">${teamLogo(t.t)}<span class="n">${esc(t.t || "")}</span><span class="t">${esc(t.name)}</span></span></td>` +
     TCOLS.map((c) => `<td style="${th[c.k](sign(c) * t[c.k])}">${c.k === "NET_RATING" && t[c.k] > 0 ? "+" : ""}${t[c.k].toFixed(1)}</td>`).join("") +
     `</tr>`).join("");
 }
