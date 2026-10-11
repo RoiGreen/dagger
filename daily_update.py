@@ -24,6 +24,7 @@ from nba_api.stats.endpoints import playergamelogs, playerindex, scheduleleaguev
 from headshots import ensure_headshots
 from injuries import pull_injuries
 from positions import pull_positions
+from team_logos import ensure_team_logos
 from nba_stats_2025_26 import fetch
 
 HERE = Path(__file__).parent
@@ -65,6 +66,9 @@ def main() -> None:
     print(msg)
     lines.append(msg)
     msg = pull_positions()
+    print(msg)
+    lines.append(msg)
+    msg = ensure_team_logos()
     print(msg)
     lines.append(msg)
     for season_type, tag in SEASON_TYPES.items():

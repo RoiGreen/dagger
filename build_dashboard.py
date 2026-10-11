@@ -97,6 +97,13 @@ def team_distribution() -> dict:
     return out
 
 
+def team_logos() -> dict:
+    """The 30 team logos (team_logos.py), embedded as data URIs: artifacts cannot load outside images."""
+    folder = DATA / "team_logos"
+    return {f.stem: "data:image/svg+xml;base64," + base64.b64encode(f.read_bytes()).decode()
+            for f in sorted(folder.glob("*.svg"))} if folder.exists() else {}
+
+
 BOX_DAYS = 21  # regular-season box scores kept in the page (the whole preseason is small enough)
 
 
@@ -401,7 +408,7 @@ def main() -> None:
     payload = json.dumps({"stats": STATS, "seasons": seasons, "preseason": PRESEASON, "current": CURRENT,
                           "curMaxGp": cur_max_gp, "players": players,
                           "teamSeasons": team_seasons, "injUpdated": inj_updated, "vsGames": VS_GAMES, "sched": sched,
-                          "dist": team_distribution(), "box": box_scores()},
+                          "dist": team_distribution(), "box": box_scores(), "logos": team_logos()},
                          ensure_ascii=False, separators=(",", ":"))
     html = html.replace("/*__DATA__*/null", payload)
     OUT.write_text(html, encoding="utf-8")

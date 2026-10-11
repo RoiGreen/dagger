@@ -454,7 +454,7 @@ header.jumbo { display: block; position: relative; overflow: hidden; border-radi
     radial-gradient(600px 220px at 85% 0%, rgba(255,122,26,.22), transparent 70%),
     radial-gradient(520px 220px at 12% 0%, rgba(56,104,255,.22), transparent 70%), linear-gradient(180deg, #0c1427, #070b16);
   box-shadow: 0 18px 40px rgba(4, 8, 20, .3); }
-.jumbo-in { display: grid; grid-template-columns: auto 1fr auto; align-items: center; gap: 14px 24px; padding: 14px 20px; }
+.jumbo-in { display: flex; justify-content: space-between; align-items: center; gap: 14px 24px; padding: 14px 20px; flex-wrap: wrap; }
 .brand { display: flex; align-items: center; gap: 12px; }
 .brand .ball { width: 40px; height: 40px; flex: none; }
 .jumbo h1 { font-family: var(--font-body); font-weight: 800; font-size: 1.6rem; color: #eef2fa; }
@@ -472,7 +472,7 @@ header.jumbo { display: block; position: relative; overflow: hidden; border-radi
 .who .signout { background: rgba(255,255,255,.06); border-color: rgba(255,255,255,.15); color: #eef2fa; }
 .iconbtn { width: 36px; height: 36px; border-radius: 10px; border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); color: #eef2fa; cursor: pointer; font-size: 1.05rem; display: grid; place-items: center; }
 .iconbtn:hover { background: rgba(255,255,255,.12); }
-.ticker { display: flex; align-items: center; gap: 8px; padding: 8px 20px; border-top: 1px solid rgba(255,255,255,.07); background: rgba(0,0,0,.32); overflow-x: auto; scrollbar-width: none; }
+.ticker { display: flex; flex-wrap: wrap; align-items: center; gap: 8px; padding: 10px 20px; border-top: 1px solid rgba(255,255,255,.07); background: rgba(0,0,0,.32); }  /* every game of the day, in rows */
 .ticker::-webkit-scrollbar { display: none; }
 .ticker .lbl { font-family: var(--font-num); font-weight: 800; letter-spacing: .2em; font-size: .76rem; color: #ff8a2a; white-space: nowrap; display: inline-flex; align-items: center; gap: 6px; }
 .ticker .lbl::before { content: ""; width: 7px; height: 7px; border-radius: 50%; background: #ff3b3b; box-shadow: 0 0 10px #ff3b3b; }
@@ -480,6 +480,9 @@ header.jumbo { display: block; position: relative; overflow: hidden; border-radi
   white-space: nowrap; direction: ltr; font-family: var(--font-num); font-weight: 700; font-size: .9rem; letter-spacing: .04em; color: #eef2fa; }
 .game .tm { display: inline-flex; align-items: center; gap: 5px; }
 .game .sw { width: 5px; height: 14px; border-radius: 2px; background: linear-gradient(var(--c1) 0 60%, var(--c2) 60%); box-shadow: 0 0 0 1px rgba(255,255,255,.15); }
+.tlogo { width: 22px; height: 22px; object-fit: contain; flex: none; vertical-align: middle; filter: drop-shadow(0 0 1px rgba(255,255,255,.35)); }
+.ghead .tlogo { width: 46px; height: 46px; }
+.gbox h4 .tlogo, .ginj h4 .tlogo, table.lead .tlogo { width: 26px; height: 26px; margin-inline-end: 6px; filter: none; }
 .game .at { color: #6f7c99; font-weight: 600; }
 .game .time { color: #ffb020; }
 button.game { cursor: pointer; font: inherit; font-family: var(--font-num); font-weight: 700; font-size: .9rem; }
@@ -529,12 +532,7 @@ table.lead .injpill { margin-inline: 6px; }
 .ginj li.none { color: var(--muted); }
 .gnote { padding: 0 16px; color: var(--muted); }
 @media (max-width: 700px) { .ghead { padding: 18px 48px; } .gteam { font-size: 1.2rem; } .gsc { font-size: 1.7rem; } .ginj { grid-template-columns: 1fr; } }
-@media (max-width: 900px) {
-  .jumbo-in { grid-template-columns: 1fr auto; }
-  .board { grid-column: 1 / -1; grid-row: 2; justify-content: flex-start; }
-  .tile { min-width: 0; flex: 1 1 70px; padding: 6px 8px; }
-  .tile .v { font-size: 1.5rem; }
-}
+
 
 /* panels, controls */
 .panel { background: color-mix(in srgb, var(--surface) 94%, transparent); border-radius: 14px; box-shadow: var(--shadow); }
@@ -687,7 +685,6 @@ table.cmpt td.lbl { min-width: 5.5em; }
         <svg class="ball" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="#ff7a1a"/><g fill="none" stroke="#1a0b00" stroke-width="2" stroke-linecap="round" opacity=".8"><path d="M3 24h42M24 3v42"/><path d="M10 9.5c5.5 4 8.5 9 8.5 14.5S15.5 34.5 10 38.5M38 9.5c-5.5 4-8.5 9-8.5 14.5s3 10.5 8.5 14.5"/></g></svg>
         <h1><span id="pageTitle">נתונים כלליים</span> <span class="yr" id="pageYear" hidden>2026-27</span></h1>
       </div>
-      <div class="board" id="scoreboard" aria-label="לוח תוצאות"></div>
       <div class="who">
         <span class="viewer" id="viewer" hidden><img id="viewerAvatar" alt="" hidden><span id="viewerName"></span><button class="signout" id="signOutBtn" type="button" hidden>התנתקות</button></span>
         <span class="save-state" id="saveState">הבחירות נשמרות בדפדפן הזה</span>
@@ -1565,12 +1562,13 @@ function renderScoreboard() {
     const week = Math.floor((new Date(today + "T12:00:00Z") - new Date(etDay(first.t) + "T12:00:00Z")) / (7 * 864e5)) + 1;
     season = tile("WEEK", week, "שבוע בעונה");
   } else season = "";
-  $("scoreboard").innerHTML = season + tile("TONIGHT", tonight.length, tonight.some((g) => g.pre) ? "משחקי הכנה" : "משחקים") +
-    tile("OUT", out, "בחוץ", "red") + tile("GTD", gtd, "בספק");
   renderTicker();
 }
 // ---------- games bar: any day's games; past games show the final score and open the box score, coming ones a preview ----------
 const GAME_DAYS = [...new Set(GAMES.map((g) => g.d))].sort();
+// A team's logo (embedded at build time); its colours if the logo is missing
+const teamLogo = (t, cls = "tlogo") => (D.logos || {})[t] ? `<img class="${cls}" src="${D.logos[t]}" alt="" title="${esc(t)}">`
+  : `<i class="sw" style="--c1:${(TEAM_COLORS[t] || ["#888"])[0]};--c2:${(TEAM_COLORS[t] || ["#888", "#555"])[1]}"></i>`;
 let tickerDay = null;  // ET date shown in the bar (null = today, or the nearest day with games)
 function defaultTickerDay() {
   const today = etDay(new Date());
@@ -1584,8 +1582,7 @@ function renderTicker() {
   const day = tickerDay || defaultTickerDay(), today = etDay(new Date());
   const i = GAME_DAYS.indexOf(day), prev = GAME_DAYS[i - 1], next = GAME_DAYS[i + 1];
   const games = GAMES.filter((g) => g.d === day).sort((a, b) => a.t - b.t);
-  const sw = (t) => { const c = TEAM_COLORS[t] || ["#888", "#555"]; return `<i class="sw" style="--c1:${c[0]};--c2:${c[1]}"></i>`; };
-  const side = (t, s, won) => `<span class="tm${won ? " won" : ""}">${sw(t)}${esc(t)}${s != null ? `<b class="sc">${s}</b>` : ""}</span>`;
+  const side = (t, s, won) => `<span class="tm${won ? " won" : ""}">${teamLogo(t)}${esc(t)}${s != null ? `<b class="sc">${s}</b>` : ""}</span>`;
   tk.innerHTML = `<span class="daynav">
       <button type="button" class="dbtn" data-tday="${prev || ""}" ${prev ? "" : "disabled"} aria-label="יום קודם" title="יום קודם">›</button>
       <span class="lbl${day === today ? " live" : ""}">${day === today ? "TONIGHT" : esc(dayLabel(day))}</span>
@@ -1593,7 +1590,7 @@ function renderTicker() {
       ${day !== defaultTickerDay() ? `<button type="button" class="dbtn today" data-tday="${defaultTickerDay()}">היום</button>` : ""}
     </span>` + games.map((g) => `<button type="button" class="game${g.fin ? " fin" : ""}" data-gid="${g.id}">` +
       side(g.a, g.fin ? g.as : null, g.fin && g.as > g.hs) + `<span class="at">@</span>` + side(g.h, g.fin ? g.hs : null, g.fin && g.hs > g.as) +
-      `<span class="time">${g.fin ? "FINAL" : g.t.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" })}${g.pre ? " · הכנה" : ""}</span></button>`).join("");
+      `<span class="time">${g.fin ? "FINAL" : g.t.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" })}</span></button>`).join("");
 }
 $("ticker").addEventListener("click", (e) => {
   const d = e.target.closest("[data-tday]");
@@ -1614,7 +1611,7 @@ function boxTable(team, rows) {
   return `<div class="gbox"><h4>${sideTag(team)}</h4><div class="tbl-wrap short"><table class="box"><thead><tr><th class="nosort">שחקן</th>${BOX_COLS.map((c) => `<th class="nosort">${c}</th>`).join("")}</tr></thead>
     <tbody>${rows.map((r) => line(r)).join("")}</tbody><tfoot>${line([...total.slice(0, 2), 240, ...total.slice(3)], "sum").replace(/<td>240<\/td>/, "<td></td>")}</tfoot></table></div></div>`;
 }
-const sideTag = (t) => { const c = TEAM_COLORS[t] || ["#888", "#555"]; return `<i class="sw" style="--c1:${c[0]};--c2:${c[1]}"></i>${esc(t)}`; };
+const sideTag = (t) => `${teamLogo(t)}${esc(t)}`;
 // Coming game: each team's leader in every category, injured players flagged, and the injury report
 function previewTeam(team) {
   const roster = players.filter((p) => p.team26 === team && p.has && p.L);
@@ -1641,7 +1638,7 @@ function openGame(gid) {
   const when = g.t.toLocaleString("he-IL", { weekday: "long", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
   const head = `<div class="ghead">
       <div class="gteam">${sideTag(g.a)}${g.fin ? `<b class="gsc${g.as > g.hs ? " won" : ""}">${g.as}</b>` : ""}</div>
-      <div class="gmid">${g.fin ? "FINAL" : esc(when)}${g.pre ? `<small>משחק הכנה</small>` : ""}</div>
+      <div class="gmid">${g.fin ? "FINAL" : esc(when)}</div>
       <div class="gteam">${g.fin ? `<b class="gsc${g.hs > g.as ? " won" : ""}">${g.hs}</b>` : ""}${sideTag(g.h)}</div>
     </div>`;
   let body;
@@ -1676,7 +1673,7 @@ function scheduleLine(p) {
   if (!p.team26) return "";
   const e = TEAM_WEEK.get(p.team26) || { total: 0, played: 0, today: null };
   const when = e.today
-    ? `<b dir="ltr">${esc(e.today.opp)} (${e.today.home ? "Home" : "Away"})</b> | ${e.today.t.toLocaleString("he-IL", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" })}${e.today.pre ? " (הכנה)" : ""}`
+    ? `<b dir="ltr">${esc(e.today.opp)} (${e.today.home ? "Home" : "Away"})</b> | ${e.today.t.toLocaleString("he-IL", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" })}`
     : "אין משחק היום";
   return `<span class="sched" title="משחקים השבוע (שני עד ראשון): ${e.played} שוחקו מתוך ${e.total}">${when} (${e.played}/${e.total})</span>`;
 }
