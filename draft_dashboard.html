@@ -483,7 +483,7 @@ header.jumbo { display: block; position: relative; overflow: hidden; border-radi
 .tlogo { width: 22px; height: 22px; object-fit: contain; flex: none; vertical-align: middle; filter: drop-shadow(0 0 1px rgba(255,255,255,.35)); }
 .ghead .tlogo { width: 46px; height: 46px; }
 .gbox h4 .tlogo, .ginj h4 .tlogo, table.lead .tlogo { width: 26px; height: 26px; margin-inline-end: 6px; filter: none; }
-.game .at { color: #6f7c99; font-weight: 600; }
+.game .at { color: #6f7c99; font-weight: 600; font-size: .75rem; letter-spacing: .08em; }
 .game .time { color: #ffb020; }
 button.game { cursor: pointer; font: inherit; font-family: var(--font-num); font-weight: 700; font-size: .9rem; }
 button.game:hover { background: rgba(255,255,255,.12); border-color: rgba(255,176,32,.5); }
@@ -494,6 +494,7 @@ button.game:hover { background: rgba(255,255,255,.12); border-color: rgba(255,17
 .dbtn { border: 1px solid rgba(255,255,255,.14); background: rgba(255,255,255,.06); color: #eef2fa; border-radius: 7px; min-width: 26px; height: 26px;
   font: inherit; font-weight: 800; cursor: pointer; display: grid; place-items: center; padding: 0 6px; }
 .dbtn:disabled { opacity: .3; cursor: default; }
+.dbtn { direction: ltr; unicode-bidi: isolate; }  /* keep the arrows pointing outwards: › on the right, ‹ on the left */
 .dbtn.today { font-size: .78rem; font-weight: 700; }
 .ticker .lbl { min-width: 6.5em; justify-content: center; }
 .ticker .lbl:not(.live)::before { display: none; }
@@ -1589,7 +1590,7 @@ function renderTicker() {
       <button type="button" class="dbtn" data-tday="${next || ""}" ${next ? "" : "disabled"} aria-label="יום הבא" title="יום הבא">‹</button>
       ${day !== defaultTickerDay() ? `<button type="button" class="dbtn today" data-tday="${defaultTickerDay()}">היום</button>` : ""}
     </span>` + games.map((g) => `<button type="button" class="game${g.fin ? " fin" : ""}" data-gid="${g.id}">` +
-      side(g.a, g.fin ? g.as : null, g.fin && g.as > g.hs) + `<span class="at">@</span>` + side(g.h, g.fin ? g.hs : null, g.fin && g.hs > g.as) +
+      side(g.a, g.fin ? g.as : null, g.fin && g.as > g.hs) + `<span class="at">VS</span>` + side(g.h, g.fin ? g.hs : null, g.fin && g.hs > g.as) +
       `<span class="time">${g.fin ? "FINAL" : g.t.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" })}</span></button>`).join("");
 }
 $("ticker").addEventListener("click", (e) => {
