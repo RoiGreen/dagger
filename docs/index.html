@@ -566,6 +566,7 @@ td.lbl { text-align: right; }
 .vsboard .wh { font-size: .78rem; font-weight: 700; margin-bottom: 3px; }
 .vsboard .wa .wh { color: color-mix(in srgb, var(--sa) 75%, #ffffff); } .vsboard .wb .wh { color: color-mix(in srgb, var(--sb) 75%, #ffffff); }
 .vsboard .wr .num { text-align: center; }
+.vsboard .wr .num b { font-weight: 800; color: #ffffff; } .vsboard .wr .num i { font-style: normal; font-weight: 600; color: #93a0bd; }
 .vsboard .wr { display: grid; grid-template-columns: 3.2em minmax(0, 1fr); gap: 10px; font-family: var(--font-num); font-weight: 700; font-size: .95rem; color: #eef2fa; }
 .vsboard .wr .wk { color: #93a0bd; letter-spacing: .06em; direction: ltr; unicode-bidi: isolate; }
 .vsboard .wr.none { color: #6f7c99; justify-content: center; }
@@ -2246,7 +2247,9 @@ function renderCmp() {
     });
     const f = (k, v) => (k.k.endsWith("_PCT") ? fmt3(v) : fmt1(v));
     return rows.map((k) => { const mine = side === "a" ? A[k.k] : B[k.k], other = side === "a" ? B[k.k] : A[k.k];
-      return `<div class="wr"><span class="wk">${k.l}</span><span class="num">${f(k, mine)}-${f(k, other)}</span></div>`; }).join("") || `<div class="wr none">–</div>`;
+      // The leading number sits on the leader's side: right in the right column, left in the left one
+      const lead = `<b>${f(k, mine)}</b>`, rest = `<i>${f(k, other)}</i>`;
+      return `<div class="wr"><span class="wk">${k.l}</span><span class="num">${side === "a" ? `${rest}-${lead}` : `${lead}-${rest}`}</span></div>`; }).join("") || `<div class="wr none">–</div>`;
   };
 
   out.style.cssText = sideColors;
