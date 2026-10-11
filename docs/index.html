@@ -564,7 +564,8 @@ td.lbl { text-align: right; }
 .vsboard .wcol.wb { border-inline-start: 1px solid rgba(255,255,255,.08); padding-inline-start: 18px; }
 .vsboard .wh { font-size: .78rem; font-weight: 700; margin-bottom: 3px; }
 .vsboard .wa .wh { color: #ff8a2a; } .vsboard .wb .wh { color: #6aa2ff; }
-.vsboard .wr { display: flex; justify-content: space-between; gap: 10px; font-family: var(--font-num); font-weight: 700; font-size: .95rem; color: #eef2fa; }
+.vsboard .wr .num { text-align: center; }
+.vsboard .wr { display: grid; grid-template-columns: 3.2em minmax(0, 1fr); gap: 10px; font-family: var(--font-num); font-weight: 700; font-size: .95rem; color: #eef2fa; }
 .vsboard .wr .wk { color: #93a0bd; letter-spacing: .06em; direction: ltr; unicode-bidi: isolate; }
 .vsboard .wr.none { color: #6f7c99; justify-content: center; }
 .vsboard .lines { width: 100%; display: grid; gap: 2px; margin-top: 10px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.08); }
