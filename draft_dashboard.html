@@ -526,7 +526,7 @@ td.lbl { text-align: right; }
 :root[data-theme="light"] td.rank.top { color: var(--accent); text-shadow: none; }
 
 /* comparison face-off: two sides and a night scoreboard between them */
-.faceoff { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 400px) minmax(0, 1fr); gap: 14px; align-items: stretch; }
+.faceoff { display: grid; grid-template-columns: minmax(0, 1fr) minmax(340px, 1.35fr) minmax(0, 1fr); gap: 14px; align-items: stretch; }
 .face { position: relative; display: grid; justify-items: center; align-content: center; gap: 6px; padding: 18px 14px 16px; text-align: center;
   border-radius: 16px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); overflow: hidden; }
 .face::before { content: ""; position: absolute; inset-inline: 0; top: 0; height: 4px; background: var(--side); }
@@ -556,11 +556,13 @@ td.lbl { text-align: right; }
 .vsboard .score .sep { color: #3a4766; }
 .vsboard .vwho { font-size: .82rem; font-weight: 700; color: #eef2fa; }
 .vsboard .lines { width: 100%; display: grid; gap: 2px; margin-top: 6px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,.08); }
-.vsboard .ln { display: grid; grid-template-columns: auto auto auto minmax(0, 1fr); gap: 12px; align-items: baseline; direction: rtl; padding-block: 3px; }
-.vsboard .ln .lk { text-align: start; font-family: var(--font-num); font-weight: 700; letter-spacing: .1em; font-size: .78rem; color: #93a0bd; }
-.vsboard .ln b { font-family: var(--font-num); font-size: 1.15rem; font-weight: 800; color: #93a0bd; min-width: 3.4em; }
+.vsboard .ln { display: grid; grid-template-columns: minmax(0, 1fr) 3.8em 4.2em 3.8em minmax(0, 1fr); gap: 8px; align-items: baseline; direction: rtl; padding-block: 3px; }
+.vsboard .ln .lk { text-align: center; font-family: var(--font-num); font-weight: 700; letter-spacing: .1em; font-size: .78rem; color: #93a0bd; }
+.vsboard .ln b { font-family: var(--font-num); font-size: 1.15rem; font-weight: 800; color: #93a0bd; text-align: center; }
 .vsboard .ln b.lead { color: #eef2fa; }
-.vsboard .fv { font-size: .8rem; font-weight: 700; color: #ffb020; text-align: end; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+.vsboard .fv { display: flex; gap: 5px; align-items: baseline; min-width: 0; font-size: .8rem; font-weight: 700; color: #ffb020; white-space: nowrap; }
+.vsboard .fv .fn2 { min-width: 0; overflow: hidden; text-overflow: ellipsis; }  /* a long name shortens; the number always shows */
+.vsboard .fv .num { flex: none; }
 .vsboard .note { font-size: .72rem; color: #ffb020; margin-top: 4px; }
 @media (max-width: 760px) {
   .faceoff { grid-template-columns: 1fr 1fr; }
@@ -2173,7 +2175,12 @@ function renderCmp() {
   const adv = cmpTable(advRows, A, B, nA, nB, mark);
   const lead = (x, y) => x > y ? nA : y > x ? nB : "שוויון";
   // "הפרש 1.03 לטובת X"; a gap that rounds to zero is a tie
-  const favor = (d, f) => f(Math.abs(d)) === f(0) ? "שוויון" : `<span class="num">+${f(Math.abs(d))}</span> ${esc(d > 0 ? nA : nB)}`;
+  // A single player goes by his last name here so the line fits ("Jokić +7.65")
+  const shortName = (side) => { const L = side === "a" ? LA : LB, n = side === "a" ? nA : nB;
+    if (L.length !== 1) return n;
+    const w = L[0].name.split(" ").filter((x) => !/^(Jr\.?|Sr\.?|II|III|IV)$/.test(x));
+    return w[w.length - 1] || n; };
+  const favor = (d, f) => f(Math.abs(d)) === f(0) ? "שוויון" : `<span class="fn2" title="${esc(d > 0 ? nA : nB)}">${esc(shortName(d > 0 ? "a" : "b"))}</span><span class="num">+${f(Math.abs(d))}</span>`;
   const chart = c.chart === "z" ? "z" : "val";
 
   out.innerHTML = `
@@ -2184,8 +2191,8 @@ function renderCmp() {
         <div class="score"><span class="num${gen.wa > gen.wb ? " lead" : ""}">${gen.wa}</span><span class="sep">:</span><span class="num${gen.wb > gen.wa ? " lead" : ""}">${gen.wb}</span></div>
         <div class="vwho">${gen.wa === gen.wb ? "שוויון" : `${esc(lead(gen.wa, gen.wb))} מוביל`}</div>
         <div class="lines">
-          <div class="ln"><span class="lk">Z</span><b class="num${A.Z > B.Z ? " lead" : ""}">${A.Z.toFixed(2)}</b><b class="num${B.Z > A.Z ? " lead" : ""}">${B.Z.toFixed(2)}</b><span class="fv">${favor(A.Z - B.Z, (v) => v.toFixed(2))}</span></div>
-          <div class="ln"><span class="lk">FPTS${avg ? " לשחקן" : ""}</span><b class="num${A.FPTS > B.FPTS ? " lead" : ""}">${fmt1(A.FPTS)}</b><b class="num${B.FPTS > A.FPTS ? " lead" : ""}">${fmt1(B.FPTS)}</b><span class="fv">${favor(A.FPTS - B.FPTS, fmt1)}</span></div>
+          <div class="ln"><span class="fv">${favor(A.Z - B.Z, (v) => v.toFixed(2))}</span><b class="num${A.Z > B.Z ? " lead" : ""}">${A.Z.toFixed(2)}</b><span class="lk">Z</span><b class="num${B.Z > A.Z ? " lead" : ""}">${B.Z.toFixed(2)}</b><span></span></div>
+          <div class="ln"><span class="fv">${favor(A.FPTS - B.FPTS, fmt1)}</span><b class="num${A.FPTS > B.FPTS ? " lead" : ""}">${fmt1(A.FPTS)}</b><span class="lk">FPTS${avg ? " לשחקן" : ""}</span><b class="num${B.FPTS > A.FPTS ? " lead" : ""}">${fmt1(B.FPTS)}</b><span></span></div>
         </div>
         ${several && LA.length !== LB.length && !avg ? `<div class="note">${LA.length} מול ${LB.length} שחקנים: צד עם יותר שחקנים צובר יותר</div>` : ""}
       </div>
