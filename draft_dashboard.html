@@ -492,7 +492,9 @@ button.game:hover { background: rgba(255,255,255,.12); border-color: rgba(255,17
 .game.fin .time { color: #93a0bd; font-size: .78rem; letter-spacing: .1em; }
 #teamFoot tr.lgavg td { font-weight: 800; border-top: 2px solid var(--line); background: var(--surface-2); }
 #teamFoot .n { letter-spacing: .08em; }
-#teamFoot td.name { text-align: right; padding-right: 74px; }  /* in line with the team names */
+#teamFoot td.name { text-align: right; }
+td.tteam .lglogo { width: 40px; height: 26px; padding: 2px 4px; border-radius: 5px; background: #0c1427; }  /* the NBA wordmark is white: keep it on a dark tile in both themes */
+#teamFoot td.tteam .tt { direction: rtl; }  /* logo on the right, under the team logos */  /* in line with the team names */
 td.tteam .tt { display: inline-flex; align-items: center; gap: 12px; }  /* logo, abbreviation, then the full name */
 td.tteam .tlogo { width: 28px; height: 28px; filter: none; }
 td.tteam .t { margin-inline-start: 4px; }
@@ -2018,7 +2020,7 @@ function renderAdv() {
     `</tr>`).join("");
   // League average of each column, under the 30 teams
   const avgOf = (k) => TEAM_ROWS.reduce((a, t) => a + t[k], 0) / Math.max(TEAM_ROWS.length, 1);
-  $("teamFoot").innerHTML = `<tr class="lgavg"><td></td><td class="name"><span class="n">LEAGUE AVERAGE</span></td>` +
+  $("teamFoot").innerHTML = `<tr class="lgavg"><td></td><td class="name tteam"><span class="tt">${(D.logos || {}).NBA ? `<img class="tlogo lglogo" src="${D.logos.NBA}" alt="NBA">` : ""}<span class="n">LEAGUE AVERAGE</span></span></td>` +
     TCOLS.map((c) => { const v = avgOf(c.k); return `<td>${c.k === "NET_RATING" && v > 0 ? "+" : ""}${v.toFixed(1)}</td>`; }).join("") + `</tr>`;
 }
 
