@@ -1,4 +1,5 @@
-# Data update, run by Windows Task Scheduler ("NBA Fantasy Daily Update"): every 3 hours from 09:00, when Roi logs on,
+# Manual version of the data update. The scheduled task ("NBA Fantasy Daily Update") runs run_daily.py with pythonw
+# (no console window to be closed half way). Same steps: every 3 hours from 09:00, when Roi logs on,
 # and when the computer wakes from sleep. It pulls the 2026-27 game logs, schedule, rosters and injuries, rebuilds the
 # website and pushes it to GitHub Pages. Injuries are also refreshed in the cloud (.github/workflows/injuries.yml).
 # Every step is logged to logs\daily_update.log as it starts, so a run that stops shows where.
