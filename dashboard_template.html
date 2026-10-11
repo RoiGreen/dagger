@@ -514,7 +514,14 @@ button.game:hover { background: rgba(255,255,255,.12); border-color: rgba(255,17
 .gmid small { font-family: var(--font-body); letter-spacing: 0; font-size: .75rem; }
 .gbox { padding: 0 16px; display: grid; gap: 6px; }
 .gbox h4, .ginj h4 { margin: 0; font-family: var(--font-num); font-weight: 800; font-size: 1.05rem; letter-spacing: .06em; direction: ltr; text-align: end; }
-table.box th, table.box td { padding: 5px 7px; font-size: .9rem; }
+table.box { direction: ltr; }  /* box score reads left to right: the player first, as in English */
+table.box th, table.box td { padding: 5px 7px; font-size: .9rem; direction: ltr; unicode-bidi: normal; }
+table.box th:first-child { text-align: start; }
+.gtabs { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; padding: 0 16px; }
+.gtabs button { display: flex; align-items: center; justify-content: center; gap: 10px; padding: 10px 12px; border-radius: 12px; cursor: pointer;
+  border: 1px solid var(--line); background: var(--surface-2); color: var(--muted); font: inherit; font-weight: 800; font-size: 1rem; direction: ltr; }
+.gtabs button .tlogo { width: 30px; height: 30px; filter: none; }
+.gtabs button[aria-selected="true"] { color: var(--ink); background: var(--surface); border-color: var(--accent-fill); box-shadow: inset 0 -3px 0 var(--accent-fill); }
 table.box td.pn { text-align: start; font-family: var(--font-body); font-weight: 700; direction: ltr; unicode-bidi: plaintext; }
 table.box tr.star td { background: color-mix(in srgb, var(--led) 14%, transparent); }
 table.box tfoot td { font-weight: 800; border-top: 2px solid var(--line); }
@@ -1608,8 +1615,8 @@ function boxTable(team, rows) {
   const tot = (i) => rows.reduce((a, r) => a + r[i], 0);
   const line = (r, cls = "") => `<tr class="${cls}${fp(r) === best && !cls ? " star" : ""}"><td class="pn">${esc(r[0])}</td>` +
     [r[2], r[3], r[4], r[5], r[6], r[7], r[8], `${r[9]}-${r[10]}`, `${r[11]}-${r[12]}`, r[13], fp(r)].map((v) => `<td>${v}</td>`).join("") + `</tr>`;
-  const total = ["סה״כ", 0, "", tot(3), tot(4), tot(5), tot(6), tot(7), tot(8), tot(9), tot(10), tot(11), tot(12), tot(13)];
-  return `<div class="gbox"><h4>${sideTag(team)}</h4><div class="tbl-wrap short"><table class="box"><thead><tr><th class="nosort">שחקן</th>${BOX_COLS.map((c) => `<th class="nosort">${c}</th>`).join("")}</tr></thead>
+  const total = ["Total", 0, "", tot(3), tot(4), tot(5), tot(6), tot(7), tot(8), tot(9), tot(10), tot(11), tot(12), tot(13)];
+  return `<div class="gbox" data-gbox="${team}"><div class="tbl-wrap short"><table class="box"><thead><tr><th class="nosort">Player</th>${BOX_COLS.map((c) => `<th class="nosort">${c}</th>`).join("")}</tr></thead>
     <tbody>${rows.map((r) => line(r)).join("")}</tbody><tfoot>${line([...total.slice(0, 2), 240, ...total.slice(3)], "sum").replace(/<td>240<\/td>/, "<td></td>")}</tfoot></table></div></div>`;
 }
 const sideTag = (t) => `${teamLogo(t)}${esc(t)}`;
@@ -1644,7 +1651,10 @@ function openGame(gid) {
     </div>`;
   let body;
   if (g.fin && box) {
-    body = [g.a, g.h].filter((t) => box[t]).map((t) => boxTable(t, box[t])).join("");
+    // One team at a time: two tabs with the full team name and logo
+    const teams = [g.a, g.h].filter((t) => box[t]);
+    body = `<div class="gtabs" role="tablist">${teams.map((t, i) => `<button type="button" role="tab" data-gtab="${t}" aria-selected="${i === 0}">${teamLogo(t)}<span>${esc(TEAM_NAMES[t] || t)}</span></button>`).join("")}</div>` +
+      teams.map((t, i) => boxTable(t, box[t]).replace(`data-gbox="${t}"`, `data-gbox="${t}"${i ? " hidden" : ""}`)).join("");
   } else if (g.fin) {
     body = `<p class="gnote">ה־Box Score של המשחק הזה כבר לא שמור באתר.</p>`;
   } else {
@@ -1659,7 +1669,23 @@ function openGame(gid) {
   $("gameCard").innerHTML = `<button type="button" class="gclose" data-gclose="1" aria-label="סגירה">✕</button>${head}${body}`;
   $("gameModal").hidden = false;
 }
-$("gameModal").addEventListener("click", (e) => { if (e.target.id === "gameModal" || e.target.closest("[data-gclose]")) $("gameModal").hidden = true; });
+$("gameModal").addEventListener("click", (e) => {
+  const tab = e.target.closest("[data-gtab]");
+  if (tab) {
+    for (const b of document.querySelectorAll("#gameCard [data-gtab]")) b.setAttribute("aria-selected", b === tab);
+    for (const box of document.querySelectorAll("#gameCard [data-gbox]")) box.hidden = box.dataset.gbox !== tab.dataset.gtab;
+    return;
+  }
+  if (e.target.id === "gameModal" || e.target.closest("[data-gclose]")) $("gameModal").hidden = true;
+});
+const TEAM_NAMES = {
+  ATL: "Atlanta Hawks", BOS: "Boston Celtics", BKN: "Brooklyn Nets", CHA: "Charlotte Hornets", CHI: "Chicago Bulls",
+  CLE: "Cleveland Cavaliers", DAL: "Dallas Mavericks", DEN: "Denver Nuggets", DET: "Detroit Pistons", GSW: "Golden State Warriors",
+  HOU: "Houston Rockets", IND: "Indiana Pacers", LAC: "LA Clippers", LAL: "Los Angeles Lakers", MEM: "Memphis Grizzlies",
+  MIA: "Miami Heat", MIL: "Milwaukee Bucks", MIN: "Minnesota Timberwolves", NOP: "New Orleans Pelicans", NYK: "New York Knicks",
+  OKC: "Oklahoma City Thunder", ORL: "Orlando Magic", PHI: "Philadelphia 76ers", PHX: "Phoenix Suns", POR: "Portland Trail Blazers",
+  SAC: "Sacramento Kings", SAS: "San Antonio Spurs", TOR: "Toronto Raptors", UTA: "Utah Jazz", WAS: "Washington Wizards",
+};
 document.addEventListener("keydown", (e) => { if (e.key === "Escape") $("gameModal").hidden = true; });
 function syncThemeBtn() { $("themeBtn").textContent = isDark() ? "☀" : "☾"; }
 $("themeBtn").addEventListener("click", () => {
