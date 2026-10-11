@@ -1098,6 +1098,8 @@ function applySettings(s) {
     s.cmp = { ta: 0, tb: 1, tta: null, ttb: null, chart: "val", ...cm };
     if (!s.cmp.sw || !Array.isArray(s.cmp.sw.a) || !Array.isArray(s.cmp.sw.b)) s.cmp.sw = { a: [], b: [] };
     if (!s.cmp.fold || typeof s.cmp.fold !== "object") s.cmp.fold = { a: false, b: false };
+    // Every visit opens the comparison fresh: player vs player, my team against the free-agent market
+    Object.assign(s.cmp, { mode: "players", a: [], b: [], tta: null, ttb: null, sw: { a: [], b: [] } });
   }
   // Saved picks of the old Guard / Forward / Center filter are dropped
   Object.assign(st, s, { punts: new Set(s.punts || []), pos: new Set((s.pos || []).filter((x) => POSITIONS.includes(x))) });
@@ -1974,7 +1976,8 @@ function renderCmpSide(side) {
   const box = $("cmpPick" + S2);
   // A team's player list starts folded (just the team); elsewhere the chosen players show until folded
   const folded = M.team ? !cmpOpen[side] : !!c.fold[side], count = cmpPlayers(side).length;
-  if (c.mode === "players" && c["tt" + side] == null) c["tt" + side] = "";  // start with no team chosen
+  // Opening screen: my team on the right, the free-agent market on the left
+  if (c.mode === "players" && c["tt" + side] == null) c["tt" + side] = side === "a" ? String(myIdx()) : "free";
   const tv = c["tt" + side];
   const head = c.mode === "players" ? (!tv ? "בחר קבוצה" : tv === "all" ? "כל השחקנים" : tv === "free" ? "שוק השחקנים החופשי" : teamName(Number(tv)))
     : c.mode === "teams" ? teamName(side === "a" ? c.ta : c.tb) : M[side];
