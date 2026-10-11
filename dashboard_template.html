@@ -526,7 +526,7 @@ td.lbl { text-align: right; }
 :root[data-theme="light"] td.rank.top { color: var(--accent); text-shadow: none; }
 
 /* comparison face-off: two sides and a night scoreboard between them */
-.faceoff { display: grid; grid-template-columns: minmax(0, 1fr) minmax(260px, 340px) minmax(0, 1fr); gap: 14px; align-items: stretch; }
+.faceoff { display: grid; grid-template-columns: minmax(0, 1fr) minmax(300px, 400px) minmax(0, 1fr); gap: 14px; align-items: stretch; }
 .face { position: relative; display: grid; justify-items: center; align-content: center; gap: 6px; padding: 18px 14px 16px; text-align: center;
   border-radius: 16px; background: var(--surface); border: 1px solid var(--line); box-shadow: var(--shadow); overflow: hidden; }
 .face::before { content: ""; position: absolute; inset-inline: 0; top: 0; height: 4px; background: var(--side); }
@@ -534,7 +534,8 @@ td.lbl { text-align: right; }
 .face.leads { box-shadow: var(--shadow), 0 0 0 2px color-mix(in srgb, var(--side) 55%, transparent); }
 .face .ph { position: relative; width: 104px; height: 104px; border-radius: 50%; padding: 3px; background: conic-gradient(var(--tc, var(--side)), var(--side), var(--tc, var(--side))); }
 .face .ph img { display: block; width: 100%; height: 100%; border-radius: 50%; object-fit: cover; background: var(--sunk); }
-.face .ph .injpill { position: absolute; bottom: -4px; inset-inline-start: 50%; translate: 50% 0; white-space: nowrap; }
+.face .ph .injpill { position: absolute; top: calc(100% + 6px); inset-inline-start: 50%; translate: 50% 0; white-space: nowrap; }
+.face .ph.hurt { width: 124px; height: 124px; margin-bottom: 26px; }
 .face .fn { font-size: 1.15rem; font-weight: 800; margin-top: 4px; }
 .face .fm { font-size: .82rem; color: var(--muted); font-weight: 600; }
 .face .fs { display: flex; gap: 16px; margin-top: 4px; }
@@ -555,11 +556,11 @@ td.lbl { text-align: right; }
 .vsboard .score .sep { color: #3a4766; }
 .vsboard .vwho { font-size: .82rem; font-weight: 700; color: #eef2fa; }
 .vsboard .lines { width: 100%; display: grid; gap: 2px; margin-top: 6px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,.08); }
-.vsboard .ln { display: grid; grid-template-columns: 1fr auto auto; gap: 14px; align-items: baseline; direction: rtl; }
+.vsboard .ln { display: grid; grid-template-columns: auto auto auto minmax(0, 1fr); gap: 12px; align-items: baseline; direction: rtl; padding-block: 3px; }
 .vsboard .ln .lk { text-align: start; font-family: var(--font-num); font-weight: 700; letter-spacing: .1em; font-size: .78rem; color: #93a0bd; }
 .vsboard .ln b { font-family: var(--font-num); font-size: 1.15rem; font-weight: 800; color: #93a0bd; min-width: 3.4em; }
 .vsboard .ln b.lead { color: #eef2fa; }
-.vsboard .fv { font-size: .72rem; color: #aab5cf; text-align: start; margin-bottom: 4px; }
+.vsboard .fv { font-size: .8rem; font-weight: 700; color: #ffb020; text-align: end; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .vsboard .note { font-size: .72rem; color: #ffb020; margin-top: 4px; }
 @media (max-width: 760px) {
   .faceoff { grid-template-columns: 1fr 1fr; }
@@ -1937,7 +1938,11 @@ function renderCmpSide(side) {
   const box = $("cmpPick" + S2);
   // A team's player list starts folded (just the team); elsewhere the chosen players show until folded
   const folded = M.team ? !cmpOpen[side] : !!c.fold[side], count = cmpPlayers(side).length;
-  $("cmpH" + S2).innerHTML = `<span>${M[side]}</span>` + (count > 1 || folded
+  if (c.mode === "players" && c["tt" + side] == null) c["tt" + side] = "";  // start with no team chosen
+  const tv = c["tt" + side];
+  const head = c.mode === "players" ? (!tv ? "בחר קבוצה" : tv === "all" ? "כל השחקנים" : tv === "free" ? "שוק השחקנים החופשי" : teamName(Number(tv)))
+    : c.mode === "teams" ? teamName(side === "a" ? c.ta : c.tb) : M[side];
+  $("cmpH" + S2).innerHTML = `<span>${esc(head)}</span>` + (count > 1 || folded
     ? `<button type="button" class="foldbtn" data-cmpfold="${side}">${folded ? `▸ הצג את השחקנים (${count})` : "▾ צמצום"}</button>` : "");
   const rank = last.now.rank;
   if (M.team) {
@@ -1961,25 +1966,26 @@ function renderCmpSide(side) {
     }
     const n = Math.max(st.teams, 1), key = "tt" + side;
     // Default: I give from my team and get from the next one
-    if (c[key] == null) {
+    if (c.mode === "trade" && (c[key] == null || c[key] === "")) {
       const t = side === "a" ? myIdx() : (myIdx() + 1) % n;
       c[key] = picks.some((x) => x.team === t) ? String(t) : "all";  // before the draft: everyone
     }
-    if (c[key] !== "all" && c[key] !== "free" && Number(c[key]) >= n) c[key] = "all";
+    if (c[key] && c[key] !== "all" && c[key] !== "free" && Number(c[key]) >= n) c[key] = "all";
     const tsel = box.querySelector("[data-cmptt]"), psel = box.querySelector("[data-cmptp]");
     if (tsel !== document.activeElement) {
-      tsel.innerHTML = Array.from({ length: n }, (_, i) =>
+      tsel.innerHTML = (c[key] ? "" : `<option value="">בחר קבוצה</option>`) + Array.from({ length: n }, (_, i) =>
         `<option value="${i}">${esc(teamName(i))}</option>`).join("") +
-        `<option value="free">שחקנים שלא נבחרו</option><option value="all">כל השחקנים</option>`;
+        `<option value="free">שוק השחקנים החופשי</option><option value="all">כל השחקנים</option>`;
       tsel.value = c[key];
     }
     const added = new Set(c[side]);
-    const from = c[key] === "all" ? players.filter((p) => p.L)
+    const from = !c[key] ? []
+      : c[key] === "all" ? players.filter((p) => p.L)
       : c[key] === "free" ? players.filter((p) => p.L && !picks.some((x) => x.id === p.id))
       : picks.filter((x) => x.team === Number(c[key])).map((x) => PLAYER_BY_ID.get(x.id)).filter(Boolean);
     const pool = from.filter((p) => !added.has(p.id)).sort((a, b) => (rank.get(a.id) ?? 1e9) - (rank.get(b.id) ?? 1e9));
     if (psel !== document.activeElement) {
-      psel.innerHTML = `<option value="">${pool.length ? "בחר שחקן" : "אין שחקנים בקבוצה הזו"}</option>` +
+      psel.innerHTML = `<option value="">${!c[key] ? "בחר קבוצה קודם" : pool.length ? "בחר שחקן" : "אין שחקנים בקבוצה הזו"}</option>` +
         pool.slice(0, 500).map((p) => `<option value="${p.id}">${rank.has(p.id) ? `#${rank.get(p.id)} ` : ""}${esc(p.name)} · ${esc(p.pos || "–")} · ${esc(p.team26 || "FA")}</option>`).join("");
     }
   } else {
@@ -2108,7 +2114,7 @@ function cmpFace(L, side, name, leads) {
   if (L.length === 1) {
     const p = L[0], r = rank.get(p.id), z = zOf(p);
     return `<div class="face s${side}${leads ? " leads" : ""}" style="--tc:${teamTint(p.team26)}">
-      <div class="ph">${p.img ? `<img src="${p.img}" alt="">` : ""}${p.hurt ? injuryPill(p) : ""}</div>
+      <div class="ph${p.hurt ? " hurt" : ""}">${p.img ? `<img src="${p.img}" alt="">` : ""}${p.hurt ? injuryPill(p) : ""}</div>
       <div class="fn">${esc(p.name)}</div>
       <div class="fm"><span class="num">${esc(p.pos || "–")}</span> · <span class="num">${esc(p.team26 || "FA")}</span>${r ? ` · <span class="num">#${r}</span>` : ""}</div>
       <div class="fs"><span><small>Z</small><b class="num">${z ? z.total.toFixed(2) : "–"}</b></span><span><small>FPTS</small><b class="num">${fmt1(p.F[st.mode])}</b></span><span><small>GP</small><b class="num">${p.gp ?? "–"}</b></span></div>
@@ -2167,7 +2173,7 @@ function renderCmp() {
   const adv = cmpTable(advRows, A, B, nA, nB, mark);
   const lead = (x, y) => x > y ? nA : y > x ? nB : "שוויון";
   // "הפרש 1.03 לטובת X"; a gap that rounds to zero is a tie
-  const favor = (d, f) => f(Math.abs(d)) === f(0) ? "שוויון" : `הפרש ${f(Math.abs(d))} לטובת ${esc(d > 0 ? nA : nB)}`;
+  const favor = (d, f) => f(Math.abs(d)) === f(0) ? "שוויון" : `<span class="num">+${f(Math.abs(d))}</span> ${esc(d > 0 ? nA : nB)}`;
   const chart = c.chart === "z" ? "z" : "val";
 
   out.innerHTML = `
@@ -2178,10 +2184,8 @@ function renderCmp() {
         <div class="score"><span class="num${gen.wa > gen.wb ? " lead" : ""}">${gen.wa}</span><span class="sep">:</span><span class="num${gen.wb > gen.wa ? " lead" : ""}">${gen.wb}</span></div>
         <div class="vwho">${gen.wa === gen.wb ? "שוויון" : `${esc(lead(gen.wa, gen.wb))} מוביל`}</div>
         <div class="lines">
-          <div class="ln"><span class="lk">Z</span><b class="num${A.Z > B.Z ? " lead" : ""}">${A.Z.toFixed(2)}</b><b class="num${B.Z > A.Z ? " lead" : ""}">${B.Z.toFixed(2)}</b></div>
-          <div class="fv">${favor(A.Z - B.Z, (v) => v.toFixed(2))}</div>
-          <div class="ln"><span class="lk">FPTS${avg ? " לשחקן" : ""}</span><b class="num${A.FPTS > B.FPTS ? " lead" : ""}">${fmt1(A.FPTS)}</b><b class="num${B.FPTS > A.FPTS ? " lead" : ""}">${fmt1(B.FPTS)}</b></div>
-          <div class="fv">${favor(A.FPTS - B.FPTS, fmt1)}</div>
+          <div class="ln"><span class="lk">Z</span><b class="num${A.Z > B.Z ? " lead" : ""}">${A.Z.toFixed(2)}</b><b class="num${B.Z > A.Z ? " lead" : ""}">${B.Z.toFixed(2)}</b><span class="fv">${favor(A.Z - B.Z, (v) => v.toFixed(2))}</span></div>
+          <div class="ln"><span class="lk">FPTS${avg ? " לשחקן" : ""}</span><b class="num${A.FPTS > B.FPTS ? " lead" : ""}">${fmt1(A.FPTS)}</b><b class="num${B.FPTS > A.FPTS ? " lead" : ""}">${fmt1(B.FPTS)}</b><span class="fv">${favor(A.FPTS - B.FPTS, fmt1)}</span></div>
         </div>
         ${several && LA.length !== LB.length && !avg ? `<div class="note">${LA.length} מול ${LB.length} שחקנים: צד עם יותר שחקנים צובר יותר</div>` : ""}
       </div>
