@@ -556,7 +556,11 @@ td.lbl { text-align: right; }
 .vsboard .score .num.lead { color: #ffb020; text-shadow: 0 0 18px rgba(255,176,32,.55); }
 .vsboard .score .sep { color: #3a4766; }
 .vsboard .vwho { font-size: .82rem; font-weight: 700; color: #eef2fa; }
-.vsboard .lines { width: 100%; display: grid; gap: 2px; margin-top: 6px; padding-top: 8px; border-top: 1px solid rgba(255,255,255,.08); }
+.vsboard .lines { width: 100%; display: grid; gap: 2px; margin-top: 10px; padding-top: 12px; border-top: 1px solid rgba(255,255,255,.08); }
+/* who each number column belongs to: full names over the two columns (a long name wraps) */
+.vsboard .ln.lh { align-items: end; padding-bottom: 4px; }
+.vsboard .nh { justify-self: center; text-align: center; width: max-content; max-width: 9.5em; font-size: .78rem; font-weight: 700; line-height: 1.2; }
+.vsboard .nh.na { color: #ff8a2a; } .vsboard .nh.nb { color: #6aa2ff; }
 .vsboard .ln { display: grid; grid-template-columns: minmax(0, 1fr) 3.8em 4.2em 3.8em minmax(0, 1fr); gap: 8px; align-items: baseline; direction: rtl; padding-block: 3px; }
 .vsboard .ln .lk { text-align: center; font-family: var(--font-num); font-weight: 700; letter-spacing: .1em; font-size: .78rem; color: #93a0bd; }
 .vsboard .ln b { font-family: var(--font-num); font-size: 1.15rem; font-weight: 800; color: #93a0bd; text-align: center; }
@@ -2193,6 +2197,7 @@ function renderCmp() {
         <div class="score"><span class="num${gen.wa > gen.wb ? " lead" : ""}">${gen.wa}</span><span class="sep">:</span><span class="num${gen.wb > gen.wa ? " lead" : ""}">${gen.wb}</span></div>
         <div class="vwho">${gen.wa === gen.wb ? "שוויון" : `${esc(lead(gen.wa, gen.wb))} מוביל`}</div>
         <div class="lines">
+          <div class="ln lh"><span></span><span class="nh na">${esc(nA)}</span><span></span><span class="nh nb">${esc(nB)}</span><span></span></div>
           <div class="ln"><span class="fv">${favor(A.Z - B.Z, (v) => v.toFixed(2))}</span><b class="num${A.Z > B.Z ? " lead" : ""}">${A.Z.toFixed(2)}</b><span class="lk">Z</span><b class="num${B.Z > A.Z ? " lead" : ""}">${B.Z.toFixed(2)}</b><span></span></div>
           <div class="ln"><span class="fv">${favor(A.FPTS - B.FPTS, fmt1)}</span><b class="num${A.FPTS > B.FPTS ? " lead" : ""}">${fmt1(A.FPTS)}</b><span class="lk">FPTS${avg ? " לשחקן" : ""}</span><b class="num${B.FPTS > A.FPTS ? " lead" : ""}">${fmt1(B.FPTS)}</b><span></span></div>
         </div>
