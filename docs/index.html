@@ -600,7 +600,8 @@ table.cmpt td.lbl { min-width: 5.5em; }
 .clock .big { font-size: 1.1rem; }
 .pickbtn { background: var(--accent-fill); color: #1a0b00; }
 .cmpsum .card .v { font-size: 1.3rem; }
-.vbar.a { --c: color-mix(in srgb, var(--accent-fill) 85%, transparent); }
+.vbar.a { --c: var(--bca, color-mix(in srgb, var(--accent-fill) 85%, transparent)); }
+.vbar.b { --c: var(--bcb, color-mix(in srgb, var(--mine) 75%, transparent)); }
 
 @media (prefers-reduced-motion: no-preference) { .seg button, .chip, .act button { transition: background-color .12s, color .12s; } }
 </style></head><body>
@@ -2092,11 +2093,11 @@ function renderCmpSide(side) {
   }
 }
 
-function cmpBars(rows, A, B, kind) {
+function cmpBars(rows, A, B, kind, colors = "") {
   // kind "val": each pair scaled to the larger of the two; "z": columns up or down from a 0 line in the middle,
   // all scaled to the largest |Z| shown
   const zmax = kind === "z" ? Math.max(0.5, ...rows.flatMap((r) => [Math.abs(A.z[r.k]), Math.abs(B.z[r.k])])) : 0;
-  return `<div class="vbars${kind === "z" ? " z" : ""}">` + rows.map((r) => {
+  return `<div class="vbars${kind === "z" ? " z" : ""}" style="${colors}">` + rows.map((r) => {
     const va = kind === "z" ? A.z[r.k] : A[r.k], vb = kind === "z" ? B.z[r.k] : B[r.k];
     const fmtv = (v) => v == null ? "–" : kind === "z" ? (v >= 0 ? "+" : "") + v.toFixed(2) : r.fmt(v);
     const lowBetter = kind !== "z" && r.k === "TOV";
@@ -2199,6 +2200,18 @@ function renderCmp() {
     return w[w.length - 1] || n; };
   const favor = (d, f) => f(Math.abs(d)) === f(0) ? "שוויון" : `<span class="fn2" title="${esc(d > 0 ? nA : nB)}">${esc(shortName(d > 0 ? "a" : "b"))}</span><span class="num">+${f(Math.abs(d))}</span>`;
   const chart = c.chart === "z" ? "z" : "val";
+  // Bars in each player's team colour (one player per side); if the two look alike, side B takes its team's other colour
+  const barColors = (() => {
+    if (LA.length !== 1 || LB.length !== 1) return "";
+    const ta = LA[0].team26, tb = LB[0].team26;
+    if (!TEAM_COLORS[ta] || !TEAM_COLORS[tb]) return "";
+    const ca = teamTint(ta);
+    const rgb = (h) => [1, 3, 5].map((i) => parseInt(h.slice(i, i + 2), 16));
+    const far = (x, y) => Math.hypot(...rgb(x).map((v, i) => v - rgb(y)[i])) > 110;
+    const bg = isDark() ? "#0e1525" : "#ffffff";
+    const cb = [teamTint(tb), ...TEAM_COLORS[tb]].find((h) => far(h, ca) && contrastOf(h, bg) >= 1.6);
+    return cb ? `--bca:${ca};--bcb:${cb}` : `--bca:${ca}`;  // same-coloured teams: B keeps the default blue
+  })();
   const catWins = (side) => {
     const rows = CATS.filter((k) => !st.punts.has(k.k)).filter((k) => {
       const a = A[k.k], b = B[k.k];
@@ -2234,14 +2247,14 @@ function renderCmp() {
         </span></h3>
       <div class="cmpgrid">
         <div class="tbl-wrap short">${gen.html}</div>
-        ${cmpBars(catRows, A, B, chart)}
+        ${cmpBars(catRows, A, B, chart, barColors)}
       </div>
     </section>
     <section class="cmpsec">
       <h3>נתונים מתקדמים</h3>
       <div class="cmpgrid">
         <div class="tbl-wrap short">${adv.html}</div>
-        ${cmpBars(advRows, A, B, "val")}
+        ${cmpBars(advRows, A, B, "val", barColors)}
       </div>
     </section>`;
 }
