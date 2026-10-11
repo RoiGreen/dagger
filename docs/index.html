@@ -213,7 +213,7 @@ tr.sel-team td { box-shadow: inset 0 -2px 0 var(--accent), inset 0 2px 0 var(--a
 .dist .abbr, .dist .pct { font-family: var(--font-num); font-weight: 700; font-variant-numeric: tabular-nums; font-size: .92rem; }
 .dist .pct { color: var(--muted); text-align: end; }
 .dist .bar { display: flex; height: 20px; border-radius: 4px; overflow: hidden; background: var(--sunk); }
-.dist .bar span { display: flex; align-items: center; justify-content: center; height: 100%; min-width: 0; overflow: hidden;
+.dist .bar span { display: flex; align-items: center; justify-content: center; height: 100%; min-width: 2.7em; overflow: hidden;  /* a small share still has room for its number */
   font-family: var(--font-num); font-weight: 700; font-size: .78rem; font-variant-numeric: tabular-nums; color: var(--ink); }
 .dist .bar .seg-key { color: var(--accent-ink); }
 .seg-key { background: var(--accent); }
@@ -1790,7 +1790,7 @@ function renderDist() {
     : `<button data-distteam="${esc(d.t)}" aria-pressed="${st.teamSel.includes(d.t)}"
        title="${esc(d.t)}, ${d.games} משחקים: מפתח ${pct(d.key)} (${esc(d.players)}) · רוטציה ${pct(d.rot)} · ספסל ${pct(d.bench)}">
       <span class="abbr">${esc(d.t)}</span>
-      <span class="bar">${segs.map((s) => `<span class="${s.cls}" style="width:${d[s.k] * 100}%">${pct(d[s.k])}</span>`).join("")}</span>
+      <span class="bar">${segs.map((s) => `<span class="${s.cls}" style="flex:${d[s.k].toFixed(4)} 1 0">${pct(d[s.k])}</span>`).join("")}</span>
     </button>`).join("");
 }
 
