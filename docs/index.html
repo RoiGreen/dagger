@@ -3257,7 +3257,9 @@ function planWeek(roster, il, team, swap = null) {
       T.covFT += ch * f * f * m.covFT + ch * (1 - ch) * f * f * m.mean.FTM * m.mean.FTA;
       T.starts += ch;
     }
-    T.days.push({ d, started: slot.size, playing: cands.length, past: d <= LOG_END });
+    const empty = [...LINEUP.map((x) => x[0])];
+    for (const v of slot.values()) empty.splice(empty.indexOf(v), 1);
+    T.days.push({ d, started: slot.size, playing: cands.length, empty, past: d <= LOG_END });
   }
   return T;
 }
@@ -3465,12 +3467,14 @@ function renderMatchup() {
       if (!c) return `<td class="dg"></td>`;
       const opp = c.gm ? `${c.gm.g.h === p.team26 ? "" : "@"}${c.gm.opp}` : c.r ? `${c.r[2] ? "" : "@"}${c.r[1]}` : "";
       const cls = c.out ? "out" : c.slot ? (c.r ? "on done" : c.ch < 1 ? "on gtd" : "on") : "bn";
-      const tip = c.out ? "פצוע" : c.slot ? `בהרכב: ${c.slot}` : "על הספסל (אין מקום בהרכב)";
+      const emptyNow = G.T.days.find((x) => x.d === d)?.empty || [];
+      const tip = c.out ? "פצוע" : c.slot ? `בהרכב: ${c.slot}`
+        : `על הספסל: המשבצות שמתאימות לו (${p.pos || "UTIL"}) תפוסות${emptyNow.length ? `, ופנויה רק ${emptyNow.join(", ")}` : ""}`;
       return `<td class="dg ${cls}" title="${tip}"><span>${esc(opp)}</span>${c.slot ? `<small>${c.slot}</small>` : c.out ? "<small>OUT</small>" : "<small>BN</small>"}</td>`;
     }).join("");
     return `<tr${G.il.has(p.id) ? ` class="ilrow"` : ""}><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span></span>${G.il.has(p.id) ? `<small class="iltag">IL</small>` : ""}</td>${cells}</tr>`;
   }).join("");
-  const gridFoot = `<tr class="dgfoot"><td>בהרכב</td>${G.T.days.map((x) => `<td${x.playing > LINEUP.length ? ` title="${x.playing} שחקנים משחקים, רק ${LINEUP.length} נכנסים להרכב"` : ""}>${x.playing > LINEUP.length ? `<b class="over">${x.playing}</b>` : x.started}/${LINEUP.length}</td>`).join("")}</tr>`;
+  const gridFoot = `<tr class="dgfoot"><td>בהרכב</td>${G.T.days.map((x) => `<td${x.playing > x.started ? ` title="${x.playing} שחקנים משחקים, ${x.started} נכנסים להרכב${x.empty.length ? `. פנויה ${x.empty.join(", ")}, ואין מי שמתאים לה` : ""}"` : ""}>${x.playing > LINEUP.length ? `<b class="over">${x.playing}</b>` : x.started}/${LINEUP.length}</td>`).join("")}</tr>`;
 
   // rosters with the week's numbers of the starters and the moves
   const freeList = players.filter((p) => p.team26 && p.L && !taken.has(p.id) && !mine.has(p.id) && !picks.some((x) => x.id === p.id))
