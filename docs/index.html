@@ -1026,8 +1026,6 @@ table.cmpt td.lbl { min-width: 5.5em; }
           <select id="vsOpp"><option value="">ללא</option></select>
         </div>
         <div class="field"><label for="maxAge">גיל מקסימלי</label><input type="number" id="maxAge" min="19" max="42" value="42"></div>
-        <label class="check"><input type="checkbox" id="hideTaken" checked> הסתר שחקנים שנבחרו</label>
-        <label class="check"><input type="checkbox" id="onlyFav"> רק מועדפים</label>
         <label class="check"><input type="checkbox" id="onlyMoved"> רק שחקנים שעברו קבוצה</label>
         <label class="check"><input type="checkbox" id="noHurt"> ללא שחקנים פצועים</label>
         <div class="field">
@@ -4109,11 +4107,9 @@ function syncControls() {
   $("viewBoard").hidden = st.tab !== "board"; $("viewAdv").hidden = st.tab !== "adv"; $("viewDraft").hidden = st.tab !== "draft"; $("viewCmp").hidden = st.tab !== "cmp"; $("viewMu").hidden = st.tab !== "mu";
   // The table search does nothing in the draft room (it has its own pick box), so it is hidden there
   document.querySelector(".topsearch").hidden = st.tab === "draft" || st.tab === "cmp" || st.tab === "mu";
-  // the quick switch over the tables (several groups at once); the two sidebar boxes are its one-group shortcuts
+  // the quick switch over the tables (several groups at once)
   const sh = st.show;
   for (const b of document.querySelectorAll("[data-show]")) b.setAttribute("aria-pressed", b.dataset.show === "all" ? !sh.length : sh.includes(b.dataset.show));
-  $("onlyFav").checked = sh.length === 1 && sh[0] === "fav";
-  $("hideTaken").checked = sh.length === 1 && sh[0] === "free";
   document.body.classList.toggle("no-fade", sh.includes("mine") || sh.includes("fav"));
   for (const b of document.querySelectorAll("[data-avs]")) b.setAttribute("aria-pressed", st.availSeasons.includes(Number(b.dataset.avs)));
   // Collapsed list shows the chosen seasons, newest first
@@ -4420,8 +4416,6 @@ $("showSeg").addEventListener("click", (e) => {
   st.show = v === "all" ? [] : st.show.includes(v) ? st.show.filter((x) => x !== v) : [...st.show, v];
   update(false);
 });
-$("hideTaken").addEventListener("change", (e) => { st.show = e.target.checked ? ["free"] : []; update(false); });
-$("onlyFav").addEventListener("change", (e) => { st.show = e.target.checked ? ["fav"] : []; update(false); });
 for (const id of ["onlyMoved", "noHurt"]) $(id).addEventListener("change", (e) => { st[id] = e.target.checked; update(false); });
 
 if (D.seasons.includes(D.current)) document.querySelector('[data-avs="4"]').hidden = false;
