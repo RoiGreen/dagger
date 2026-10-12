@@ -1152,6 +1152,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
               <button type="button" data-auto="next">בחירה הבאה</button>
               <button type="button" data-auto="mine">עד התור שלי</button>
               <button type="button" data-auto="all">כל הדראפט</button>
+              <button type="button" data-auto="redo" title="הקבוצה שלך נשארת כמו שהיא; כל בחירה של קבוצה אחרת מוחלפת בשחקן הזמין הכי טוב באותו מקום בדראפט">בחירה מחדש לשאר הקבוצות</button>
             </div>
           </div>
         </div>
@@ -3740,6 +3741,28 @@ $("pickEdit").addEventListener("keydown", (e) => {
 });
 
 // ---------- auto-pick: the best available player by the current ranking, for the team on the clock ----------
+// Re-draft the other teams: my picks stay where they are, every other pick (in draft order) becomes the best player
+// still available at that moment. Repairs a board drafted before every player could be picked.
+function redoOthers() {
+  const me = myIdx();
+  if (!picks.some((x) => x.team !== me)) return showToast("אין בחירות של קבוצות אחרות להחליף.");
+  if (!confirm("לבחור מחדש את כל השחקנים של שאר הקבוצות? הקבוצה שלך לא משתנה.")) return;
+  const pool = players.filter((p) => p.L && (p.team26 || p.rookie)).sort((a, b) => draftVal(b) - draftVal(a)).map((p) => p.id);
+  const used = new Set(picks.filter((x) => x.team === me).map((x) => x.id));
+  let at = 0, changed = 0;
+  for (const x of picks) {
+    if (x.team === me) continue;
+    while (at < pool.length && used.has(pool[at])) at++;
+    if (at >= pool.length) break;
+    if (x.id !== pool[at]) changed++;
+    x.id = pool[at]; used.add(pool[at]);
+  }
+  // table marks of players now on a draft-room team are no longer needed
+  for (const x of picks) if (st.tags[x.id] === "t") delete st.tags[x.id];
+  editCell = null;
+  rebuildSets(); saveSettings(); render(); flushPicks();
+  showToast(`${changed} בחירות של קבוצות אחרות הוחלפו. הקבוצה שלך נשארה כמו שהיא.`);
+}
 function autoPick(until) {
   const n = Math.max(st.teams, 1), total = n * Math.max(st.roster, 1), me = myIdx();
   // Everyone on a 2026-27 roster (and rookies), not only players who pass the table filters: a star who missed
@@ -3767,7 +3790,7 @@ function autoPick(until) {
 }
 document.querySelector(".autobar").addEventListener("click", (e) => {
   const b = e.target.closest("button[data-auto]");
-  if (b) autoPick(b.dataset.auto);
+  if (b) b.dataset.auto === "redo" ? redoOthers() : autoPick(b.dataset.auto);
 });
 
 function renderMine() {
