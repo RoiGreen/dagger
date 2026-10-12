@@ -1024,16 +1024,6 @@ table.cmpt td.lbl { min-width: 5.5em; }
           </details>
         </div>
         <div class="field">
-          <label for="formWin">כושר עדכני</label>
-          <select id="formWin">
-            <option value="">עונה שלמה</option>
-            <option value="7">7 ימים אחרונים</option>
-            <option value="14">14 ימים אחרונים</option>
-            <option value="30">חודש אחרון</option>
-          </select>
-          <p class="hint" id="formHint" hidden></p>
-        </div>
-        <div class="field">
           <label for="vsOpp">נגד יריבה</label>
           <select id="vsOpp"><option value="">ללא</option></select>
         </div>
@@ -4098,14 +4088,15 @@ function syncControls() {
   const onlyCur = chosenSeasons().every((y) => y === D.current);
   $("minGp").min = 0; $("minGp").max = onlyCur ? Math.max(D.curMaxGp || 1, 1) : 82;
   $("minGp").value = st.minGp; $("minGpOut").textContent = onlyCur ? Math.min(st.minGp, D.curMaxGp || 1) : st.minGp;
-  $("formWin").value = st.formWin || ""; setField("formWinTop", st.formWin || "");
-  const fh = $("formHint");
-  fh.hidden = !st.formWin;
+  setField("formWinTop", st.formWin || "");
+  // which games the recent-form window covers, on hover
+  let formTip = "";
   if (st.formWin && D.formEnd) {
     const end = new Date(D.formEnd + "T12:00:00Z"), start = new Date(end - (Number(st.formWin) - 1) * 864e5);
     const d = (x) => x.toLocaleDateString("he-IL", { day: "numeric", month: "numeric", year: "2-digit", timeZone: "UTC" });
-    fh.textContent = `משחקי העונה הסדירה מ־${d(start)} עד ${d(end)}. נספרים שחקנים עם ${FORM_MIN[st.formWin]} משחקים לפחות.`;
+    formTip = `משחקי העונה הסדירה מ־${d(start)} עד ${d(end)}. נספרים שחקנים עם ${FORM_MIN[st.formWin]} משחקים לפחות.`;
   }
+  $("formWinTop").title = formTip;
   $("minMin").value = st.minMin; $("minMinOut").textContent = st.minMin;
   syncCatFilters();
   setField("maxAge", st.maxAge);
@@ -4152,7 +4143,6 @@ $("puntChips").innerHTML = CATS.map((c) => `<button class="chip punt" data-punt=
 const teams = [...new Set(players.map((p) => p.team26).filter(Boolean))].sort();
 $("vsOpp").innerHTML += teams.map((t) => `<option value="${t}">${t}</option>`).join("");
 $("vsOpp").addEventListener("change", (e) => { st.vsOpp = e.target.value; update(); });
-$("formWin").addEventListener("change", (e) => { st.formWin = e.target.value; update(); });
 $("formWinTop").addEventListener("change", (e) => { st.formWin = e.target.value; update(); });
 document.addEventListener("change", (e) => {
   const sel = e.target.closest("[data-cardform]");
