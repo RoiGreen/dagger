@@ -498,7 +498,9 @@ table.mucats .sofar { display: block; font-size: .68rem; font-weight: 600; color
 .mubar2.win i, .mubar2.lean-w i { background: var(--pos); } .mubar2.toss i { background: var(--led); } .mubar2.lean-l i, .mubar2.lose i { background: var(--neg); }
 .muq { font-family: var(--font-num); font-size: .9rem; display: inline-block; min-width: 3em; }
 .muq.win, .muq.lean-w { color: var(--pos); } .muq.lean-l, .muq.lose { color: var(--neg); }
-.mupicks .mwho { display: grid; gap: 1px; }
+.mupicks .mwho { display: grid; gap: 2px; }
+.mupicks .mline { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; }
+.mupicks .mline .mdays { margin-inline-start: 6px; }
 .mupicks .mwho > .pn, .mupicks .mwho { align-items: center; }
 .mupicks .mdrop { font-size: .74rem; color: var(--muted); font-weight: 600; }
 .mupicks .mdays { font-family: var(--font-body); font-size: .78rem; color: var(--muted); white-space: nowrap; letter-spacing: .08em; }
@@ -3685,9 +3687,9 @@ function renderMatchup() {
     const days = weekDays().filter((d) => x.A2.cell.get(`${x.X.id}|${d}`)?.slot);
     const dropTxt = x.drop ? `${x.kind === "il" ? "ל־IL" : "משחרר"}: <span class="pn" data-pcard="${x.drop.id}">${esc(x.drop.name)}</span>` : "יש מקום פנוי בסגל";
     return `<li><span class="rk">${i + 1}</span>${x.X.img ? `<img class="mimg" src="${x.X.img}" alt="" loading="lazy" decoding="async">` : `<span class="mimg"></span>`}
-      <span class="mwho"><span class="pn" data-pcard="${x.X.id}">${esc(x.X.name)}</span>${teamLogo(x.X.team26)}${x.X.hurt ? injuryPill(x.X) : ""}
+      <span class="mwho"><span class="mline"><span class="pn" data-pcard="${x.X.id}">${esc(x.X.name)}</span>${teamLogo(x.X.team26)}${x.X.hurt ? injuryPill(x.X) : ""}
+        <span class="mdays" title="הימים שבהם הוא נכנס להרכב">${days.map(dayShort).join(" ") || "–"}</span></span>
         <small class="mdrop">${dropTxt}</small></span>
-      <span class="mdays" title="הימים שבהם הוא נכנס להרכב">${days.map(dayShort).join(" ") || "–"}</span>
       <span class="mtags">${ups.map((u) => `<i class="need"><bdi>${u.l}</bdi> +${Math.round(u.d * 100)}%</i>`).join("")}</span>
       <b class="mfit" title="סיכוי לנצח את המצ'אפ אחרי המהלך">${pctTxt(x.r.win)}<small>+${Math.max(0, Math.round((x.r.win - odds.win) * 100))}%</small></b>
       <button type="button" class="mgo" data-mumove="${x.X.id}|${x.drop?.id ?? ""}|${x.kind ?? ""}">בצע</button></li>`;
