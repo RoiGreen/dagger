@@ -254,6 +254,23 @@ tr.sel-team td { box-shadow: inset 0 -2px 0 var(--accent), inset 0 2px 0 var(--a
 .tabhead { border-bottom: 1px solid var(--line); }
 .tabhead-inner { display: inline-grid; gap: 8px; max-width: 100%; }
 .tabs { display: flex; gap: 4px; }
+.lpanel > summary { list-style: none; cursor: pointer; display: grid; gap: 2px; }
+.lpanel > summary::-webkit-details-marker { display: none; }
+.lpanel > summary h2 { display: flex; align-items: center; gap: 8px; }
+.lpanel > summary h2::after { content: "▾"; font-size: .8em; color: var(--muted); margin-inline-start: auto; transition: transform .15s; }
+.lpanel[open] > summary h2::after { transform: rotate(180deg); }
+.lpanel .lsum { font-size: .8rem; color: var(--muted); font-weight: 600; }
+.lpanel[open] .lsum { display: none; }
+.lpanel[open] > summary { margin-bottom: 4px; }
+.lpanel { display: block; }
+.lbody { display: grid; gap: 14px; }
+.lbody input[type="text"] { font: inherit; color: var(--ink); background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; width: 100%; min-width: 0; box-sizing: border-box; }
+.tnames > summary { cursor: pointer; font-weight: 700; font-size: .88rem; }
+.tnames[open] > summary { margin-bottom: 8px; }
+.phead2 { display: flex; align-items: center; justify-content: space-between; gap: 8px; }
+.fcount { display: inline-grid; place-items: center; min-width: 1.5em; height: 1.5em; padding: 0 5px; border-radius: 999px; background: var(--accent); color: #fff; font-size: .72rem; font-weight: 800; vertical-align: middle; }
+.dsetlink { justify-self: start; width: fit-content; margin: 0 0 8px; padding: 0; border: 0; background: none; color: var(--accent); font: inherit; font-weight: 700; cursor: pointer; }
+.dsetlink:hover { text-decoration: underline; }
 .dsetup { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 10px 14px; }
 .dsetup summary { cursor: pointer; font-weight: 700; }
 .dgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 10px 0; align-items: end; }
@@ -927,8 +944,38 @@ table.cmpt td.lbl { min-width: 5.5em; }
 
   <div class="layout">
     <aside>
-      <section class="panel" aria-labelledby="hFmt">
-        <h2 id="hFmt">פורמט</h2>
+      <details class="panel lpanel" id="leaguePanel">
+        <summary><h2 id="hLeague">הליגה שלי</h2><span class="lsum" id="leagueSum"></span></summary>
+        <div class="lbody">
+        <div class="field"><label for="leagueName">שם הליגה</label><input type="text" id="leagueName" maxlength="40" placeholder="הליגה שלי"></div>
+        <div class="field">
+          <span class="lbl">סוג ליגה</span>
+          <div class="seg" role="group" aria-label="סוג ליגה">
+            <button id="fmt9" aria-pressed="true" data-fmt="cat">9 קטגוריות</button>
+            <button id="fmtP" aria-pressed="false" data-fmt="pts">נקודות</button>
+          </div>
+        </div>
+        <div class="row2">
+          <div class="field"><label for="teams">קבוצות בליגה</label><input type="number" id="teams" min="4" max="30" value="8"></div>
+          <div class="field"><label for="roster">שחקנים בסגל</label><input type="number" id="roster" min="5" max="20" value="13"></div>
+        </div>
+        <div class="row2">
+          <div class="field"><label for="myTeam">הקבוצה שלי</label><select id="myTeam"></select></div>
+          <div class="field"><label for="muAddsMax">פיק אפים בשבוע</label><input type="number" id="muAddsMax" min="0" max="14"></div>
+        </div>
+        <label class="check"><input type="checkbox" id="snake" checked> סדר סנייק בדראפט</label>
+        <details class="tnames"><summary>שמות הקבוצות (לפי סדר הבחירה בסיבוב הראשון)</summary><div class="teamnames" id="teamNames"></div></details>
+        <div class="field" id="puntField">
+          <span class="lbl">ויתור על קטגוריות (Punt)</span>
+          <div class="chips" id="puntChips"></div>
+          <p class="hint">קטגוריה מסומנת לא נספרת: בליגת קטגוריות היא יוצאת מה־Z, ובליגת נקודות הנקודות שלה לא נכנסות ל־FPTS.</p>
+        </div>
+        <p class="hint" id="ptsHint" hidden>ניקוד FPTS: נקודה 1, שלשה 1, קליעה 2, זריקה ‎-1, עונשין 1, ניסיון עונשין ‎-1, ריבאונד 1, אסיסט 2, חטיפה 4, חסימה 4, איבוד ‎-2.</p>
+        </div>
+      </details>
+
+      <section class="panel" aria-labelledby="hView">
+        <h2 id="hView">תצוגה</h2>
         <div class="field">
           <span class="lbl">עונות</span>
           <p class="lockmsg" id="seasonLockMsg" role="status" hidden>הסינון מול יריבה מחושב על העונה הסדירה (2025-26, ו־2026-27 כשיש בה משחקים). כדי לבחור עונות אחרות, בטל קודם את הסינון מול יריבה.</p>
@@ -945,33 +992,21 @@ table.cmpt td.lbl { min-width: 5.5em; }
           <p class="hint">כל הנתונים בכל הטבלאות מחושבים מהעונות שנבחרו. כמה עונות = ממוצע משוקלל לפי משחקים.</p>
         </div>
         <div class="field">
-          <span class="lbl">סוג ליגה</span>
-          <div class="seg" role="group" aria-label="סוג ליגה">
-            <button id="fmt9" aria-pressed="true" data-fmt="cat">9 קטגוריות</button>
-            <button id="fmtP" aria-pressed="false" data-fmt="pts">נקודות</button>
-          </div>
-        </div>
-        <div class="field">
           <span class="lbl">סטטיסטיקה</span>
           <div class="seg" role="group" aria-label="נרמול">
             <button id="modeG" aria-pressed="true" data-mode="g">אמיתי למשחק</button>
             <button id="mode36" aria-pressed="false" data-mode="36">ל־36 דקות</button>
           </div>
         </div>
-        <div class="row2">
-          <div class="field"><label for="teams">קבוצות בליגה</label><input type="number" id="teams" min="4" max="30" value="8"></div>
-          <div class="field"><label for="roster">שחקנים בסגל</label><input type="number" id="roster" min="5" max="20" value="13"></div>
+        <div class="field">
+          <label for="vsOpp">נגד יריבה</label>
+          <select id="vsOpp"><option value="">ללא</option></select>
         </div>
-        <div class="field" id="puntField">
-          <span class="lbl">ויתור על קטגוריות (Punt)</span>
-          <div class="chips" id="puntChips"></div>
-          <p class="hint">קטגוריה מסומנת לא נספרת: בליגת קטגוריות היא יוצאת מה־Z, ובליגת נקודות הנקודות שלה לא נכנסות ל־FPTS.</p>
-        </div>
-        <p class="hint" id="ptsHint" hidden>ניקוד FPTS: נקודה 1, שלשה 1, קליעה 2, זריקה ‎-1, עונשין 1, ניסיון עונשין ‎-1, ריבאונד 1, אסיסט 2, חטיפה 4, חסימה 4, איבוד ‎-2.</p>
       </section>
 
       <section class="panel" aria-labelledby="hFilt">
-        <h2 id="hFilt">סינון ומיון</h2>
+        <div class="phead2"><h2 id="hFilt">סינון שחקנים <span class="fcount" id="filtCount" hidden></span></h2>
+          <button class="linkbtn" type="button" id="filtClear" hidden>נקה סינונים</button></div>
         <div class="field">
           <label for="sortBy">מיין לפי</label>
           <div class="sortrow">
@@ -1022,10 +1057,6 @@ table.cmpt td.lbl { min-width: 5.5em; }
             <div class="chips" id="teamChips" role="group" aria-label="בחירת קבוצות"></div>
             <button class="linkbtn" type="button" id="teamClear">ניקוי הבחירה</button>
           </details>
-        </div>
-        <div class="field">
-          <label for="vsOpp">נגד יריבה</label>
-          <select id="vsOpp"><option value="">ללא</option></select>
         </div>
         <div class="field"><label for="maxAge">גיל מקסימלי</label><input type="number" id="maxAge" min="19" max="42" value="42"></div>
         <label class="check"><input type="checkbox" id="onlyMoved"> רק שחקנים שעברו קבוצה</label>
@@ -1137,17 +1168,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
       </section>
 
       <section class="view" id="viewDraft" role="tabpanel" aria-labelledby="tabDraft" hidden>
-        <details class="dsetup" id="draftSetup">
-          <summary>הגדרות הליגה</summary>
-          <div class="dgrid">
-            <div class="field"><label for="leagueName">שם הליגה</label><input id="leagueName" maxlength="40" placeholder="הליגה שלי"></div>
-            <div class="field"><label for="dTeams">מספר קבוצות</label><input type="number" id="dTeams" min="4" max="30"></div>
-            <div class="field"><label for="dRounds">סיבובים (שחקנים בסגל)</label><input type="number" id="dRounds" min="5" max="20"></div>
-            <div class="field"><label for="myTeam">הקבוצה שלי</label><select id="myTeam"></select></div>
-            <label class="check"><input type="checkbox" id="snake" checked> סדר סנייק</label>
-          </div>
-          <div class="field"><span class="lbl">שמות הקבוצות, לפי סדר הבחירה בסיבוב הראשון</span><div class="teamnames" id="teamNames"></div></div>
-        </details>
+        <button type="button" class="linkbtn dsetlink" id="openLeague">הגדרות הליגה: קבוצות, סדר בחירה ושמות</button>
         <div class="dconsole">
           <div class="clock" id="clock"></div>
           <div class="pickbar">
@@ -1214,7 +1235,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
       <section class="view" id="viewMu" role="tabpanel" aria-labelledby="tabMu" hidden>
         <div class="mubar">
           <div class="mupick"><span>היריב השבוע</span><select id="muOpp" aria-label="היריב השבוע"></select></div>
-          <span class="muadds">פיק אפים השבוע: <input type="number" id="muAddsUsed" min="0" max="14" aria-label="פיק אפים שנוצלו"> מתוך <input type="number" id="muAddsMax" min="0" max="14" aria-label="פיק אפים בשבוע"></span>
+          <span class="muadds">פיק אפים השבוע: <input type="number" id="muAddsUsed" min="0" max="14" aria-label="פיק אפים שנוצלו"> מתוך <b id="muAddsMaxTxt"></b></span>
           <span class="muwnav">
             <button type="button" class="mact" id="muPrev" aria-label="השבוע הקודם" title="השבוע הקודם"><svg viewBox="0 0 10 10" width="10" height="10" aria-hidden="true"><path d="M3 1.5 6.5 5 3 8.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
             <span class="muweek" id="muWeek"></span>
@@ -1674,6 +1695,7 @@ function render() {
   if (rows.length > FIRST) setTimeout(more, 0);
 
 
+  syncTeamNames(); syncLeaguePanel();
   renderMine(); renderFav(); renderAdv(); renderDraft(); renderDist(); renderCmp(); renderMatchup();
 }
 
@@ -2485,9 +2507,24 @@ function syncTeamNames() {
   const opts = Array.from({ length: n }, (_, i) => `<option value="${i}">${esc(teamName(i))}</option>`).join("");
   if ($("myTeam") !== document.activeElement) { $("myTeam").innerHTML = opts; $("myTeam").value = String(myIdx()); }
   setField("leagueName", st.leagueName || "");
-  setField("dTeams", st.teams); setField("dRounds", st.roster);
 }
 
+// "הליגה שלי": a one-line summary while folded, the weekly pickups; and the filters count / reset
+const FILTER_DEFAULTS = () => ({ minGp: 0, minMin: 0, catFilters: [{ cat: "PTS", val: 0 }], weekGames: [], pos: new Set(), teamSel: [],
+  maxAge: 42, onlyMoved: false, noHurt: false, inj: "all", rookies: "all", roles: [] });
+function activeFilters() {
+  return [st.minGp > 0, st.minMin > 0, st.catFilters.some((f) => Number(f.val) > 0), st.weekGames.length, st.pos.size, st.teamSel.length,
+    st.maxAge < 42, st.onlyMoved, st.noHurt, st.inj !== "all", st.rookies !== "all", st.roles.length].filter(Boolean).length;
+}
+function syncLeaguePanel() {
+  const fmtTxt = st.fmt === "pts" ? "נקודות" : "9 קטגוריות";
+  const punts = [...st.punts].map((k) => CATS.find((c) => c.k === k)?.l).filter(Boolean);
+  $("leagueSum").textContent = [st.leagueName, fmtTxt, `${st.teams} קבוצות`, `${st.roster} בסגל`, punts.length ? `Punt ${punts.join(", ")}` : ""].filter(Boolean).join(" · ");
+  setField("muAddsMax", st.weekAdds ?? 3);
+  const n = activeFilters();
+  $("filtCount").hidden = !n; $("filtCount").textContent = n;
+  $("filtClear").hidden = !n;
+}
 function renderDraft() {
   if (st.tab !== "draft") return;
   syncTeamNames();
@@ -3520,7 +3557,7 @@ function renderMatchup() {
   $("muPrev").disabled = from <= first; $("muNext").disabled = to >= last;
   $("muNow").hidden = !off;
   const maxAdds = st.weekAdds ?? 3;
-  setField("muAddsMax", maxAdds); setField("muAddsUsed", addsUsed());
+  $("muAddsMaxTxt").textContent = maxAdds; setField("muAddsUsed", addsUsed());
   const out = $("muOut");
   const mineP = myRoster(), oppP = rosterOf(st.muOpp);
   if (!mineP.length || !oppP.length) {
@@ -3703,7 +3740,7 @@ $("muOpp").addEventListener("change", (e) => { st.muOpp = Number(e.target.value)
 for (const [id, d] of [["muPrev", -1], ["muNext", 1], ["muNow", 0]]) {
   $(id).addEventListener("click", () => { st.muWeekOff = d ? (st.muWeekOff || 0) + d : 0; renderMatchup(); });
 }
-$("muAddsMax").addEventListener("input", (e) => { const v = Number(e.target.value); if (Number.isFinite(v)) { st.weekAdds = Math.min(14, Math.max(0, v)); saveSettings(); renderMatchup(); } });
+$("muAddsMax").addEventListener("input", (e) => { const v = Number(e.target.value); if (Number.isFinite(v)) { st.weekAdds = Math.min(14, Math.max(0, v)); update(false); } });
 $("muAddsUsed").addEventListener("input", (e) => { const v = Number(e.target.value); if (Number.isFinite(v)) { st.muAdds = { week: WEEK.from, n: Math.min(14, Math.max(0, v)) }; saveSettings(); renderMatchup(); } });
 $("muOut").addEventListener("click", (e) => {
   const b = e.target.closest("button");
@@ -4342,8 +4379,6 @@ $("catFilters").addEventListener("click", (e) => {
   syncCatFilters(true);
   update(false);
 });
-num("dTeams", "teams", 4, 30);
-num("dRounds", "roster", 5, 20);
 $("myTeam").addEventListener("change", (e) => { st.myPos = Number(e.target.value) + 1; rebuildSets(); update(false); flushPicks(); });
 $("leagueName").addEventListener("input", (e) => { st.leagueName = e.target.value; update(false); });
 $("teamNames").addEventListener("input", (e) => {
@@ -4418,6 +4453,12 @@ $("quickPicks").addEventListener("change", (e) => {
   if (pl && value) { $("pickInput").value = value; $("pickBtn").focus(); }
   e.target.value = "";
 });
+$("filtClear").addEventListener("click", () => { Object.assign(st, FILTER_DEFAULTS()); syncControls(); update(); });
+$("openLeague").addEventListener("click", () => {
+  const lp = $("leaguePanel");
+  lp.open = true;
+  lp.scrollIntoView({ behavior: "smooth", block: "start" });
+});
 $("snake").addEventListener("change", (e) => { st.snake = e.target.checked; update(false); });
 $("undoBtn").addEventListener("click", () => {
   if (!picks.length) return;
@@ -4448,6 +4489,7 @@ if (D.injUpdated) {
   $("injStamp").hidden = false;
 }
 
+$("leaguePanel").open = !picks.length && !st.leagueName;  // folded once the league is set up
 syncControls(); compute(); render();
 if (SITE) connectSite(); else connectStore();
 </script>
