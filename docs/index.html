@@ -476,7 +476,11 @@ table.box tr.ilrow td { opacity: .55; }
 .muadd input { flex: 1 1 180px; } .muadd select { flex: 0 1 200px; width: auto; }
 .dghead { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .dghead h3 { margin: 0; }
-.showseg { margin: 0 0 10px; justify-self: start; width: fit-content; }
+.topbar { display: flex; flex-wrap: wrap; align-items: center; justify-content: space-between; gap: 10px; margin: 0 0 10px; }
+.topbar[hidden] { display: none; }
+.showseg { width: fit-content; }
+.topform { display: inline-flex; align-items: center; gap: 8px; font-weight: 700; font-size: .88rem; color: var(--muted); }
+.topform select { width: auto; min-width: 150px; }
 /* my team / favorites view: their rows are the point, so they are not faded */
 .no-fade tr.is-taken td:not(.acts), .no-fade tr.is-mine td:not(.acts):not(.name), .no-fade tr.is-mine td.name > * { opacity: 1; }
 table.box.daygrid { width: 100%; margin-top: 8px; }
@@ -1085,11 +1089,20 @@ table.cmpt td.lbl { min-width: 5.5em; }
           </div>
         </div>
       </div>
+      <div class="topbar" id="topBar">
       <div class="seg showseg" id="showSeg" role="group" aria-label="אילו שחקנים להציג">
         <button type="button" data-show="free">שחקנים חופשיים</button>
         <button type="button" data-show="mine">הקבוצה שלי</button>
         <button type="button" data-show="fav">המועדפים שלי</button>
         <button type="button" data-show="all">כל השחקנים</button>
+      </div>
+      <label class="topform"><span>כושר עדכני</span>
+        <select id="formWinTop" aria-label="כושר עדכני">
+          <option value="">עונה שלמה</option>
+          <option value="7">7 ימים אחרונים</option>
+          <option value="14">14 ימים אחרונים</option>
+          <option value="30">חודש אחרון</option>
+        </select></label>
       </div>
       <section class="view" id="viewBoard" role="tabpanel" aria-labelledby="tabBoard">
       <div class="legend">
@@ -4068,7 +4081,7 @@ function syncControls() {
   const onlyCur = chosenSeasons().every((y) => y === D.current);
   $("minGp").min = 0; $("minGp").max = onlyCur ? Math.max(D.curMaxGp || 1, 1) : 82;
   $("minGp").value = st.minGp; $("minGpOut").textContent = onlyCur ? Math.min(st.minGp, D.curMaxGp || 1) : st.minGp;
-  $("formWin").value = st.formWin || "";
+  $("formWin").value = st.formWin || ""; setField("formWinTop", st.formWin || "");
   const fh = $("formHint");
   fh.hidden = !st.formWin;
   if (st.formWin && D.formEnd) {
@@ -4090,7 +4103,7 @@ function syncControls() {
   for (const b of document.querySelectorAll("[data-tab]")) b.setAttribute("aria-selected", b.dataset.tab === st.tab);
   // The page title follows the open tab
   try { sessionStorage.setItem(TAB_KEY, st.tab); } catch (e) {}
-  $("showSeg").hidden = !["board", "adv"].includes(st.tab);
+  $("topBar").hidden = !["board", "adv"].includes(st.tab);
   $("pageTitle").textContent = { board: "נתונים כלליים", adv: "נתונים מתקדמים", draft: "חדר הדראפט", cmp: "השוואה", mu: "מצ'אפ שבועי" }[st.tab] || "נתונים כלליים";
   $("pageYear").hidden = st.tab !== "draft";  // the season shows only in the draft room
   $("viewBoard").hidden = st.tab !== "board"; $("viewAdv").hidden = st.tab !== "adv"; $("viewDraft").hidden = st.tab !== "draft"; $("viewCmp").hidden = st.tab !== "cmp"; $("viewMu").hidden = st.tab !== "mu";
@@ -4125,6 +4138,7 @@ const teams = [...new Set(players.map((p) => p.team26).filter(Boolean))].sort();
 $("vsOpp").innerHTML += teams.map((t) => `<option value="${t}">${t}</option>`).join("");
 $("vsOpp").addEventListener("change", (e) => { st.vsOpp = e.target.value; update(); });
 $("formWin").addEventListener("change", (e) => { st.formWin = e.target.value; update(); });
+$("formWinTop").addEventListener("change", (e) => { st.formWin = e.target.value; update(); });
 $("teamChips").innerHTML = teams.map((t) => `<button class="chip" type="button" data-teamsel="${t}" aria-pressed="false">${t}</button>`).join("");
 $("teamClear").addEventListener("click", () => { st.teamSel = []; update(false); });
 $("vsNote").addEventListener("click", (e) => { if (e.target.id === "vsClear") { st.vsOpp = ""; update(); } });
