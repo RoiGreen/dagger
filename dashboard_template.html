@@ -575,13 +575,13 @@ table.box.daygrid tr.dgfoot .over { color: var(--neg); }
 .mupicks .mtags i { font-style: normal; font-family: var(--font-num); font-weight: 700; font-size: .78rem; padding: 0 7px; border-radius: 6px; background: var(--sunk); }
 .mupicks .mtags i.need { background: color-mix(in srgb, var(--led) 26%, transparent); }
 /* gains on top, losses under them, the warning centred below */
-.mupicks .mtags { flex: 1; display: grid; justify-items: center; gap: 4px; margin-inline-start: 0; }
+.mupicks .mtags { flex: none; display: grid; justify-items: center; gap: 4px; margin-inline-start: auto; }  /* next to the win chance */
 .mupicks .mtags .trow { display: inline-flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
 .mupicks .mtags i.gain { background: color-mix(in srgb, var(--pos) 18%, transparent); color: var(--pos); }
 .mupicks .mtags i.loss { background: color-mix(in srgb, var(--neg) 14%, transparent); color: var(--neg); }
 .mupicks .mtags .mwarn { font-style: normal; font-size: .86rem; font-weight: 800; color: var(--neg); text-align: center; }
 .mupicks .mfit { font-family: var(--font-num); font-size: 1.15rem; min-width: 5.5rem; text-align: center; color: var(--accent); }
-.mupickhead { display: flex; justify-content: flex-end; padding-inline: 11px calc(11px + 64px + 10px); margin-bottom: 4px; }  /* over the % column: skip the button */
+.mupickhead { display: flex; justify-content: flex-end; padding-inline: 11px calc(11px + 64px + 10px); margin: -6px 0 2px; }  /* over the % column: skip the button */
 .mupicks .mgo { width: 64px; flex: none; }
 .mupickhead span { min-width: 5.5rem; width: 5.5rem; line-height: 1.2; text-align: center; font-size: .8rem; font-weight: 700; color: var(--muted); }
 .mupicks li.none { color: var(--muted); background: none; border: 0; }
@@ -3740,7 +3740,7 @@ function renderMatchup() {
     const cur = `${x.drop?.id ?? ""}|${x.kind ?? ""}`;
     const dropSel = `<select class="mdropsel" data-mudropsel="${x0.X.id}" aria-label="את מי לשחרר">${opts.map(([v, l]) => `<option value="${v}"${v === cur ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
     // categories that move: the biggest gains, and the losses too, so a swap's price is in view
-    const moved = x.r.cats.map((c, j) => ({ l: c.l, d: c.q - odds.cats[j].q, punt: st.punts.has(c.k) })).filter((u) => !u.punt && Math.abs(u.d) > 0.02);
+    const moved = x.r.cats.map((c, j) => ({ l: c.l, d: c.q - odds.cats[j].q, punt: st.punts.has(c.k) })).filter((u) => !u.punt && Math.abs(u.d) >= 0.005);
     const ups = moved.filter((u) => u.d > 0).sort((a, b) => b.d - a.d).slice(0, 3);
     const downs = moved.filter((u) => u.d < 0).sort((a, b) => a.d - b.d).slice(0, 3);
     // releasing someone clearly better for the season: good for this week only
