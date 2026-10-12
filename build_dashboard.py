@@ -454,6 +454,7 @@ def main() -> None:
         if f.exists():
             p["img"] = "data:image/webp;base64," + base64.b64encode(f.read_bytes()).decode()
             with_img += 1
+    site_players = site_images(players)
     print(f"Headshots embedded for {with_img} players")
 
     pd.DataFrame([{
@@ -493,10 +494,29 @@ def main() -> None:
                           "teamSeasons": team_seasons, "injUpdated": inj_updated, "vsGames": VS_GAMES, "sched": sched,
                           "dist": team_distribution(), "box": box_scores(), "logos": team_logos(), "formEnd": form_end},
                          ensure_ascii=False, separators=(",", ":"))
-    html = html.replace("/*__DATA__*/null", payload)
-    OUT.write_text(html, encoding="utf-8")
-    build_site(html)
+    OUT.write_text(html.replace("/*__DATA__*/null", payload), encoding="utf-8")
+    # The website loads the photos as separate files (cached, fetched when shown), so the page itself is small
+    as_json = lambda x: json.dumps(x, ensure_ascii=False, separators=(",", ":"))
+    build_site(html.replace("/*__DATA__*/null", payload.replace(as_json(players), as_json(site_players), 1)))
     print(f"Saved {OUT.name} ({len(players)} players)")
+
+
+SITE_IMG = SITE_OUT.parent / "img"
+
+
+def site_images(players: list[dict]) -> list[dict]:
+    """Copies of the players for the website: each photo becomes docs/img/<id>.webp instead of inline data."""
+    SITE_IMG.mkdir(parents=True, exist_ok=True)
+    out = []
+    for p in players:
+        f = HEADSHOTS / f"{p['id']}.webp"
+        if p.get("img") and f.exists():
+            dst = SITE_IMG / f.name
+            if not dst.exists() or dst.read_bytes() != f.read_bytes():
+                dst.write_bytes(f.read_bytes())
+            p = {**p, "img": f"img/{f.name}"}
+        out.append(p)
+    return out
 
 
 def build_site(html: str) -> None:
@@ -508,9 +528,9 @@ def build_site(html: str) -> None:
     if not cfg.get("supabaseUrl") or not cfg.get("supabaseKey"):
         print(f"{SITE_CONFIG.name} is missing supabaseUrl / supabaseKey, skipping the website")
         return
-    site_cfg = json.dumps({"supabaseUrl": cfg["supabaseUrl"], "supabaseKey": cfg["supabaseKey"]})
+    # The sign-in library is loaded by the page itself once it is drawn (connectSite)
+    site_cfg = json.dumps({"supabaseUrl": cfg["supabaseUrl"], "supabaseKey": cfg["supabaseKey"], "supabaseJs": SUPABASE_JS})
     html = html.replace("/*__SITE__*/null", site_cfg)
-    html = html.replace("\n<script>\n", f'\n<script src="{SUPABASE_JS}"></script>\n<script>\n', 1)
     # The template starts with <title>, font links and <style>; those belong in <head>
     cut = html.index("</style>") + len("</style>")
     head, body = html[:cut], html[cut:]

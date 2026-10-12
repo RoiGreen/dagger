@@ -1572,7 +1572,7 @@ function nameCell(p) {
     : `${rk}${inj}${esc(p.team26)}`;
   const lab = DRAFT.labels.get(p.id);
   const chip = lab ? `<span class="pickchip" title="בחירה ${DRAFT.overall.get(p.id)} בדראפט">${lab}</span>` : "";
-  return `<td class="name" style="--tc:${teamTint(p.team26)}"><div class="nc">${p.img ? `<img class="avatar" src="${p.img}" alt="" loading="lazy">` : `<span class="avatar"></span>`}<div class="nmeta"><div class="nline"><span class="n pcl" data-pcard="${p.id}">${esc(p.name)}</span>${chip}<span class="t">${esc(p.pos || "–")} · ${team}</span>${injuryPill(p)}</div>${scheduleLine(p)}</div></div></td>`;
+  return `<td class="name" style="--tc:${teamTint(p.team26)}"><div class="nc">${p.img ? `<img class="avatar" src="${p.img}" alt="" loading="lazy" decoding="async">` : `<span class="avatar"></span>`}<div class="nmeta"><div class="nline"><span class="n pcl" data-pcard="${p.id}">${esc(p.name)}</span>${chip}<span class="t">${esc(p.pos || "–")} · ${team}</span>${injuryPill(p)}</div>${scheduleLine(p)}</div></div></td>`;
 }
 
 // Availability: share of the 82 games played over the last three seasons he was in the league
@@ -1863,7 +1863,7 @@ function boxTable(team, rows) {
   const best = Math.max(...rows.map(fp));
   const tot = (i) => rows.reduce((a, r) => a + r[i], 0);
   // the player's photo on the left, the name centred in the rest of the cell
-  const face = (r) => { const p = PLAYER_BY_ID.get(r[1]); return p && p.img ? `<img class="bimg" src="${p.img}" alt="">` : `<span class="bimg"></span>`; };
+  const face = (r) => { const p = PLAYER_BY_ID.get(r[1]); return p && p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : `<span class="bimg"></span>`; };
   // Starters: the spot they started at. The NBA box score only says G / F / C, so the two guards are split into
   // PG / SG and the two forwards into SF / PF by how each one is listed (a PG runs the point, a forward starting
   // in the backcourt is the SG; a PF or C is the PF), then by assists / rebounds. The bench shows no position.
@@ -1978,7 +1978,7 @@ function openPlayer(id) {
   }).join("");
   const jc = (JERSEY[p.team26] || [])[0] || "#1d2944";
   $("gameCard").innerHTML = `<button type="button" class="gclose" data-gclose="1" aria-label="סגירה">✕</button>
-    <div class="ghead phead" style="--jc:${jc}"><div class="pinfo">${p.img ? `<img class="pimg" src="${p.img}" alt="">` : ""}<div><div class="pnm">${esc(p.name)}</div>
+    <div class="ghead phead" style="--jc:${jc}"><div class="pinfo">${p.img ? `<img class="pimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<div><div class="pnm">${esc(p.name)}</div>
       <div class="pmeta">${p.team26 ? teamLogo(p.team26) : ""}<span>${esc(TEAM_NAMES[p.team26] || p.team26 || "FA")} · ${esc(p.pos || "–")}</span>${p.hurt ? injuryPill(p) : ""}</div></div></div>
       ${p.L ? `<div class="pstats">${CARD_CATS.map((c) => { const r = leagueRank(p, c);
         return `<div><span class="pv"><b>${c.f(c.v(p))}</b>${r ? `<i title="מקום ${r.rank} מתוך ${r.of} בליגה">#${r.rank}</i>` : ""}</span><small>${c.l}</small></div>`; }).join("")}</div>` : ""}</div>
@@ -2395,7 +2395,7 @@ function renderDraft() {
     const x = t[r];
     const pl = x && byId.get(x.id);
     const editing = editCell && editCell.team === i && editCell.r === r;
-    return `<td data-cell="${i},${r}" class="${i === me ? "me" : ""}${editing ? " editing" : ""}" title="${pl ? "עריכת הבחירה" : "הוספת שחקן לקבוצה"}">${pl ? `<span class="dcell"><span class="pk">${DRAFT.labels.get(x.id)}</span><span class="dn">${esc(pl.name)}</span>${pl.img ? `<img class="dimg" src="${pl.img}" alt="">` : ""}</span>` : ""}</td>`;
+    return `<td data-cell="${i},${r}" class="${i === me ? "me" : ""}${editing ? " editing" : ""}" title="${pl ? "עריכת הבחירה" : "הוספת שחקן לקבוצה"}">${pl ? `<span class="dcell"><span class="pk">${DRAFT.labels.get(x.id)}</span><span class="dn">${esc(pl.name)}</span>${pl.img ? `<img class="dimg" src="${pl.img}" alt="" loading="lazy" decoding="async">` : ""}</span>` : ""}</td>`;
   }).join("") + `</tr>`).join("");
   const zAll = last.now.z, m = st.mode;
   const value = (id) => { const pl = byId.get(id); if (!pl) return 0; return st.fmt === "cat" ? (zAll.get(id)?.total ?? 0) : (pl.F?.[m] ?? 0); };
@@ -2745,7 +2745,7 @@ function cmpFace(L, side, name, leads) {
   if (L.length === 1) {
     const p = L[0], r = rank.get(p.id), z = zOf(p);
     return `<div class="face s${side}${leads ? " leads" : ""}">
-      <div class="ph${p.hurt ? " hurt" : ""}">${p.img ? `<img src="${p.img}" alt="">` : ""}${p.hurt ? injuryPill(p) : ""}</div>
+      <div class="ph${p.hurt ? " hurt" : ""}">${p.img ? `<img src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}${p.hurt ? injuryPill(p) : ""}</div>
       <div class="fn">${esc(p.name)}</div>
       <div class="fm"><span class="num">${esc(p.pos || "–")}</span> · <span class="num">${esc(p.team26 || "FA")}</span>${r ? ` · <span class="num">#${r}</span>` : ""}</div>
       <div class="fs">${st.fmt === "pts"
@@ -2755,7 +2755,7 @@ function cmpFace(L, side, name, leads) {
   }
   const shown = L.slice(0, 7);
   return `<div class="face s${side} multi${leads ? " leads" : ""}">
-    <div class="stack">${shown.map((p) => `<span class="mini" title="${esc(p.name)}">${p.img ? `<img src="${p.img}" alt="">` : ""}</span>`).join("")}${L.length > 7 ? `<span class="mini more num">+${L.length - 7}</span>` : ""}</div>
+    <div class="stack">${shown.map((p) => `<span class="mini" title="${esc(p.name)}">${p.img ? `<img src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}</span>`).join("")}${L.length > 7 ? `<span class="mini more num">+${L.length - 7}</span>` : ""}</div>
     <div class="fn">${esc(name)}</div>
     <div class="fm">${L.length ? `${L.length} שחקנים` : "ללא שחקנים"}</div>
   </div>`;
@@ -2797,7 +2797,7 @@ function renderCmp() {
   const one = LA.length === 1 && LB.length === 1;
   const mark = (side) => {
     const p = one ? (side === "a" ? LA[0] : LB[0]) : null;
-    return p && p.img ? `<img class="wmark w${side}" src="${p.img}" alt="${esc(p.name)}" title="${esc(p.name)}">`
+    return p && p.img ? `<img class="wmark w${side}" src="${p.img}" alt="${esc(p.name)}" title="${esc(p.name)}" loading="lazy" decoding="async">`
       : `<i class="wdot w${side}" title="${esc(side === "a" ? nA : nB)}"></i>`;
   };
   gen.html = cmpTable([...catRows,
@@ -3183,7 +3183,7 @@ function renderMatchup() {
     .filter((x) => x.f.perGame < bestFree - 0.5).sort((a, b) => a.f.perGame - b.f.perGame).slice(0, 3);
   const pickRow = (x, i) => {
     const top = [...x.f.parts].filter((q) => q.v > 0.15).sort((a, b) => b.v - a.v).slice(0, 3);
-    return `<li><span class="rk">${i + 1}</span>${x.p.img ? `<img class="mimg" src="${x.p.img}" alt="">` : `<span class="mimg"></span>`}
+    return `<li><span class="rk">${i + 1}</span>${x.p.img ? `<img class="mimg" src="${x.p.img}" alt="" loading="lazy" decoding="async">` : `<span class="mimg"></span>`}
       <span class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</span>${teamLogo(x.p.team26)}${x.p.hurt ? injuryPill(x.p) : ""}
       <span class="mg" title="משחקים צפויים השבוע">${fmt1(x.f.games).replace(/\.0$/, "")} משח׳</span>
       <span class="mtags">${top.map((q) => `<i class="${weights[q.k] >= 1.4 ? "need" : ""}"><bdi>${q.l}</bdi></i>`).join("")}</span>
@@ -3197,7 +3197,7 @@ function renderMatchup() {
     return fmt1(t(k));
   };
   const rosterTable = (T, title) => `<div class="muroster"><h4>${esc(title)}</h4><table class="box murt"><thead><tr><th class="nosort">שחקן</th><th class="nosort">שוחקו</th><th class="nosort">נותרו</th>${CATS.map((c) => `<th class="nosort">${c.l}</th>`).join("")}</tr></thead><tbody>${
-    [...T.rows].sort((a, b) => b.games - a.games || (b.p.F?.g ?? 0) - (a.p.F?.g ?? 0)).map((r) => `<tr><td class="pn"><span class="pw" data-pcard="${r.p.id}">${r.p.img ? `<img class="bimg" src="${r.p.img}" alt="">` : ""}<span>${esc(r.p.name)}</span></span>${r.p.hurt ? injuryPill(r.p) : ""}</td>
+    [...T.rows].sort((a, b) => b.games - a.games || (b.p.F?.g ?? 0) - (a.p.F?.g ?? 0)).map((r) => `<tr><td class="pn"><span class="pw" data-pcard="${r.p.id}">${r.p.img ? `<img class="bimg" src="${r.p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(r.p.name)}</span></span>${r.p.hurt ? injuryPill(r.p) : ""}</td>
       <td>${r.played}</td><td>${fmt1(r.games).replace(/\.0$/, "")}</td>${CATS.map((c) => `<td>${weekCell(r, c.k)}</td>`).join("")}</tr>`).join("")
   }</tbody></table></div>`;
 
@@ -3449,6 +3449,10 @@ const AUTH_ERRORS = {
 const authText = (e) => AUTH_ERRORS[e?.message] || `משהו השתבש: ${e?.message || "נסה שוב"}`;
 
 async function connectSite() {
+  // The sign-in library is fetched after the page is drawn, so it never holds up the first paint
+  if (!window.supabase) {
+    await new Promise((ok, fail) => document.head.append(Object.assign(document.createElement("script"), { src: SITE.supabaseJs, onload: ok, onerror: fail })));
+  }
   const sb = window.supabase.createClient(SITE.supabaseUrl, SITE.supabaseKey);
   const here = location.origin + location.pathname;
   let mode = "in", signedInAs = null;
@@ -3481,11 +3485,13 @@ async function connectSite() {
     $("saveState").textContent = "טוען את הנתונים שלך…";
     const { data, error } = await sb.from("user_state").select("picks, fav, settings").eq("user_id", user.id).maybeSingle();
     if (error) { $("saveState").textContent = "לא הצלחתי לטעון את הנתונים שלך. רענן את הדף."; return; }
+    const before = JSON.stringify([picks, [...fav], settingsData()]);
     if (data) {
       picks = picksFrom(data); rebuildSets(); fav = new Set(data.fav || []);
       applySettings(data.settings);
     }
     savePicksLocal();
+    const same = before === JSON.stringify([picks, [...fav], settingsData()]);
     remote = {
       async save(d) {
         const { error } = await sb.from("user_state").upsert({
@@ -3495,7 +3501,7 @@ async function connectSite() {
       },
     };
     $("saveState").textContent = "הבחירות נשמרות בחשבון שלך";
-    syncControls(); compute(); render();
+    if (!same) { syncControls(); compute(); render(); }
   }
   function signedOut() {
     signedInAs = null; remote = null; siteUid = null;
