@@ -461,7 +461,7 @@ table.cmpt td.lbl { font-family: var(--font-num); font-weight: 700; text-align: 
 .muscore .mside b { font-size: 1.25rem; }
 .muscore .mside span { font-size: .82rem; color: #aab5cf; }
 .muscore .gcount { font-family: var(--font-num); font-size: 1.25rem; color: #eef2fa; }
-.muscore .mnum { display: grid; grid-template-columns: auto auto auto; align-items: center; gap: 10px; font-family: var(--font-num); font-weight: 800; font-size: 3rem; line-height: 1; justify-items: center; }
+.muscore .mnum { display: grid; grid-template-columns: auto auto auto; align-items: center; gap: 14px; font-family: var(--font-num); font-weight: 800; font-size: 4.6rem; line-height: 1; justify-items: center; }
 .muscore .mnum small { grid-column: 1 / -1; font-family: var(--font-body); font-size: .72rem; font-weight: 600; color: #93a0bd; }
 .muscore .num { color: #6f7c99; } .muscore .num.lead { color: #ffb020; text-shadow: 0 0 18px rgba(255,176,32,.5); } .muscore .sep { color: #3a4766; }
 .mugrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
@@ -494,8 +494,11 @@ table.mucats tr.punted td { opacity: .4; }
 .mustack .mini.more { font-family: var(--font-num); font-weight: 800; font-size: .85rem; color: #aab5cf; cursor: default; }
 .muscore .wins { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; margin-top: 4px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.08); }
 .muscore .wcol { display: grid; gap: 3px; align-content: start; }
+.muscore .wrows { display: grid; gap: 3px 14px; }
+.muscore .wrows.two { grid-template-columns: 1fr 1fr; }  /* five or more categories: two short columns instead of one long one */
+.muscore .wrows.two .wr { grid-template-columns: 3em minmax(0, 1fr); gap: 6px; font-size: .88rem; }
 .muscore .wcol.wb { border-inline-start: 1px solid rgba(255,255,255,.08); padding-inline-start: 18px; }
-.muscore .wh { font-size: .78rem; font-weight: 700; margin-bottom: 3px; text-align: center; margin-inline-start: calc(3.2em + 10px); color: #ffb020; }
+.muscore .wh { font-size: .78rem; font-weight: 700; margin-bottom: 3px; text-align: center; color: #ffb020; }
 .muscore .wb .wh { color: #7fb2ff; }
 .muscore .wr { display: grid; grid-template-columns: 3.2em minmax(0, 1fr); gap: 10px; font-family: var(--font-num); font-weight: 700; font-size: .95rem; color: #eef2fa; }
 .muscore .wr .wk { color: #93a0bd; letter-spacing: .06em; direction: ltr; unicode-bidi: isolate; }
@@ -3816,11 +3819,11 @@ function renderMatchup() {
     if (st.fmt === "pts") return "";
     const col = (mineSide) => {
       const rows = cats.filter((c) => !c.punted && (mineSide ? c.q > 0.5 : c.q < 0.5));
-      return rows.map((c) => {
+      return `<div class="wrows${rows.length > 4 ? " two" : ""}">` + rows.map((c) => {
         const me = f(c.k, c.a), opp = f(c.k, c.b);
         const lead = `<b>${mineSide ? me : opp}</b>`, rest = `<i>${mineSide ? opp : me}</i>`;
         return `<div class="wr"><span class="wk">${c.l}</span><span class="num">${mineSide ? `${rest}-${lead}` : `${lead}-${rest}`}</span></div>`;
-      }).join("") || `<div class="wr none">–</div>`;
+      }).join("") + (rows.length ? "" : `<div class="wr none">–</div>`) + `</div>`;
     };
     return `<div class="wins"><div class="wcol wa"><div class="wh">${esc(myName)}</div>${col(true)}</div><div class="wcol wb"><div class="wh">${esc(oppName)}</div>${col(false)}</div></div>`;
   };
