@@ -527,7 +527,8 @@ table.box.murt td.pn { min-width: 0; text-align: start; line-height: 1.25; }
 table.box.murt .pw { gap: 6px; }
 table.box.murt .bimg { width: 26px; height: 26px; }
 table.box.murt .injpill { display: table; margin: 2px 0 0 32px; }
-.pn[data-pcard] { cursor: pointer; }
+.pn[data-pcard], .face [data-pcard], .wh[data-pcard] { cursor: pointer; }
+.face .fn[data-pcard]:hover, .wh[data-pcard]:hover { text-decoration: underline; text-underline-offset: 3px; }
 .tipbox { white-space: pre-line; }
 .tipbox { position: fixed; z-index: 50; max-width: 280px; padding: 7px 10px; border-radius: 8px; background: var(--ink); color: var(--surface);
   font-size: .82rem; font-weight: 500; line-height: 1.45; pointer-events: none; box-shadow: 0 4px 14px rgb(0 0 0 / .18); white-space: pre-line; direction: rtl; }
@@ -2813,8 +2814,8 @@ function cmpFace(L, side, name, leads) {
   if (L.length === 1) {
     const p = L[0], r = rank.get(p.id), z = zOf(p);
     return `<div class="face s${side}${leads ? " leads" : ""}">
-      <div class="ph${p.hurt ? " hurt" : ""}">${p.img ? `<img src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}${p.hurt ? injuryPill(p) : ""}</div>
-      <div class="fn">${esc(p.name)}</div>
+      <div class="ph${p.hurt ? " hurt" : ""}" data-pcard="${p.id}">${p.img ? `<img src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}${p.hurt ? injuryPill(p) : ""}</div>
+      <div class="fn" data-pcard="${p.id}">${esc(p.name)}</div>
       <div class="fm"><span class="num">${esc(p.pos || "–")}</span> · <span class="num">${esc(p.team26 || "FA")}</span>${r ? ` · <span class="num">#${r}</span>` : ""}</div>
       <div class="fs">${st.fmt === "pts"
         ? `<span><small>FPTS</small><b class="num">${fmt1(p.F[st.mode])}</b></span><span><small>Z</small><b class="num">${z ? z.total.toFixed(2) : "–"}</b></span>`
@@ -2873,6 +2874,9 @@ function renderCmp() {
     { k: "FPTS", l: "FPTS", tot: true, fmt: fmt1 }], A, B, nA, nB, mark).html;
   const adv = cmpTable(advRows, A, B, nA, nB, mark);
   const lead = (x, y) => x > y ? nA : y > x ? nB : "שוויון";
+  // a side that is one player: his name opens his card
+  const whead = (side) => { const L = side === "a" ? LA : LB, n = side === "a" ? nA : nB;
+    return `<div class="wh"${L.length === 1 && !M.pickup && !M.team ? ` data-pcard="${L[0].id}"` : ""}>${esc(n)}</div>`; };
   // "הפרש 1.03 לטובת X"; a gap that rounds to zero is a tie
   // A single player goes by his last name here so the line fits ("Jokić +7.65")
   const shortName = (side) => { const L = side === "a" ? LA : LB, n = side === "a" ? nA : nB;
@@ -2937,11 +2941,11 @@ function renderCmp() {
           // the whole line in one direction: "Nikola Jokić Lead +10.9" / "אני נותן מוביל +10.9"
           return /[֐-׿]/.test(n) ? `${esc(n)} מוביל ${gap}` : `<span dir="ltr">${esc(n)} Lead ${gap}</span>`;
         })()}</div>
-        <div class="wins">${["a", "b"].map((side) => `<div class="wcol w${side}"><div class="wh">${esc(side === "a" ? nA : nB)}</div>${fpWins(side)}</div>`).join("")}</div>` : `
+        <div class="wins">${["a", "b"].map((side) => `<div class="wcol w${side}">${whead(side)}${fpWins(side)}</div>`).join("")}</div>` : `
         <div class="k">קטגוריות · מתוך ${CATS.length - st.punts.size}</div>
         <div class="score"><span class="num${gen.wa > gen.wb ? " lead" : ""}">${gen.wa}</span><span class="sep">:</span><span class="num${gen.wb > gen.wa ? " lead" : ""}">${gen.wb}</span></div>
         <div class="vwho">${gen.wa === gen.wb ? "שוויון" : leadLine(lead(gen.wa, gen.wb))}</div>
-        <div class="wins">${["a", "b"].map((side) => `<div class="wcol w${side}"><div class="wh">${esc(side === "a" ? nA : nB)}</div>${catWins(side)}</div>`).join("")}</div>`}
+        <div class="wins">${["a", "b"].map((side) => `<div class="wcol w${side}">${whead(side)}${catWins(side)}</div>`).join("")}</div>`}
         ${several && LA.length !== LB.length && !avg ? `<div class="note">${LA.length} מול ${LB.length} שחקנים: צד עם יותר שחקנים צובר יותר</div>` : ""}
       </div>
       ${cmpFace(LB, "b", nB, gen.wb > gen.wa)}
