@@ -2287,6 +2287,7 @@ const ADV_COLS = [
   { k: "gp", l: "GP", asc: false }, { k: "min", l: "MIN", asc: false },
   { k: "USG", l: "USG%", asc: false, tip: "אחוז מהפוזשנים של הקבוצה שהשחקן מסיים כשהוא על המגרש" },
   { k: "EFG", l: "EFG%", asc: false, tip: "יעילות הקליעה מהשדה, כשקליעה לשלוש שווה פי 1.5 מקליעה לשתיים, כי היא שווה נקודה נוספת.\n⁦eFG% = (FGM + 0.5 × 3PM) / FGA⁩" },
+  { k: "TS", l: "TS%", asc: false, tip: "יעילות הקליעה הכוללת: כמה נקודות השחקן מייצר מכל ניסיון קליעה, כשהשלשות וזריקות העונשין נלקחות בחשבון. גבוה יותר = קולע ביעילות" },
   { k: "PACE", l: "PACE", asc: false, tip: "פוזשנים ל־48 דקות כשהשחקן על המגרש" },
   { k: "ORTG", l: "ORTG", asc: false, tip: "נקודות שהקבוצה קולעת ל־100 פוזשנים כשהשחקן על המגרש" },
   { k: "ASTTOV", l: "AST/TOV", asc: false, tip: "כמה אסיסטים השחקן נותן על כל איבוד" },
@@ -2301,6 +2302,7 @@ function astTovRatio(p) {
 function advVal(p, k) {
   if (k === "TPACE") return TEAM_STATS.get(p.team26)?.PACE ?? null;
   if (k === "ASTTOV") return astTovRatio(p);
+  if (k === "TS") { const d = 2 * (p.L.g.FGA + 0.44 * p.L.g.FTA); return p.L.g.FGA > 0 && d ? p.L.g.PTS / d : null; }
   if (k === "EFG") return p.L.g.FGA > 0 ? (p.L.g.FGM + 0.5 * p.L.g.FG3M) / p.L.g.FGA : null;
   if (!p.adv) return null;
   return { USG: p.adv[0] * 100, PACE: p.adv[1], ORTG: p.adv[2] }[k];
@@ -2320,7 +2322,7 @@ function renderAdv() {
   if (st.tab !== "adv") return;
   const { list, now } = last;
   const rows = list.filter((p) => passes(p));
-  const heats = Object.fromEntries(["USG", "EFG", "PACE", "ORTG", "ASTTOV", "TPACE"].map((k) => [k, percentileHeat(list.map((p) => advVal(p, k)))]));
+  const heats = Object.fromEntries(["USG", "EFG", "TS", "PACE", "ORTG", "ASTTOV", "TPACE"].map((k) => [k, percentileHeat(list.map((p) => advVal(p, k)))]));
   const key = (p) => st.advSort === "rank" ? now.rank.get(p.id) : st.advSort === "name" ? p.name
     : st.advSort === "gp" ? p.gp : st.advSort === "min" ? p.L.g.MIN : (advVal(p, st.advSort) ?? -Infinity);
   rows.sort((a, b) => {
@@ -2330,7 +2332,7 @@ function renderAdv() {
   });
 
   // Sorting by a stat adds that stat's league rank (1 = highest) at the right edge
-  const statCol = ["USG", "EFG", "PACE", "ORTG", "ASTTOV", "TPACE", "gp", "min"].includes(st.advSort)
+  const statCol = ["USG", "EFG", "TS", "PACE", "ORTG", "ASTTOV", "TPACE", "gp", "min"].includes(st.advSort)
     ? ADV_COLS.find((c) => c.k === st.advSort) : null;
   let statRank = null;
   if (statCol) {
@@ -2355,7 +2357,7 @@ function renderAdv() {
   $("advBody").innerHTML = rows.map((p) => {
     const cell = (k) => {
       const v = advVal(p, k);
-      const txt = v == null ? "–" : k === "ASTTOV" ? v.toFixed(2) : k === "EFG" ? fmt3(v) : v.toFixed(1);
+      const txt = v == null ? "–" : k === "ASTTOV" ? v.toFixed(2) : k === "EFG" || k === "TS" ? fmt3(v) : v.toFixed(1);
       return `<td style="${heats[k](v)}">${txt}</td>`;
     };
     return `<tr class="${mine.has(p.id) ? "is-mine" : ""} ${taken.has(p.id) ? "is-taken" : ""} ${fav.has(p.id) ? "is-fav" : ""}">
@@ -2363,7 +2365,7 @@ function renderAdv() {
       ${posR ? posTd(posR, p) : `<td class="rank">${now.rank.get(p.id)}</td>`}
       ${nameCell(p)}
       <td>${p.gp}</td><td>${fmt1(p.L.g.MIN)}</td>
-      ${cell("USG")}${cell("EFG")}${cell("PACE")}${cell("ORTG")}${cell("ASTTOV")}${cell("TPACE")}
+      ${cell("USG")}${cell("EFG")}${cell("TS")}${cell("PACE")}${cell("ORTG")}${cell("ASTTOV")}${cell("TPACE")}
       <td class="acts">${actions(p)}</td></tr>`;
   }).join("") || EMPTY_ROW(ADV_COLS.length + (statCol ? 1 : 0));
 
@@ -4283,6 +4285,7 @@ const SORT_OPTS = {
   adv: [
     { k: "USG", l: "USG%", asc: false },
     { k: "EFG", l: "EFG% (יעילות קליעה)", asc: false },
+    { k: "TS", l: "TS% (יעילות קליעה כוללת)", asc: false },
     { k: "PACE", l: "PACE", asc: false },
     { k: "ORTG", l: "ORTG", asc: false },
     { k: "ASTTOV", l: "AST/TOV (אסיסטים לכל איבוד)", asc: false },
