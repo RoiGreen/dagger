@@ -574,13 +574,16 @@ table.box.daygrid tr.dgfoot .over { color: var(--neg); }
 .mupicks .mtags { display: inline-flex; gap: 4px; margin-inline-start: auto; }
 .mupicks .mtags i { font-style: normal; font-family: var(--font-num); font-weight: 700; font-size: .78rem; padding: 0 7px; border-radius: 6px; background: var(--sunk); }
 .mupicks .mtags i.need { background: color-mix(in srgb, var(--led) 26%, transparent); }
-.mupicks .mtags { flex-wrap: wrap; }
-.mupicks .mtags i.loss { background: color-mix(in srgb, var(--neg) 16%, transparent); color: var(--neg); }
-.mupicks .mtags .mwarn { flex-basis: 100%; font-style: normal; font-size: .74rem; font-weight: 700; color: var(--neg); }
+/* gains on top, losses under them, the warning centred below */
+.mupicks .mtags { flex: 1; display: grid; justify-items: center; gap: 4px; margin-inline-start: 0; }
+.mupicks .mtags .trow { display: inline-flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
+.mupicks .mtags i.gain { background: color-mix(in srgb, var(--pos) 18%, transparent); color: var(--pos); }
+.mupicks .mtags i.loss { background: color-mix(in srgb, var(--neg) 14%, transparent); color: var(--neg); }
+.mupicks .mtags .mwarn { font-style: normal; font-size: .86rem; font-weight: 800; color: var(--neg); text-align: center; }
 .mupicks .mfit { font-family: var(--font-num); font-size: 1.15rem; min-width: 5.5rem; text-align: center; color: var(--accent); }
 .mupickhead { display: flex; justify-content: flex-end; padding-inline: 11px calc(11px + 64px + 10px); margin-bottom: 4px; }  /* over the % column: skip the button */
 .mupicks .mgo { width: 64px; flex: none; }
-.mupickhead span { min-width: 5.5rem; text-align: center; font-size: .8rem; font-weight: 700; color: var(--muted); }
+.mupickhead span { min-width: 5.5rem; width: 5.5rem; line-height: 1.2; text-align: center; font-size: .8rem; font-weight: 700; color: var(--muted); }
 .mupicks li.none { color: var(--muted); background: none; border: 0; }
 .muroster h4 { margin: 0 0 6px; text-align: center; }
 .muvs { position: relative; display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: center; min-height: 54px; margin: 18px 0 6px; }
@@ -3747,7 +3750,8 @@ function renderMatchup() {
       <span class="mwho"><span class="mline"><span class="pn" data-pcard="${x.X.id}">${esc(x.X.name)}</span>${teamLogo(x.X.team26)}${x.X.hurt ? injuryPill(x.X) : ""}
         <span class="mdays" title="הימים שבהם הוא נכנס להרכב">${days.map(dayShort).join(" ") || "–"}</span></span>
         <small class="mdrop">${dropSel}</small></span>
-      <span class="mtags">${ups.map((u) => `<i class="need"><bdi>${u.l}</bdi> +${Math.round(u.d * 100)}%</i>`).join("")}${downs.map((u) => `<i class="loss"><bdi>${u.l}</bdi> −${Math.round(-u.d * 100)}%</i>`).join("")}
+      <span class="mtags"><span class="trow">${ups.map((u) => `<i class="gain"><bdi>${u.l}</bdi> +${Math.round(u.d * 100)}%</i>`).join("")}</span>
+        ${downs.length ? `<span class="trow">${downs.map((u) => `<i class="loss"><bdi>${u.l}</bdi> −${Math.round(-u.d * 100)}%</i>`).join("")}</span>` : ""}
         ${costly ? `<em class="mwarn" title="השבוע זה משפר את הסיכוי, אבל ${esc(x.drop.name)} שווה יותר לאורך העונה">${esc(x.drop.name)} שווה יותר לאורך העונה</em>` : ""}</span>
       <b class="mfit" title="סיכוי לנצח את המצ'אפ אחרי המהלך">${pctTxt(x.r.win)}<small>+${Math.max(0, Math.round((x.r.win - odds.win) * 100))}%</small></b>
       <button type="button" class="mgo" data-mumove="${x.X.id}|${x.drop?.id ?? ""}|${x.kind ?? ""}">בצע</button></li>`;
@@ -3883,7 +3887,7 @@ function renderMatchup() {
     </div>
     <section class="cmpsec"><h3 class="ctr">פיק אפ מומלץ לשבוע הזה</h3>
       ${left === 0 ? `<p class="munote">ניצלת את כל ${maxAdds} הפיק אפים של השבוע</p>`
-        : moves.length ? `<div class="mupickhead"><span>סיכוי לנצח</span></div><ol class="mupicks">${moves.map(moveRow).join("")}</ol>`
+        : moves.length ? `<div class="mupickhead"><span>סיכוי לנצח במצ'אפ הקרוב</span></div><ol class="mupicks">${moves.map(moveRow).join("")}</ol>`
         : `<p class="munote">אין פיק אפ שמשפר את הסיכוי לנצח השבוע</p>`}
     </section>
     <section class="cmpsec"><div class="dghead"><h3>הרכב יומי</h3>
