@@ -578,6 +578,8 @@ td.tteam .t { margin-inline-start: 4px; }
 .dbtn:disabled { opacity: .3; cursor: default; }
 .dbtn { direction: ltr; unicode-bidi: isolate; }  /* keep the arrows pointing outwards: › on the right, ‹ on the left */
 .dbtn.today { font-size: .78rem; font-weight: 700; }
+.dpick { position: relative; display: inline-grid; }
+.dpick input { position: absolute; inset: 0; opacity: 0; pointer-events: none; width: 100%; height: 100%; color-scheme: dark; }
 .ticker .lbl { min-width: 6.5em; justify-content: center; }
 .ticker .lbl:not(.live)::before { display: none; }
 /* game window */
@@ -1779,12 +1781,25 @@ function renderTicker() {
       <button type="button" class="dbtn" data-tday="${prev || ""}" ${prev ? "" : "disabled"} aria-label="יום קודם" title="יום קודם">›</button>
       <span class="lbl${day === today ? " live" : ""}">${day === today ? "TONIGHT" : esc(dayLabel(day))}</span>
       <button type="button" class="dbtn" data-tday="${next || ""}" ${next ? "" : "disabled"} aria-label="יום הבא" title="יום הבא">‹</button>
+      <span class="dpick" title="בחירת תאריך"><button type="button" class="dbtn cal" data-tcal aria-label="בחירת תאריך"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="2"/><path d="M2 7h12M5.5 1.5v3M10.5 1.5v3"/></svg></button>
+        <input type="date" id="tickerDate" tabindex="-1" aria-hidden="true" value="${day}" min="${GAME_DAYS[0]}" max="${GAME_DAYS[GAME_DAYS.length - 1]}"></span>
       ${day !== defaultTickerDay() ? `<button type="button" class="dbtn today" data-tday="${defaultTickerDay()}">היום</button>` : ""}
     </span>` + games.map((g) => `<button type="button" class="game${g.fin ? " fin" : ""}" data-gid="${g.id}">` +
       side(g.a, g.fin ? g.as : null, g.fin && g.as > g.hs) + `<span class="at">VS</span>` + side(g.h, g.fin ? g.hs : null, g.fin && g.hs > g.as) +
       `<span class="time">${g.fin ? "FINAL" : g.t.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" })}</span></button>`).join("");
 }
+// A chosen date with no games jumps to the next day that has games (or the last one)
+$("ticker").addEventListener("change", (e) => {
+  if (e.target.id !== "tickerDate" || !e.target.value) return;
+  tickerDay = GAME_DAYS.find((d) => d >= e.target.value) || GAME_DAYS[GAME_DAYS.length - 1];
+  renderTicker();
+});
 $("ticker").addEventListener("click", (e) => {
+  if (e.target.closest("[data-tcal]")) {
+    const inp = $("tickerDate");
+    try { inp.showPicker(); } catch (err) { inp.focus(); inp.click(); }
+    return;
+  }
   const d = e.target.closest("[data-tday]");
   if (d && d.dataset.tday) { tickerDay = d.dataset.tday; return renderTicker(); }
   const g = e.target.closest("[data-gid]");
