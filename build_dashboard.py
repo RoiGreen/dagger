@@ -40,6 +40,14 @@ FULL_SEASON_GP = 40   # what counts as a full season before that
 FULL_ROLE_MIN = 25    # and a real role in it
 INJURED_CSV = HERE / "injured_last_full_season.csv"
 ROOKIE_CSV = HERE / "rookie_projections_2026_27.csv"
+BIRTHDATES = HERE / "nba_2026_27" / "birthdates.json"  # rookies' birth dates (birthdates.py)
+
+
+def age_on(birth: str, day=None) -> int:
+    """Whole years from a YYYY-MM-DD birth date to today."""
+    from datetime import date
+    b, d = date.fromisoformat(birth[:10]), day or date.today()
+    return d.year - b.year - ((d.month, d.day) < (b.month, b.day))
 # Seasons the page can choose from, by start year, and their files
 AVAIL_SEASONS = [2023, 2024, 2025]
 SEASON_TAG = {2023: "_2023_24", 2024: "_2024_25", 2025: ""}  # 2025-26 files carry no suffix
@@ -282,6 +290,7 @@ def rookies(existing: set[int]) -> list[dict]:
         print(f"{ROOKIE_CSV.name} not found, skipping rookies (run rookie_projections.py)")
         return []
     out = []
+    births = json.loads(BIRTHDATES.read_text(encoding="utf-8")) if BIRTHDATES.exists() else {}
     for _, r in pd.read_csv(ROOKIE_CSV).iterrows():
         pid = int(r["PLAYER_ID"])
         if pid in existing:
@@ -289,7 +298,8 @@ def rookies(existing: set[int]) -> list[dict]:
         out.append({
             "id": pid,
             "name": r["PLAYER_NAME"],
-            "age": None if pd.isna(r["AGE"]) else int(r["AGE"]),
+            # real age today from the birth date (birthdates.py); the projection file only has his last college age
+            "age": age_on(births[str(pid)]) if str(pid) in births else None if pd.isna(r["AGE"]) else int(r["AGE"]),
             "team25": None,
             "team26": r["TEAM"],
             "pos": None if pd.isna(r["POSITION"]) else r["POSITION"],

@@ -26,6 +26,7 @@ from headshots import ensure_headshots
 from injuries import pull_injuries
 from positions import pull_positions
 from starters import pull_starters
+from birthdates import pull_birthdates
 from team_logos import ensure_team_logos
 from nba_stats_2025_26 import fetch
 
@@ -87,6 +88,9 @@ def main() -> None:
         print(msg)
         lines.append(msg)
     msg = pull_starters()
+    print(msg)
+    lines.append(msg)
+    msg = pull_birthdates()
     print(msg)
     lines.append(msg)
     (OUT / "last_update.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
