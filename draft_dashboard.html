@@ -578,8 +578,23 @@ td.tteam .t { margin-inline-start: 4px; }
 .dbtn:disabled { opacity: .3; cursor: default; }
 .dbtn { direction: ltr; unicode-bidi: isolate; }  /* keep the arrows pointing outwards: › on the right, ‹ on the left */
 .dbtn.today { font-size: .78rem; font-weight: 700; }
-.dpick { position: relative; display: inline-grid; }
-.dpick input { position: absolute; inset: 0; opacity: 0; pointer-events: none; width: 100%; height: 100%; color-scheme: dark; }
+.dbtn.cal[aria-expanded="true"] { border-color: #ff8a2a; color: #ff8a2a; }
+.calpop { position: absolute; z-index: 60; width: 300px; padding: 12px; border-radius: 14px; direction: ltr; color: #eef2fa;
+  background: linear-gradient(180deg, #121c33, #0a1020); border: 1px solid rgba(255,255,255,.12); box-shadow: 0 18px 40px rgba(0,0,0,.45); }
+.calhead { display: flex; align-items: center; justify-content: space-between; margin-bottom: 10px; }
+.calhead span { font-family: var(--font-num); font-weight: 800; font-size: 1.05rem; letter-spacing: .08em; text-transform: uppercase; }
+.calgrid { display: grid; grid-template-columns: repeat(7, 1fr); gap: 4px; }
+.calgrid .wd { text-align: center; font-family: var(--font-num); font-size: .7rem; font-weight: 700; letter-spacing: .1em; color: #7f8bab; text-transform: uppercase; padding-bottom: 4px; }
+.calgrid .cd { height: 36px; border-radius: 8px; border: 1px solid transparent; background: rgba(255,255,255,.05); color: #eef2fa; cursor: pointer;
+  display: grid; place-items: center; align-content: center; gap: 0; font: inherit; padding: 0; }
+.calgrid .cd b { font-family: var(--font-num); font-size: .92rem; line-height: 1; }
+.calgrid .cd i { font-style: normal; font-family: var(--font-num); font-size: .62rem; line-height: 1; color: #ffb020; margin-top: 2px; }
+.calgrid .cd:hover:not(:disabled) { border-color: rgba(255,138,42,.6); }
+.calgrid .cd:disabled { background: none; color: #4a5571; cursor: default; }
+.calgrid .cd.now { border-color: rgba(255,255,255,.35); }
+.calgrid .cd.sel { background: #ff8a2a; color: #160c02; } .calgrid .cd.sel i { color: #160c02; }
+.calfoot { display: flex; align-items: center; justify-content: space-between; margin-top: 10px; font-size: .72rem; color: #7f8bab; }
+.calfoot i { display: inline-block; font-style: normal; width: 8px; height: 8px; border-radius: 50%; background: #ffb020; margin-inline-end: 4px; vertical-align: middle; }
 .ticker .lbl { min-width: 6.5em; justify-content: center; }
 .ticker .lbl:not(.live)::before { display: none; }
 /* game window */
@@ -1763,6 +1778,41 @@ const GAME_DAYS = [...new Set(GAMES.map((g) => g.d))].sort();
 // A team's logo (embedded at build time); its colours if the logo is missing
 const teamLogo = (t, cls = "tlogo") => (D.logos || {})[t] ? `<img class="${cls}" src="${D.logos[t]}" alt="" title="${esc(t)}">`
   : `<i class="sw" style="--c1:${(TEAM_COLORS[t] || ["#888"])[0]};--c2:${(TEAM_COLORS[t] || ["#888", "#555"])[1]}"></i>`;
+// Calendar for the games bar: a month grid in English; days with games show how many and can be picked
+const GAMES_ON = GAMES.reduce((m, g) => m.set(g.d, (m.get(g.d) || 0) + 1), new Map());
+const calPop = Object.assign(document.createElement("div"), { className: "calpop", hidden: true });
+document.body.append(calPop);
+let calMonth = null;
+function renderCal() {
+  const [y, m] = calMonth.split("-").map(Number);
+  const first = new Date(Date.UTC(y, m - 1, 1)), days = new Date(Date.UTC(y, m, 0)).getUTCDate();
+  const iso = (d) => `${calMonth}-${String(d).padStart(2, "0")}`;
+  const sel = tickerDay || defaultTickerDay(), today = etDay(new Date());
+  const minM = GAME_DAYS[0].slice(0, 7), maxM = GAME_DAYS[GAME_DAYS.length - 1].slice(0, 7);
+  const cells = Array.from({ length: first.getUTCDay() }, () => `<span></span>`);
+  for (let d = 1; d <= days; d++) {
+    const k = iso(d), n = GAMES_ON.get(k) || 0;
+    cells.push(`<button type="button" class="cd${k === sel ? " sel" : ""}${k === today ? " now" : ""}" data-cday="${k}" ${n ? "" : "disabled"}>
+      <b>${d}</b>${n ? `<i>${n}</i>` : ""}</button>`);
+  }
+  calPop.innerHTML = `<div class="calhead">
+      <button type="button" class="dbtn" data-cmon="-1" ${calMonth <= minM ? "disabled" : ""} aria-label="Previous month">‹</button>
+      <span>${first.toLocaleDateString("en-US", { month: "long", year: "numeric", timeZone: "UTC" })}</span>
+      <button type="button" class="dbtn" data-cmon="1" ${calMonth >= maxM ? "disabled" : ""} aria-label="Next month">›</button></div>
+    <div class="calgrid">${["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"].map((w) => `<span class="wd">${w}</span>`).join("")}${cells.join("")}</div>
+    <div class="calfoot"><button type="button" class="dbtn today" data-cday="${defaultTickerDay()}">Today</button><span><i></i> games that day</span></div>`;
+}
+function closeCal() { calPop.hidden = true; document.querySelector("[data-tcal]")?.setAttribute("aria-expanded", "false"); }
+calPop.addEventListener("click", (e) => {
+  const mon = e.target.closest("[data-cmon]"), day = e.target.closest("[data-cday]");
+  if (mon) {
+    const [y, m] = calMonth.split("-").map(Number), d = new Date(Date.UTC(y, m - 1 + Number(mon.dataset.cmon), 1));
+    calMonth = d.toISOString().slice(0, 7); renderCal();
+  } else if (day) { tickerDay = day.dataset.cday; closeCal(); renderTicker(); }
+  e.stopPropagation();
+});
+document.addEventListener("click", (e) => { if (!calPop.hidden && !e.target.closest(".calpop, [data-tcal]")) closeCal(); });
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !calPop.hidden) closeCal(); });
 let tickerDay = null;  // ET date shown in the bar (null = today, or the nearest day with games)
 function defaultTickerDay() {
   const today = etDay(new Date());
@@ -1781,23 +1831,22 @@ function renderTicker() {
       <button type="button" class="dbtn" data-tday="${prev || ""}" ${prev ? "" : "disabled"} aria-label="יום קודם" title="יום קודם">›</button>
       <span class="lbl${day === today ? " live" : ""}">${day === today ? "TONIGHT" : esc(dayLabel(day))}</span>
       <button type="button" class="dbtn" data-tday="${next || ""}" ${next ? "" : "disabled"} aria-label="יום הבא" title="יום הבא">‹</button>
-      <span class="dpick" title="בחירת תאריך"><button type="button" class="dbtn cal" data-tcal aria-label="בחירת תאריך"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="2"/><path d="M2 7h12M5.5 1.5v3M10.5 1.5v3"/></svg></button>
-        <input type="date" id="tickerDate" tabindex="-1" aria-hidden="true" value="${day}" min="${GAME_DAYS[0]}" max="${GAME_DAYS[GAME_DAYS.length - 1]}"></span>
+      <button type="button" class="dbtn cal" data-tcal aria-label="Pick a date" title="Pick a date" aria-expanded="${!calPop.hidden}"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="2"/><path d="M2 7h12M5.5 1.5v3M10.5 1.5v3"/></svg></button>
       ${day !== defaultTickerDay() ? `<button type="button" class="dbtn today" data-tday="${defaultTickerDay()}">היום</button>` : ""}
     </span>` + games.map((g) => `<button type="button" class="game${g.fin ? " fin" : ""}" data-gid="${g.id}">` +
       side(g.a, g.fin ? g.as : null, g.fin && g.as > g.hs) + `<span class="at">VS</span>` + side(g.h, g.fin ? g.hs : null, g.fin && g.hs > g.as) +
       `<span class="time">${g.fin ? "FINAL" : g.t.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" })}</span></button>`).join("");
 }
-// A chosen date with no games jumps to the next day that has games (or the last one)
-$("ticker").addEventListener("change", (e) => {
-  if (e.target.id !== "tickerDate" || !e.target.value) return;
-  tickerDay = GAME_DAYS.find((d) => d >= e.target.value) || GAME_DAYS[GAME_DAYS.length - 1];
-  renderTicker();
-});
 $("ticker").addEventListener("click", (e) => {
-  if (e.target.closest("[data-tcal]")) {
-    const inp = $("tickerDate");
-    try { inp.showPicker(); } catch (err) { inp.focus(); inp.click(); }
+  const cal = e.target.closest("[data-tcal]");
+  if (cal) {
+    if (!calPop.hidden) return closeCal();
+    calMonth = (tickerDay || defaultTickerDay()).slice(0, 7);
+    renderCal(); calPop.hidden = false;
+    const r = cal.getBoundingClientRect(), w = calPop.offsetWidth;
+    calPop.style.left = `${Math.min(Math.max(8, r.left + r.width / 2 - w / 2), innerWidth - w - 8)}px`;
+    calPop.style.top = `${r.bottom + 8 + scrollY}px`;
+    cal.setAttribute("aria-expanded", "true");
     return;
   }
   const d = e.target.closest("[data-tday]");
