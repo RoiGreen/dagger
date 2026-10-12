@@ -443,6 +443,10 @@ table.mucats tr.punted td { opacity: .4; }
 .mucat.lean-l { background: color-mix(in srgb, var(--neg) 12%, transparent); color: var(--neg); }
 .mucat.lose { background: color-mix(in srgb, var(--neg) 24%, transparent); color: var(--neg); }
 .munote { margin: 6px 0 0; font-size: .78rem; color: var(--muted); }
+.muwnav { display: inline-flex; align-items: center; gap: 6px; }
+.muwnav .mact { font-family: var(--font-num); font-size: .95rem; padding: 2px 10px; direction: ltr; unicode-bidi: isolate; }
+.muwnav .mact:disabled { opacity: .35; cursor: default; }
+.muwnav #muNow { font-family: var(--font-body); font-size: .78rem; }
 .muadds { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; font-weight: 700; color: var(--muted); }
 .muadds input { width: 3.4em; padding: 4px 6px; text-align: center; }
 .muscore .mmid { display: grid; justify-items: center; gap: 8px; }
@@ -1181,7 +1185,12 @@ table.cmpt td.lbl { min-width: 5.5em; }
         <div class="mubar">
           <div class="mupick"><span>היריב השבוע</span><select id="muOpp" aria-label="היריב השבוע"></select></div>
           <span class="muadds">פיק אפים השבוע: <input type="number" id="muAddsUsed" min="0" max="14" aria-label="פיק אפים שנוצלו"> מתוך <input type="number" id="muAddsMax" min="0" max="14" aria-label="פיק אפים בשבוע"></span>
-          <span class="muweek" id="muWeek"></span>
+          <span class="muwnav">
+            <button type="button" class="mact" id="muPrev" aria-label="השבוע הקודם" title="השבוע הקודם"><svg viewBox="0 0 10 10" width="10" height="10" aria-hidden="true"><path d="M3 1.5 6.5 5 3 8.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <span class="muweek" id="muWeek"></span>
+            <button type="button" class="mact" id="muNext" aria-label="השבוע הבא" title="השבוע הבא"><svg viewBox="0 0 10 10" width="10" height="10" aria-hidden="true"><path d="M7 1.5 3.5 5 7 8.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            <button type="button" class="mact" id="muNow" hidden>השבוע</button>
+          </span>
         </div>
         <div id="muOut"></div>
       </section>
@@ -1383,7 +1392,7 @@ function applySettings(s) {
   // What the user built stays: league setup (format, teams, roster, Punt), draft settings, table marks
   // (favorites and draft picks are stored apart from the settings).
   for (const k of ["q", "minGp", "minMin", "catFilters", "pos", "teamSel", "maxAge", "hideTaken", "onlyMoved", "noHurt", "onlyFav",
-    "inj", "rookies", "roles", "weekGames", "formWin", "sort", "asc", "tab", "advSort", "advAsc", "teamSort", "teamAsc", "availSeasons", "vsOpp", "mode", "cmp"]) delete s[k];
+    "inj", "rookies", "roles", "weekGames", "formWin", "sort", "asc", "tab", "advSort", "advAsc", "teamSort", "teamAsc", "availSeasons", "vsOpp", "mode", "cmp", "muWeekOff"]) delete s[k];
   if (s.onlyInj && !s.inj) s.inj = "only";
   if (!Array.isArray(s.roles)) s.roles = s.role ? [s.role] : [];
   if (!Array.isArray(s.teamSel)) s.teamSel = s.team ? [s.team] : [];
@@ -3362,9 +3371,18 @@ function muFromIL(team, id) {
 
 // days with at least one regular-season game (an empty lineup slot only matters then)
 const MU_DAY_GAMES = (d) => GAMES.some((g) => !g.pre && g.d === d);
+// Browsing weeks: offset from the week to plan (0), within the regular season
+const shiftDay = (d, days) => new Date(new Date(d + "T12:00:00Z").getTime() + days * 864e5).toISOString().slice(0, 10);
+const SEASON_DAYS = GAMES.filter((g) => !g.pre).map((g) => g.d).sort();
+function muWeekRange() {
+  const base = weekRange(), off = st.muWeekOff || 0;
+  if (!off) return base;
+  const w = weekOf(shiftDay(base.from, 7 * off));
+  return { ...w, next: false, off };
+}
 function renderMatchup() {
   if (st.tab !== "mu") return;
-  WEEK = weekRange();
+  WEEK = muWeekRange();
   MU = { model: new Map(), games: new Map() };
   for (const g of GAMES) if (!g.pre) { MU.games.set(`${g.h}|${g.d}`, g); MU.games.set(`${g.a}|${g.d}`, g); }
   const n = Math.max(st.teams, 1), me = myIdx();
@@ -3376,7 +3394,10 @@ function renderMatchup() {
   }
   const { from, to } = WEEK;
   const dd = (d) => { const [, m, day] = d.split("-"); return `${Number(day)}.${Number(m)}`; };
-  $("muWeek").textContent = `${WEEK.next ? "השבוע הבא" : "שבוע"} ${dd(from)}–${dd(to)}`;
+  const off = st.muWeekOff || 0, first = SEASON_DAYS[0] || from, last = SEASON_DAYS[SEASON_DAYS.length - 1] || to;
+  $("muWeek").innerHTML = `${!off && WEEK.next ? "השבוע הבא" : "שבוע"} <bdi dir="ltr">${dd(from)}–${dd(to)}</bdi>`;
+  $("muPrev").disabled = from <= first; $("muNext").disabled = to >= last;
+  $("muNow").hidden = !off;
   const maxAdds = st.weekAdds ?? 3;
   setField("muAddsMax", maxAdds); setField("muAddsUsed", addsUsed());
   const out = $("muOut");
@@ -3524,6 +3545,9 @@ function renderMatchup() {
     <div class="mugrid murosters">${rosterTable("a", me, mineP, A, ilA, myName)}${rosterTable("b", st.muOpp, oppP, B, ilB, oppName)}</div>`;
 }
 $("muOpp").addEventListener("change", (e) => { st.muOpp = Number(e.target.value); saveSettings(); renderMatchup(); });
+for (const [id, d] of [["muPrev", -1], ["muNext", 1], ["muNow", 0]]) {
+  $(id).addEventListener("click", () => { st.muWeekOff = d ? (st.muWeekOff || 0) + d : 0; renderMatchup(); });
+}
 $("muAddsMax").addEventListener("input", (e) => { const v = Number(e.target.value); if (Number.isFinite(v)) { st.weekAdds = Math.min(14, Math.max(0, v)); saveSettings(); renderMatchup(); } });
 $("muAddsUsed").addEventListener("input", (e) => { const v = Number(e.target.value); if (Number.isFinite(v)) { st.muAdds = { week: WEEK.from, n: Math.min(14, Math.max(0, v)) }; saveSettings(); renderMatchup(); } });
 $("muOut").addEventListener("click", (e) => {
