@@ -1357,11 +1357,17 @@ function applySeasons() {
     const short = !p.rookie && ys.some((y) => y !== D.preseason && y !== D.current && !(p.seasons[y]?.gp >= seasonMinGames(y)));
     // No qualifying season: off the board, but keep numbers for his favorites / my-team entries
     p.has = chosen.length > 0 && !short;
-    const lines = p.has ? chosen : Object.keys(p.seasons).map(Number).sort().map((y) => ({ y, ...p.seasons[y] }));
+    let lines = p.has ? chosen : Object.keys(p.seasons).map(Number).sort().map((y) => ({ y, ...p.seasons[y] }));
+    // Missed the chosen season(s) through injury (the "24-25" badge): he still shows, with his latest earlier
+    // full regular season, so a rostered star does not vanish from the tables
+    if (!p.has && p.injured) {
+      const back = Object.keys(p.seasons).map(Number).filter((y) => y !== D.preseason && y < Math.min(...ys) && p.seasons[y].gp >= seasonMinGames(y)).sort();
+      if (back.length) { const y = back[back.length - 1]; lines = [{ y, ...p.seasons[y] }]; p.has = true; }
+    }
     const games = lines.reduce((a, l) => a + l.gp, 0);
     p.s = S.map((_, i) => lines.reduce((a, l) => a + l.s[i] * l.gp, 0) / games);
     p.gp = Math.round(games / lines.length);  // games per season he played
-    p.gpTotal = p.has ? games : 0;            // games in the chosen seasons
+    p.gpTotal = p.has ? games : 0;            // games in the chosen seasons (or the season he fell back to)
     const latest = lines[lines.length - 1];
     p.team25 = latest.t;
     p.srcSeason = latest.y;
