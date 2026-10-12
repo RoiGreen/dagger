@@ -4190,7 +4190,7 @@ function syncControls() {
   setField("vsOpp", st.vsOpp || "");
   $("zPool").textContent = st.teams * st.roster;
   $("vsNote").hidden = !st.vsOpp;
-  if (st.vsOpp) $("vsNote").innerHTML = `מוצגים ממוצעי ${D.vsGames} המשחקים האחרונים של כל שחקן מול <b>${esc(st.vsOpp)}</b> בעונה הסדירה (${D.seasons.includes(D.current) ? "2025-26 ו־2026-27" : "2025-26"}). GP = מספר המשחקים מולה. <button type="button" id="vsClear">חזרה לנתוני העונות</button>`;
+  if (st.vsOpp) $("vsNote").innerHTML = `מוצגים ממוצעי ${D.vsGames} המשחקים האחרונים של כל שחקן מול <b>${esc(TEAM_NAMES[st.vsOpp] || st.vsOpp)}</b> בעונה הסדירה (${D.seasons.includes(D.current) ? "2025-26 ו־2026-27" : "2025-26"}). GP = מספר המשחקים מולה. <button type="button" id="vsClear">חזרה לנתוני העונות</button>`;
   for (const b of document.querySelectorAll("[data-teamsel]")) b.setAttribute("aria-pressed", st.teamSel.includes(b.dataset.teamsel));
   $("teamSummary").textContent = !st.teamSel.length ? "כל הקבוצות"
     : st.teamSel.length <= 4 ? st.teamSel.map((t) => t === "-" ? "FA" : t).join(", ") : `${st.teamSel.length} קבוצות נבחרו`;
@@ -4229,7 +4229,8 @@ function update(recompute = true) {
 $("puntChips").innerHTML = CATS.map((c) => `<button class="chip punt" data-punt="${c.k}" aria-pressed="false">${c.l}</button>`).join("")
   + `<button class="chip puntreset" type="button" data-puntreset="1">איפוס</button>`;
 const teams = [...new Set(players.map((p) => p.team26).filter(Boolean))].sort();
-$("vsOpp").innerHTML += teams.map((t) => `<option value="${t}">${t}</option>`).join("");
+$("vsOpp").innerHTML += [...teams].sort((a, b) => (TEAM_NAMES[a] || a).localeCompare(TEAM_NAMES[b] || b))
+  .map((t) => `<option value="${t}">${esc(TEAM_NAMES[t] || t)}</option>`).join("");
 $("vsOpp").addEventListener("change", (e) => { st.vsOpp = e.target.value; update(); });
 $("formWinTop").addEventListener("change", (e) => { st.formWin = e.target.value; update(); });
 document.addEventListener("change", (e) => {
