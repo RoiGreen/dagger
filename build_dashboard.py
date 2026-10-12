@@ -518,6 +518,8 @@ def main() -> None:
 
 
 SITE_IMG = SITE_OUT.parent / "img"
+# Visit counting for the website only (roigreen.goatcounter: account "dagger"); the claude.ai copy is private
+GOATCOUNTER = '<script data-goatcounter="https://dagger.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>'
 
 
 def site_images(players: list[dict]) -> list[dict]:
@@ -552,7 +554,7 @@ def build_site(html: str) -> None:
     head, body = html[:cut], html[cut:]
     page = ('<!doctype html><html lang="he"><head><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
-            f"<style>{SITE_RESET}</style>{head}</head><body>{body}</body></html>")
+            f"<style>{SITE_RESET}</style>{GOATCOUNTER}{head}</head><body>{body}</body></html>")
     SITE_OUT.parent.mkdir(exist_ok=True)
     SITE_OUT.write_text(page, encoding="utf-8")
     (SITE_OUT.parent / ".nojekyll").write_text("", encoding="utf-8")  # serve files as-is

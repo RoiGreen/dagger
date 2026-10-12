@@ -1,5 +1,5 @@
 <meta charset="utf-8">
-<title>Fantasy 2026-2027</title>
+<title>Dagger · פנטזי NBA</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;600;700;800&family=Saira+Condensed:wght@500;600;700;800&display=swap">
@@ -254,6 +254,9 @@ tr.sel-team td { box-shadow: inset 0 -2px 0 var(--accent), inset 0 2px 0 var(--a
 .tabhead { border-bottom: 1px solid var(--line); }
 .tabhead-inner { display: inline-grid; gap: 8px; max-width: 100%; }
 .tabs { display: flex; gap: 4px; }
+.wordmark { font-family: var(--font-num); font-weight: 800; font-size: 1.05rem; letter-spacing: .18em; text-transform: uppercase; color: #ff8a2a;
+  padding: 2px 10px; border: 1px solid rgba(255,138,42,.45); border-radius: 8px; margin-inline-start: 2px; }
+.authbrand { font-family: var(--font-num); letter-spacing: .06em; }
 .lpanel > summary { list-style: none; cursor: pointer; display: grid; gap: 2px; }
 .lpanel > summary::-webkit-details-marker { display: none; }
 .lpanel > summary h2 { display: flex; align-items: center; gap: 8px; }
@@ -921,7 +924,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
 </script>
 <div class="auth" id="auth" hidden>
   <form class="auth-card" id="authForm" novalidate>
-    <h2>חדר הדראפט <span class="yr">2026-27</span></h2>
+    <h2 class="authbrand">Dagger <span class="yr">פנטזי NBA 2026-27</span></h2>
     <div class="seg" role="group" aria-label="כניסה או הרשמה" id="authTabs">
       <button type="button" data-auth="in" aria-pressed="true">כניסה</button>
       <button type="button" data-auth="up" aria-pressed="false">הרשמה</button>
@@ -942,6 +945,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
     <div class="jumbo-in">
       <div class="brand">
         <svg class="ball" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="#ff7a1a"/><g fill="none" stroke="#1a0b00" stroke-width="2" stroke-linecap="round" opacity=".8"><path d="M3 24h42M24 3v42"/><path d="M10 9.5c5.5 4 8.5 9 8.5 14.5S15.5 34.5 10 38.5M38 9.5c-5.5 4-8.5 9-8.5 14.5s3 10.5 8.5 14.5"/></g></svg>
+        <span class="wordmark" dir="ltr">Dagger</span>
         <h1><span id="pageTitle">נתונים כלליים</span> <span class="yr" id="pageYear" hidden>2026-27</span></h1>
       </div>
       <div class="who">
@@ -1434,6 +1438,7 @@ function picksFrom(d) {
 const SITE = /*__SITE__*/null;
 
 const TAB_KEY = "fantasy-tab";
+let LAST_TAB_COUNTED = null;
 const SETTINGS_KEY = "draftroom.settings.v1", PICKS_KEY = "draftroom.picks.v1", ACCOUNT_KEY = "draftroom.account.v1";
 // Website: the signed-in account's last known picks, kept in this browser under its user id, so a reload shows them
 // at once instead of the full player list until the account finishes loading (a few seconds)
@@ -4216,6 +4221,11 @@ function syncControls() {
   for (const b of document.querySelectorAll("[data-tab]")) b.setAttribute("aria-selected", b.dataset.tab === st.tab);
   // The page title follows the open tab
   try { sessionStorage.setItem(TAB_KEY, st.tab); } catch (e) {}
+  // website visit stats: which tabs people open (an event per tab change, not a page view)
+  if (SITE && st.tab !== LAST_TAB_COUNTED) {
+    LAST_TAB_COUNTED = st.tab;
+    try { window.goatcounter?.count?.({ path: `tab-${st.tab}`, title: st.tab, event: true }); } catch (e) {}
+  }
   $("topBar").hidden = !["board", "adv"].includes(st.tab);
   $("pageTitle").textContent = { board: "נתונים כלליים", adv: "נתונים מתקדמים", draft: "חדר הדראפט", cmp: "השוואה", mu: "מצ'אפ שבועי" }[st.tab] || "נתונים כלליים";
   $("pageYear").hidden = st.tab !== "draft";  // the season shows only in the draft room
