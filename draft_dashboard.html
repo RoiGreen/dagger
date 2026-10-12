@@ -491,6 +491,7 @@ table.box.daygrid td.dg.bn { color: var(--muted); text-decoration: line-through;
 table.box.daygrid td.dg.out { color: var(--neg); }
 table.box.daygrid .iltag { font-size: .66rem; font-weight: 800; color: var(--neg); margin-inline-start: 6px; }
 table.box.daygrid tr.dgfoot td { font-family: var(--font-num); font-weight: 800; }
+table.box.daygrid tr.dgfoot .over { color: var(--neg); }
 table.box.daygrid tr.dgfoot td.gap { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .muadv { display: grid; gap: 10px; }
 .muadv b { margin-inline-end: 8px; }
@@ -3253,7 +3254,7 @@ function planWeek(roster, il, team, swap = null) {
       T.covFT += ch * f * f * m.covFT + ch * (1 - ch) * f * f * m.mean.FTM * m.mean.FTA;
       T.starts += ch;
     }
-    T.days.push({ d, started: slot.size, past: d <= LOG_END });
+    T.days.push({ d, started: slot.size, playing: cands.length, past: d <= LOG_END });
   }
   return T;
 }
@@ -3468,7 +3469,7 @@ function renderMatchup() {
     }).join("");
     return `<tr${G.il.has(p.id) ? ` class="ilrow"` : ""}><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span></span>${G.il.has(p.id) ? `<small class="iltag">IL</small>` : ""}</td>${cells}</tr>`;
   }).join("");
-  const gridFoot = `<tr class="dgfoot"><td>בהרכב</td>${G.T.days.map((x) => `<td class="${!x.past && x.started < LINEUP.length && MU_DAY_GAMES(x.d) ? "gap" : ""}">${x.started}/${LINEUP.length}</td>`).join("")}</tr>`;
+  const gridFoot = `<tr class="dgfoot"><td>בהרכב</td>${G.T.days.map((x) => `<td class="${!x.past && x.started < LINEUP.length && MU_DAY_GAMES(x.d) ? "gap" : ""}"${x.playing > LINEUP.length ? ` title="${x.playing} שחקנים משחקים, רק ${LINEUP.length} נכנסים להרכב"` : ""}>${x.playing > LINEUP.length ? `<b class="over">${x.playing}</b>` : x.started}/${LINEUP.length}</td>`).join("")}</tr>`;
 
   // rosters with the week's numbers of the starters and the moves
   const freeList = players.filter((p) => p.team26 && p.L && !taken.has(p.id) && !mine.has(p.id) && !picks.some((x) => x.id === p.id))
