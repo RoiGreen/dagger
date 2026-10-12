@@ -8,6 +8,7 @@ Writes ./nba_2026_27/ :
   game_logs_regular.csv     same for the regular season (empty until opening night)
   injuries.csv              ESPN injury list (status, injury, expected return)
   positions_espn.csv        ESPN fantasy positions (PG / SG / SF / PF / C)
+  starters.json             starting five of every game
 Also refreshes ../nba_2025_26/player_index_2026_27.csv (current rosters).
   last_update.txt           when the pull ran and the latest game date in each file
 
@@ -24,6 +25,7 @@ from nba_api.stats.endpoints import playergamelogs, playerindex, scheduleleaguev
 from headshots import ensure_headshots
 from injuries import pull_injuries
 from positions import pull_positions
+from starters import pull_starters
 from team_logos import ensure_team_logos
 from nba_stats_2025_26 import fetch
 
@@ -84,6 +86,9 @@ def main() -> None:
                    f"({df.loc[df['GAME_DATE'] == last, 'GAME_ID'].nunique()} games on {last})")
         print(msg)
         lines.append(msg)
+    msg = pull_starters()
+    print(msg)
+    lines.append(msg)
     (OUT / "last_update.txt").write_text("\n".join(lines) + "\n", encoding="utf-8")
 
 

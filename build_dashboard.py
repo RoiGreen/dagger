@@ -49,6 +49,7 @@ CURRENT = 2026
 CURRENT_LOGS = HERE / "nba_2026_27" / "game_logs_regular.csv"
 PRESEASON = 1026
 PRESEASON_LOGS = HERE / "nba_2026_27" / "game_logs_preseason.csv"
+STARTERS = HERE / "nba_2026_27" / "starters.json"  # starting lineups per game (starters.py)
 INJURIES_CSV = HERE / "nba_2026_27" / "injuries.csv"  # ESPN injury list, from injuries.py
 POSITIONS_CSV = HERE / "nba_2026_27" / "positions_espn.csv"  # ESPN fantasy positions, from positions.py
 # For players ESPN does not list yet (mostly rookies): the NBA's broad position turned into fantasy positions
@@ -182,8 +183,10 @@ BOX_DAYS = 21  # regular-season box scores kept in the page (the whole preseason
 
 def box_scores() -> dict:
     """2026-27 box scores by game id: per team, one row per player who played
-    [name, player id, MIN, PTS, REB, AST, STL, BLK, 3PM, FGM, FGA, FTM, FTA, TOV, 3PA]. Regular season: the last BOX_DAYS days."""
+    [name, player id, MIN, PTS, REB, AST, STL, BLK, 3PM, FGM, FGA, FTM, FTA, TOV, 3PA, starting position or ""].
+    Starters first (in the box-score order), then the bench by minutes. Regular season: the last BOX_DAYS days."""
     out = {}
+    starters = json.loads(STARTERS.read_text(encoding="utf-8")) if STARTERS.exists() else {}
     for f, recent_only in [(PRESEASON_LOGS, False), (CURRENT_LOGS, True)]:
         if not f.exists() or f.stat().st_size < 200:
             continue
@@ -195,9 +198,14 @@ def box_scores() -> dict:
         if recent_only:
             df = df[df["GAME_DATE"] >= df["GAME_DATE"].max() - pd.Timedelta(days=BOX_DAYS)]
         for (gid, team), g in df.sort_values("MIN", ascending=False).groupby(["GAME_ID", "TEAM_ABBREVIATION"], sort=False):
-            out.setdefault(str(gid).zfill(10), {})[team] = [
+            gid = str(gid).zfill(10)
+            five = starters.get(gid, {})
+            order = {pid: i for i, pid in enumerate(five)}
+            rows = sorted(g.itertuples(), key=lambda r: order.get(str(int(r.PLAYER_ID)), 99))  # stable: bench keeps minutes order
+            out.setdefault(gid, {})[team] = [
                 [r.PLAYER_NAME, int(r.PLAYER_ID), round(float(r.MIN)), int(r.PTS), int(r.REB), int(r.AST), int(r.STL), int(r.BLK),
-                 int(r.FG3M), int(r.FGM), int(r.FGA), int(r.FTM), int(r.FTA), int(r.TOV), int(r.FG3A)] for r in g.itertuples()]
+                 int(r.FG3M), int(r.FGM), int(r.FGA), int(r.FTM), int(r.FTA), int(r.TOV), int(r.FG3A),
+                 five.get(str(int(r.PLAYER_ID)), "")] for r in rows]
     print(f"Box scores: {len(out)} games")
     return out
 
