@@ -1576,6 +1576,7 @@ function passes(p) {
     catOk(p);
 }
 
+let BODY_JOB = 0;  // a newer render stops the batches of the one before
 function render() {
   const { list, now } = last;
   const m = st.mode;
@@ -1632,8 +1633,8 @@ function render() {
     return `<th class="${cls}"${tip} ${c.nosort ? "" : `tabindex="0" data-k="${c.k}"`} scope="col">${esc(label)}</th>`;
   }).join("");
 
-  // body
-  $("body").innerHTML = rows.map(({ p, rank, z }) => {
+  // body: the first rows at once, the rest in small batches after it, so the page scrolls while the table fills
+  const rowHtml = ({ p, rank, z }) => {
     const o = p.L[m];
     const cats = CATS.map((c) => {
       const v = c.k.endsWith("_PCT") ? fmt3(o[c.k]) : fmt1(o[c.k]);
@@ -1647,7 +1648,17 @@ function render() {
       <td>${p.age ?? "–"}</td><td>${p.gp}</td>${availCell(p)}<td>${fmt1(p.L.g.MIN)}</td>${cats}
       <td class="val"${z.w < 1 ? ` title="לפני תיקון המדגם: ${z.raw.toFixed(2)} (${p.gp} משחקים בלבד, הערך הוזז חלקית לכיוון הממוצע)"` : ""}>${z.total.toFixed(2)}${z.w < 0.97 ? `<i class="fewg">*</i>` : ""}</td><td class="val">${fmt1(p.F[m])}</td>
       <td class="acts">${actions(p)}</td></tr>`;
-  }).join("") || EMPTY_ROW(COLS.length + (statRank ? 1 : 0));
+  };
+  const job = ++BODY_JOB, FIRST = 60, STEP = 80;
+  $("body").innerHTML = rows.slice(0, FIRST).map(rowHtml).join("") || EMPTY_ROW(COLS.length + (statRank ? 1 : 0));
+  let at = FIRST;
+  const more = () => {
+    if (job !== BODY_JOB || at >= rows.length) return;
+    $("body").insertAdjacentHTML("beforeend", rows.slice(at, at + STEP).map(rowHtml).join(""));
+    at += STEP;
+    setTimeout(more, 0);
+  };
+  if (rows.length > FIRST) setTimeout(more, 0);
 
 
   renderMine(); renderFav(); renderAdv(); renderDraft(); renderDist(); renderCmp(); renderMatchup();
@@ -1797,7 +1808,9 @@ function injuryPill(p) {
 }
 
 // ---------- this fantasy week's games (Monday to Sunday, NBA game days in US Eastern time) ----------
-const etDay = (d) => d.toLocaleDateString("en-CA", { timeZone: "America/New_York" });  // YYYY-MM-DD
+// One shared formatter: building a new one for each of the ~1,300 games cost a quarter of a second at load
+const ET_DAY = new Intl.DateTimeFormat("en-CA", { timeZone: "America/New_York", year: "numeric", month: "2-digit", day: "2-digit" });
+const etDay = (d) => ET_DAY.format(d);  // YYYY-MM-DD
 const GAMES = (D.sched || []).map(([utc, h, a, pre, id, fin, hs, as]) => { const t = new Date(utc); return { t, h, a, pre, d: etDay(t), id, fin, hs, as }; });
 let TEAM_WEEK = new Map();
 function computeWeek() {
