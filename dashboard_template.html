@@ -443,6 +443,51 @@ table.mucats tr.punted td { opacity: .4; }
 .mucat.lean-l { background: color-mix(in srgb, var(--neg) 12%, transparent); color: var(--neg); }
 .mucat.lose { background: color-mix(in srgb, var(--neg) 24%, transparent); color: var(--neg); }
 .munote { margin: 6px 0 0; font-size: .78rem; color: var(--muted); }
+.muadds { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; font-weight: 700; color: var(--muted); }
+.muadds input { width: 3.4em; padding: 4px 6px; text-align: center; }
+.muscore .mmid { display: grid; justify-items: center; gap: 8px; }
+.mwin { display: grid; justify-items: center; line-height: 1.1; }
+.mwin b { font-family: var(--font-num); font-size: 1.6rem; font-weight: 800; }
+.mwin span { font-size: .72rem; color: #93a0bd; }
+.mwin.win b, .mwin.lean-w b { color: #3ddc97; } .mwin.toss b { color: #ffb020; } .mwin.lean-l b, .mwin.lose b { color: #ff6b7d; }
+table.mucats .sofar { display: block; font-size: .68rem; font-weight: 600; color: var(--muted); }
+.mubar2 { display: inline-block; width: 70px; height: 8px; border-radius: 4px; background: var(--sunk); overflow: hidden; vertical-align: middle; margin-inline-end: 6px; direction: ltr; }
+.mubar2 i { display: block; height: 100%; border-radius: 4px; background: var(--muted); }
+.mubar2.win i, .mubar2.lean-w i { background: var(--pos); } .mubar2.toss i { background: var(--led); } .mubar2.lean-l i, .mubar2.lose i { background: var(--neg); }
+.muq { font-family: var(--font-num); font-size: .9rem; display: inline-block; min-width: 3em; }
+.muq.win, .muq.lean-w { color: var(--pos); } .muq.lean-l, .muq.lose { color: var(--neg); }
+.mupicks .mwho { display: grid; gap: 1px; }
+.mupicks .mwho > .pn, .mupicks .mwho { align-items: center; }
+.mupicks .mdrop { font-size: .74rem; color: var(--muted); font-weight: 600; }
+.mupicks .mdays { font-family: var(--font-body); font-size: .78rem; color: var(--muted); white-space: nowrap; letter-spacing: .08em; }
+.mupicks .mfit { display: grid; line-height: 1.05; }
+.mupicks .mfit small { font-size: .72rem; color: var(--pos); }
+.mgo, .mact { border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); border-radius: 8px; padding: 3px 10px; font: inherit; font-size: .78rem; font-weight: 700; cursor: pointer; }
+.mgo { background: var(--accent); border-color: var(--accent); color: #fff; }
+.mact:hover, .mgo:hover { filter: brightness(1.08); }
+table.box.murt td.macts { white-space: nowrap; text-align: end; }
+table.box.murt .mact { padding: 2px 7px; font-size: .72rem; margin-inline-start: 3px; }
+table.box tr.ilrow td { opacity: .55; }
+.muadd { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
+.muadd input { flex: 1 1 180px; } .muadd select { flex: 0 1 200px; width: auto; }
+.dghead { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
+.dghead h3 { margin: 0; }
+.seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
+.seg button { border: 0; background: none; padding: 5px 12px; font: inherit; font-size: .82rem; font-weight: 700; color: var(--muted); cursor: pointer; }
+.seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
+table.box.daygrid { width: 100%; margin-top: 8px; }
+table.box.daygrid td.pn { text-align: start; min-width: 0; }
+table.box.daygrid th.today { color: var(--accent); }
+table.box.daygrid td.dg { font-family: var(--font-num); font-size: .78rem; line-height: 1.1; padding: 4px 2px; }
+table.box.daygrid td.dg small { display: block; font-size: .64rem; opacity: .8; }
+table.box.daygrid td.dg.on { background: color-mix(in srgb, var(--pos) 18%, transparent); font-weight: 700; }
+table.box.daygrid td.dg.on.gtd { background: color-mix(in srgb, var(--led) 22%, transparent); }
+table.box.daygrid td.dg.on.done { background: color-mix(in srgb, var(--muted) 16%, transparent); }
+table.box.daygrid td.dg.bn { color: var(--muted); text-decoration: line-through; }
+table.box.daygrid td.dg.out { color: var(--neg); }
+table.box.daygrid .iltag { font-size: .66rem; font-weight: 800; color: var(--neg); margin-inline-start: 6px; }
+table.box.daygrid tr.dgfoot td { font-family: var(--font-num); font-weight: 800; }
+table.box.daygrid tr.dgfoot td.gap { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .muadv { display: grid; gap: 10px; }
 .muadv b { margin-inline-end: 8px; }
 .muadv p { margin: 3px 0 0; font-size: .82rem; color: var(--muted); }
@@ -1135,6 +1180,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
       <section class="view" id="viewMu" role="tabpanel" aria-labelledby="tabMu" hidden>
         <div class="mubar">
           <div class="mupick"><span>היריב השבוע</span><select id="muOpp" aria-label="היריב השבוע"></select></div>
+          <span class="muadds">פיק אפים השבוע: <input type="number" id="muAddsUsed" min="0" max="14" aria-label="פיק אפים שנוצלו"> מתוך <input type="number" id="muAddsMax" min="0" max="14" aria-label="פיק אפים בשבוע"></span>
           <span class="muweek" id="muWeek"></span>
         </div>
         <div id="muOut"></div>
@@ -1272,7 +1318,7 @@ const hasPos = (p, x) => (p.pos || "").split("/").includes(x);
 const st = {
   fmt: "cat", mode: "g", teams: 8, roster: 13, punts: new Set(), settingsVersion: 5,
   q: "", minGp: 50, minMin: 0, catFilters: [{ cat: "PTS", val: 0 }], pos: new Set(), teamSel: [], maxAge: 42,
-  hideTaken: true, onlyMoved: false, noHurt: false, weekGames: [], formWin: "", muOpp: null, onlyFav: false, inj: "all", rookies: "all", myPos: 1, snake: true, roles: [], leagueName: "", teamNames: [], tags: {}, tagsMigrated: false,
+  hideTaken: true, onlyMoved: false, noHurt: false, weekGames: [], formWin: "", muOpp: null, weekAdds: 3, muAdds: null, il: {}, muGrid: "a", onlyFav: false, inj: "all", rookies: "all", myPos: 1, snake: true, roles: [], leagueName: "", teamNames: [], tags: {}, tagsMigrated: false,
   cmp: { mode: "players", a: [], b: [], ta: 0, tb: 1, tta: null, ttb: null, chart: "val", sw: { a: [], b: [] }, fold: { a: false, b: false }, drops: [], adds: [] },
   sort: "zTotal", asc: false, tab: "board", advSort: "USG", advAsc: false, teamSort: "PACE", teamAsc: false, availSeasons: [2], vsOpp: "",
 };
@@ -3059,88 +3105,268 @@ function oppFactor(team, opp) {
   const pace = ((o.PACE + (m ? m.PACE : avg("PACE"))) / 2) / avg("PACE");
   return Math.min(1.12, Math.max(0.88, pace * (o.DEF_RATING / avg("DEF_RATING"))));
 }
-// What a player has already put up this week (from his game log) and what he is expected to add
+// ---------- the week: daily lineups, projection and the chance to win ----------
 const MU_KEYS = ["PTS", "REB", "AST", "STL", "BLK", "FG3M", "TOV", "FGM", "FGA", "FTM", "FTA"];
-function weekLine(p) {
-  const { from, to } = WEEK || weekRange();
-  const done = Object.fromEntries(MU_KEYS.map((k) => [k, 0]));
-  let played = 0;
-  for (const r of p.recent || []) {
-    if (r.length < 6 || r[0] < from || r[0] > to || r[0] < REG_START) continue;
-    played++;
-    Object.assign(done, { PTS: done.PTS + r[6], FGM: done.FGM + r[7], FGA: done.FGA + r[8], FTM: done.FTM + r[9], FTA: done.FTA + r[10],
-      FG3M: done.FG3M + r[11], REB: done.REB + r[13], AST: done.AST + r[14], STL: done.STL + r[15], BLK: done.BLK + r[16], TOV: done.TOV + r[17] });
-  }
-  const proj = Object.fromEntries(MU_KEYS.map((k) => [k, 0]));
-  const b = blendRaw(p);
-  let games = 0, missed = 0;
-  if (b && p.team26) {
-    for (const { g, opp } of weekGamesLeft(p.team26)) {
-      const ch = playChance(p, g);
-      games += ch; missed += 1 - ch;
-      const f = ch * oppFactor(p.team26, opp);
-      for (const k of MU_KEYS) proj[k] += b.arr[ix[k]] * f;
+// where each stat sits in a p.recent game row
+const ROW_IX = { PTS: 6, FGM: 7, FGA: 8, FTM: 9, FTA: 10, FG3M: 11, REB: 13, AST: 14, STL: 15, BLK: 16, TOV: 17 };
+const rowLine = (r) => Object.fromEntries(MU_KEYS.map((k) => [k, r[ROW_IX[k]]]));
+// Active slots of the league (bench and IL do not count). A player fills a slot his positions allow; UTIL takes anyone
+const LINEUP = [["PG", ["PG"]], ["SG", ["SG"]], ["G", ["PG", "SG"]], ["SF", ["SF"]], ["PF", ["PF"]], ["F", ["SF", "PF"]],
+  ["C", ["C"]], ["C", ["C"]], ["UTIL", null], ["UTIL", null]];
+const IL_SLOTS = 2;
+// The best lineup of one day: the most valuable players first, each one placed if the slots can still hold everyone
+// placed so far (moving earlier players between slots when needed). Greedy is exact here (a transversal matroid).
+function lineupFor(cands) {
+  const at = new Array(LINEUP.length).fill(-1);
+  const fits = (c, s) => !LINEUP[s][1] || LINEUP[s][1].some((x) => hasPos(c.p, x));
+  const place = (ci, seen) => {
+    for (let s = 0; s < LINEUP.length; s++) {
+      if (seen[s] || !fits(cands[ci], s)) continue;
+      seen[s] = true;
+      if (at[s] < 0 || place(at[s], seen)) { at[s] = ci; return true; }
     }
-  }
-  return { done, proj, played, games, missed, recent: b?.recent };
+    return false;
+  };
+  cands.map((_, i) => i).sort((a, b) => cands[b].v - cands[a].v).forEach((ci) => place(ci, []));
+  const slot = new Map();
+  at.forEach((ci, s) => { if (ci >= 0) slot.set(cands[ci].p.id, LINEUP[s][0]); });
+  return slot;
 }
-function teamWeek(roster) {
-  const T = { done: Object.fromEntries(MU_KEYS.map((k) => [k, 0])), total: Object.fromEntries(MU_KEYS.map((k) => [k, 0])), games: 0, played: 0, rows: [] };
-  for (const p of roster) {
-    const w = weekLine(p);
-    for (const k of MU_KEYS) { T.done[k] += w.done[k]; T.total[k] += w.done[k] + w.proj[k]; }
-    T.games += w.games; T.played += w.played;
-    T.rows.push({ p, ...w });
+
+// Per-player model for the week: expected line per game (the blended form), its spread game to game, and lineup value
+let MU = null;  // per-render cache
+function muModel(p) {
+  if (MU.model.has(p.id)) return MU.model.get(p.id);
+  const b = blendRaw(p);
+  let m = null;
+  if (b && p.L) {
+    const L = line(b.arr, "g");
+    const mean = Object.fromEntries(MU_KEYS.map((k) => [k, L[k]]));
+    mean.FP = fpts(L);
+    const keys = [...MU_KEYS, "FP"];
+    const val = (r, k) => (k === "FP" ? fpts(rowLine(r)) : r[ROW_IX[k]]);
+    const rows = (p.recent || []).filter((r) => r.length >= 18 && r[5] > 0);
+    const v = {};
+    let cFG = 0.6, cFT = 0.6;
+    if (rows.length >= 6) {
+      // his own spread over his recent games, kept in proportion when his level now is different
+      const mu = {}, sd = {};
+      for (const k of keys) {
+        mu[k] = rows.reduce((a, r) => a + val(r, k), 0) / rows.length;
+        sd[k] = Math.sqrt(rows.reduce((a, r) => a + (val(r, k) - mu[k]) ** 2, 0) / (rows.length - 1));
+        const scale = Math.abs(mu[k]) > 0.05 ? Math.abs(mean[k] / mu[k]) : 1;
+        v[k] = (sd[k] * Math.min(scale, 2)) ** 2;
+      }
+      const corr = (x, y) => {
+        if (!sd[x] || !sd[y]) return 0;
+        return rows.reduce((a, r) => a + (val(r, x) - mu[x]) * (val(r, y) - mu[y]), 0) / (rows.length - 1) / (sd[x] * sd[y]);
+      };
+      cFG = corr("FGM", "FGA"); cFT = corr("FTM", "FTA");
+    } else {
+      for (const k of MU_KEYS) v[k] = Math.max(mean[k], 0.2) * 1.3;  // no history: a count-like spread
+      v.FP = (0.35 * mean.FP) ** 2;
+    }
+    const value = st.fmt === "pts" ? mean.FP : zScores([{ id: p.id, L: { g: L } }], last.now.pool, "g").get(p.id).total;
+    m = { mean, v, covFG: cFG * Math.sqrt(v.FGM * v.FGA), covFT: cFT * Math.sqrt(v.FTM * v.FTA), value };
   }
-  T.total.FG_PCT = T.total.FGA ? T.total.FGM / T.total.FGA : 0;
-  T.total.FT_PCT = T.total.FTA ? T.total.FTM / T.total.FTA : 0;
+  MU.model.set(p.id, m);
+  return m;
+}
+const muValue = (p) => muModel(p)?.value ?? -99;
+// Season value: what a player is worth beyond this week (used to protect good players from being dropped)
+const seasonValue = (p) => (st.fmt === "pts" ? p.F?.g ?? 0 : zOf(p)?.total ?? -99);
+
+function weekDays() {
+  if (MU && MU.days) return MU.days;
+  const out = [];
+  for (let d = new Date(WEEK.from + "T12:00:00Z"); out.length < 7; d = new Date(d.getTime() + 864e5)) out.push(d.toISOString().slice(0, 10));
+  if (MU) MU.days = out;
+  return out;
+}
+// A team's regular-season game on a day still to come (not yet in the game logs)
+function gameOn(team, d) {
+  if (!team || d <= LOG_END) return null;
+  const g = MU.games.get(`${team}|${d}`);
+  return g ? { g, opp: g.h === team ? g.a : g.h } : null;
+}
+const playedOn = (p, d) => (p.recent || []).find((r) => r[0] === d && r.length >= 18);
+const zeroLine = () => Object.fromEntries([...MU_KEYS, "FP"].map((k) => [k, 0]));
+
+// One roster's week. Days already in the logs: the best lineup of those who played, with what they did.
+// Days to come: the best lineup of those with a game, and what they should add (chance to play x opponent).
+// swap = { add, drop, from, kind }: from that day on, `add` is on the team and `drop` is not.
+function planWeek(roster, il, team, swap = null) {
+  const T = { done: zeroLine(), mean: zeroLine(), v: zeroLine(), covFG: 0, covFT: 0, starts: 0, played: 0, days: [], cell: new Map() };
+  for (const d of weekDays()) {
+    const who = roster.filter((p) => !il.has(p.id) && !(swap && d >= swap.from && p.id === swap.drop));
+    if (swap && d >= swap.from) who.push(swap.add);
+    const cands = [];
+    for (const p of who) {
+      if (d <= LOG_END) {
+        const r = playedOn(p, d);
+        if (r) cands.push({ p, v: muValue(p), r });
+      } else {
+        const gm = gameOn(p.team26, d);
+        if (!gm) continue;
+        const ch = playChance(p, gm.g);
+        if (ch <= 0) { T.cell.set(`${p.id}|${d}`, { gm, out: true }); continue; }
+        cands.push({ p, v: muValue(p) * (ch < 1 ? 0.6 : 1), gm, ch });
+      }
+    }
+    const slot = lineupFor(cands);
+    for (const c of cands) {
+      const on = slot.get(c.p.id);
+      T.cell.set(`${c.p.id}|${d}`, { gm: c.gm, r: c.r, slot: on, ch: c.ch });
+      if (!on) continue;
+      if (c.r) {
+        const L = rowLine(c.r);
+        for (const k of MU_KEYS) T.done[k] += L[k];
+        T.done.FP += fpts(L);
+        T.played++;
+        continue;
+      }
+      const m = muModel(c.p);
+      if (!m) continue;
+      const f = oppFactor(c.p.team26, c.gm.opp), ch = c.ch;
+      for (const k of [...MU_KEYS, "FP"]) {
+        const mu = m.mean[k] * f;
+        T.mean[k] += ch * mu;
+        T.v[k] += ch * f * f * m.v[k] + ch * (1 - ch) * mu * mu;  // his spread, plus the doubt whether he plays
+      }
+      T.covFG += ch * f * f * m.covFG + ch * (1 - ch) * f * f * m.mean.FGM * m.mean.FGA;
+      T.covFT += ch * f * f * m.covFT + ch * (1 - ch) * f * f * m.mean.FTM * m.mean.FTA;
+      T.starts += ch;
+    }
+    T.days.push({ d, started: slot.size, past: d <= LOG_END });
+  }
   return T;
 }
-// How each category looks: margin against the opponent, and what to do about it
-function catOutlook(k, a, b) {
-  const lowBetter = k === "TOV", pct = k.endsWith("_PCT");
-  const lead = a === b ? 0 : (a > b) !== lowBetter ? 1 : -1;
-  const gap = pct ? Math.abs(a - b) : Math.abs(a - b) / Math.max((a + b) / 2, 1);
-  const [close, lean] = pct ? [0.006, 0.02] : [0.06, 0.15];
-  const level = gap < close ? 0 : gap < lean ? 1 : 2;
-  const key = level === 0 ? "toss" : lead > 0 ? (level === 1 ? "lean-w" : "win") : (level === 1 ? "lean-l" : "lose");
-  const label = { toss: "צמוד", "lean-w": "יתרון", win: "ניצחון בטוח", "lean-l": "פיגור קטן", lose: "פיגור גדול" }[key];
-  const weight = { toss: 2, "lean-w": 1.4, "lean-l": 1.6, win: 0.4, lose: 0.3 }[key];  // where an added player helps most
-  return { key, label, weight, lead };
-}
-// Fit score: how much a player helps this team where it matters (category weights; punted categories count 0,
-// so with TOV punted a high-turnover player is not marked down), times the games he has left this week.
-// Replacement level: the average of the players ranked just after everyone a league can roster
-let REPL = null;
-function replacement() {
-  if (REPL) return REPL;
-  const size = Math.max(1, st.teams * st.roster), rank = last.now.rank;
-  const band = last.list.filter((p) => !p.rookie && rank.get(p.id) > size && rank.get(p.id) <= size + 25);
-  const zs = band.map((p) => last.now.z.get(p.id).z);
-  REPL = { z: Object.fromEntries(CATS.map((c) => [c.k, zs.length ? zs.reduce((a, z) => a + z[c.k], 0) / zs.length : 0])),
-    fp: band.length ? band.reduce((a, p) => a + p.F.g, 0) / band.length : 0 };
-  return REPL;
-}
-// Fit score as 1-100%: a fixed scale (not relative to this week's list), so a thin week shows low numbers
-const fitPct = (score) => Math.max(1, Math.min(100, Math.round(100 * (1 - Math.exp(-Math.max(score, 0) / 12)))));
-function fitScore(p, weights) {
-  const b = blendRaw(p);
-  if (!b || !p.team26) return null;
-  const L = line(b.arr, "g"), R = replacement();
-  const z = zScores([{ id: p.id, L: { g: L } }], last.now.pool, "g").get(p.id).z;
-  const pts = st.fmt === "pts";
-  // value over a replacement-level player, so more games always means more value
-  const parts = CATS.map((c) => ({ k: c.k, l: c.l, v: st.punts.has(c.k) || pts ? 0 : (weights[c.k] ?? 1) * (z[c.k] - R.z[c.k]), z: z[c.k] }));
-  const perGame = pts ? (fpts(L) - R.fp) / 10 : parts.reduce((a, x) => a + x.v, 0);
-  const games = p.team26 ? weekGamesLeft(p.team26).reduce((a, { g }) => a + playChance(p, g), 0) : 0;
-  return { perGame, games, score: perGame * games, parts, recent: b.recent };
-}
-const myRoster = () => players.filter((p) => mine.has(p.id));
-const teamRoster = (t) => picks.filter((x) => x.team === t).map((x) => PLAYER_BY_ID.get(x.id)).filter(Boolean);
 
+// Chance to win each category, and the matchup (more categories than the opponent)
+function erf(x) {
+  const s = Math.sign(x), a = Math.abs(x), t = 1 / (1 + 0.3275911 * a);
+  return s * (1 - (((((1.061405429 * t - 1.453152027) * t) + 1.421413741) * t - 0.284496736) * t + 0.254829592) * t * Math.exp(-a * a));
+}
+const Phi = (x) => 0.5 * (1 + erf(x / Math.SQRT2));
+const chanceOf = (diff, sd) => (sd > 1e-9 ? Phi(diff / sd) : diff > 0 ? 1 : diff < 0 ? 0 : 0.5);
+function muOdds(A, B) {
+  const pct = (T, m, a, cov) => {
+    const M = T.done[m] + T.mean[m], N = T.done[a] + T.mean[a];
+    if (N <= 0) return { p: 0, v: 0 };
+    const p = M / N;
+    return { p, v: Math.max(0, (T.v[m] - 2 * p * cov + p * p * T.v[a]) / (N * N)) };
+  };
+  const cats = CATS.map((c) => {
+    if (c.k.endsWith("_PCT")) {
+      const [m, a, cv] = c.k === "FG_PCT" ? ["FGM", "FGA", "covFG"] : ["FTM", "FTA", "covFT"];
+      const x = pct(A, m, a, A[cv]), y = pct(B, m, a, B[cv]);
+      return { ...c, a: x.p, b: y.p, done: [A.done[a] ? A.done[m] / A.done[a] : null, B.done[a] ? B.done[m] / B.done[a] : null],
+        q: chanceOf(x.p - y.p, Math.sqrt(x.v + y.v)) };
+    }
+    const a = A.done[c.k] + A.mean[c.k], b = B.done[c.k] + B.mean[c.k];
+    const diff = c.k === "TOV" ? b - a : a - b;
+    return { ...c, a, b, done: [A.done[c.k], B.done[c.k]], q: chanceOf(diff, Math.sqrt(A.v[c.k] + B.v[c.k])) };
+  });
+  // the number of categories won follows a Poisson-binomial distribution
+  let dist = [1];
+  for (const c of cats) {
+    const nd = new Array(dist.length + 1).fill(0);
+    dist.forEach((x, i) => { nd[i] += x * (1 - c.q); nd[i + 1] += x * c.q; });
+    dist = nd;
+  }
+  const n = cats.length;
+  const catWin = dist.reduce((a, x, k) => a + (k > n / 2 ? x : 0), 0);
+  const fa = A.done.FP + A.mean.FP, fb = B.done.FP + B.mean.FP;
+  const fpWin = chanceOf(fa - fb, Math.sqrt(A.v.FP + B.v.FP));
+  return { cats, win: st.fmt === "pts" ? fpWin : catWin, exp: cats.reduce((a, c) => a + c.q, 0), fa, fb };
+}
+const oddsKey = (q) => (q >= 0.85 ? "win" : q >= 0.6 ? "lean-w" : q > 0.4 ? "toss" : q > 0.15 ? "lean-l" : "lose");
+const ODDS_LABEL = { win: "ניצחון בטוח", "lean-w": "יתרון", toss: "צמוד", "lean-l": "פיגור קטן", lose: "פיגור גדול" };
+const pctTxt = (q) => (q > 0.995 ? ">99%" : q < 0.005 ? "<1%" : `${Math.round(q * 100)}%`);
+
+// Roster state for the matchup: IL lists per team, pickups used this week
+const ilOf = (t) => new Set(((st.il || {})[t] || []).filter((id) => picks.some((x) => x.id === id && x.team === t) || (t === myIdx() && mine.has(id))));
+const rosterOf = (t) => (t === myIdx() ? players.filter((p) => mine.has(p.id)) : picks.filter((x) => x.team === t).map((x) => PLAYER_BY_ID.get(x.id)).filter(Boolean));
+const myRoster = () => rosterOf(myIdx());
+const addsUsed = () => (st.muAdds && st.muAdds.week === WEEK.from ? st.muAdds.n : 0);
+// The first day a player picked up now can play: today (US Eastern), or the first day of the week planned
+function pickupFrom() {
+  const today = etDay(new Date());
+  let d = today > WEEK.from ? today : WEEK.from;
+  return d <= LOG_END ? new Date(new Date(LOG_END + "T12:00:00Z").getTime() + 864e5).toISOString().slice(0, 10) : d;
+}
+
+// The best pickups for this matchup: each free agent with his best release (or IL move, or an open spot),
+// ranked by how much he raises the chance to win the week. Good players are protected from release:
+// only someone whose season value is close to the newcomer's, or below the league's rostered level, can go.
+function bestMoves(me, opp, mineP, il, B, base) {
+  const from = pickupFrom();
+  if (from > WEEK.to) return [];
+  const rank = last.now.rank, size = Math.max(1, st.teams * st.roster);
+  const free = players.filter((p) => p.team26 && p.L && !taken.has(p.id) && !mine.has(p.id) && !picks.some((x) => x.id === p.id));
+  const gamesFrom = (p) => weekDays().filter((d) => d >= from).reduce((a, d) => { const gm = gameOn(p.team26, d); return a + (gm ? playChance(p, gm.g) : 0); }, 0);
+  const pool = free.map((p) => ({ p, g: gamesFrom(p) })).filter((x) => x.g > 0 && muModel(x.p))
+    .sort((a, b) => (muValue(b.p) + (st.fmt === "pts" ? 0 : 4)) * b.g - (muValue(a.p) + (st.fmt === "pts" ? 0 : 4)) * a.g).slice(0, 24);
+  const active = mineP.filter((p) => !il.has(p.id));
+  const open = active.length < st.roster;
+  const ilFree = il.size < IL_SLOTS;
+  const margin = st.fmt === "pts" ? 3 : 0.75;
+  const out = [];
+  for (const { p: X } of pool) {
+    const opts = open ? [{ drop: null, kind: null }] : [];
+    for (const Y of active) {
+      const hurtLong = Y.hurt && Y.hurt.s === "OUT";
+      if (hurtLong && ilFree) { opts.push({ drop: Y, kind: "il" }); continue; }
+      const cheap = seasonValue(Y) <= seasonValue(X) + margin || (rank.get(Y.id) ?? 1e9) > size;
+      if (cheap) opts.push({ drop: Y, kind: "drop" });
+    }
+    let best = null;
+    for (const o of opts) {
+      const A2 = planWeek(mineP, il, me, { add: X, drop: o.drop?.id, from });
+      const r = muOdds(A2, B);
+      const gain = r.win - base.win + 0.08 * (r.exp - base.exp);
+      if (!best || gain > best.gain) best = { X, ...o, r, gain, A2 };
+    }
+    if (best && best.gain > 0.003) out.push(best);
+  }
+  return out.sort((a, b) => b.gain - a.gain).slice(0, 8);
+}
+
+// Roster moves from the matchup tab (add / release / IL) write straight into the draft-room rosters
+function muMove(team, addId, dropId, kind) {
+  const me = myIdx(), added = addId;
+  st.il = st.il || {};
+  if (dropId && kind === "il") {
+    st.il[team] = [...new Set([...(st.il[team] || []), dropId])];
+  } else if (dropId) {
+    // a release with an add takes the same board cell, so the draft board keeps its shape
+    const i = picks.findIndex((x) => x.id === dropId && x.team === team);
+    if (i >= 0 && addId) { picks[i] = { id: addId, team }; addId = null; }
+    else if (i >= 0) picks.splice(i, 1);
+    if (team === me && st.tags[dropId] === "m") delete st.tags[dropId];
+    st.il[team] = (st.il[team] || []).filter((id) => id !== dropId);
+  }
+  if (addId) picks.push({ id: addId, team });
+  if (added) {
+    delete st.tags[added];  // a table mark of the newcomer would contradict his new team
+    if (team === me) st.muAdds = { week: WEEK.from, n: addsUsed() + 1 };
+  }
+  rebuildSets(); flushPicks(); saveSettings(); render();
+}
+function muFromIL(team, id) {
+  st.il[team] = (st.il[team] || []).filter((x) => x !== id);
+  const over = rosterOf(team).filter((p) => !ilOf(team).has(p.id)).length - st.roster;
+  if (over > 0) showToast(`בסגל יש עכשיו ${over} שחקנים מעבר למקום. שחרר שחקן כדי להחזיר את הסגל לגודלו.`);
+  saveSettings(); render();
+}
+
+// days with at least one regular-season game (an empty lineup slot only matters then)
+const MU_DAY_GAMES = (d) => GAMES.some((g) => !g.pre && g.d === d);
 function renderMatchup() {
   if (st.tab !== "mu") return;
-  WEEK = weekRange(); REPL = null;
+  WEEK = weekRange();
+  MU = { model: new Map(), games: new Map() };
+  for (const g of GAMES) if (!g.pre) { MU.games.set(`${g.h}|${g.d}`, g); MU.games.set(`${g.a}|${g.d}`, g); }
   const n = Math.max(st.teams, 1), me = myIdx();
   if (st.muOpp == null || st.muOpp >= n || st.muOpp === me) st.muOpp = (me + 1) % n;
   const sel = $("muOpp");
@@ -3148,93 +3374,183 @@ function renderMatchup() {
     sel.innerHTML = Array.from({ length: n }, (_, i) => i).filter((i) => i !== me).map((i) => `<option value="${i}">${esc(teamName(i))}</option>`).join("");
     sel.value = String(st.muOpp);
   }
-  const { from, to } = weekRange();
+  const { from, to } = WEEK;
   const dd = (d) => { const [, m, day] = d.split("-"); return `${Number(day)}.${Number(m)}`; };
   $("muWeek").textContent = `${WEEK.next ? "השבוע הבא" : "שבוע"} ${dd(from)}–${dd(to)}`;
+  const maxAdds = st.weekAdds ?? 3;
+  setField("muAddsMax", maxAdds); setField("muAddsUsed", addsUsed());
   const out = $("muOut");
-  const mineP = myRoster(), oppP = teamRoster(st.muOpp);
+  const mineP = myRoster(), oppP = rosterOf(st.muOpp);
   if (!mineP.length || !oppP.length) {
     out.innerHTML = `<p class="gnote">${!mineP.length ? "כדי לתכנן מצ'אפ צריך את הסגל שלך: בחר שחקנים לקבוצה שלך בחדר הדראפט או סמן אותם \"שלי\" בטבלה." : "לקבוצה הזו אין עדיין שחקנים בחדר הדראפט."}</p>`;
     return;
   }
-  const A = teamWeek(mineP), B = teamWeek(oppP);
-  const cats = CATS.map((c) => {
-    const a = A.total[c.k], b = B.total[c.k];
-    return { ...c, a, b, punted: st.punts.has(c.k), o: catOutlook(c.k, a, b) };
-  });
-  const live = cats.filter((c) => !c.punted);
-  const wins = live.filter((c) => c.o.lead > 0).length, losses = live.filter((c) => c.o.lead < 0).length;
-  const f = (k, v) => (k.endsWith("_PCT") ? fmt3(v) : fmt1(v));
+  const ilA = ilOf(me), ilB = ilOf(st.muOpp);
+  const A = planWeek(mineP, ilA, me), B = planWeek(oppP, ilB, st.muOpp);
+  const odds = muOdds(A, B);
+  const cats = odds.cats.map((c) => ({ ...c, punted: st.punts.has(c.k), key: oddsKey(c.q) }));
+  const wins = cats.filter((c) => c.q > 0.5).length;
+  const f = (k, v) => (v == null ? "–" : k.endsWith("_PCT") ? fmt3(v) : fmt1(v));
   const myName = teamName(me), oppName = teamName(st.muOpp);
-  // advice
-  const by = (keys) => live.filter((c) => keys.includes(c.o.key));
+  const live = cats.filter((c) => !c.punted);
+  const by = (keys) => live.filter((c) => keys.includes(c.key));
   const chase = by(["toss", "lean-l"]), hold = by(["win", "lean-w"]), drop = by(["lose"]);
-  const chip = (c) => `<span class="mucat ${c.o.key}"><bdi>${c.l}</bdi></span>`;
-  // injuries that cost games this week
-  const hurtRows = (T) => T.rows.filter((r) => r.missed > 0.01).map((r) => `<li>${injuryPill(r.p)}<span class="pn" data-pcard="${r.p.id}">${esc(r.p.name)}</span><span class="why">${r.p.hurt?.s === "OUT" ? `מפסיד ${Math.round(r.missed)} ${Math.round(r.missed) === 1 ? "משחק" : "משחקים"}` : "בספק"}</span></li>`).join("");
-  // pickups: free agents by fit score for this matchup
-  const weights = Object.fromEntries(cats.map((c) => [c.k, c.punted ? 0 : c.o.weight]));
-  const free = players.filter((p) => p.team26 && p.L && !taken.has(p.id) && !mine.has(p.id) && !picks.some((x) => x.id === p.id));
-  const scored = free.map((p) => ({ p, f: fitScore(p, weights) })).filter((x) => x.f && x.f.games > 0 && x.f.score > 0).sort((a, b) => b.f.score - a.f.score).slice(0, 8);
-  // release candidates: the lowest season value on my roster (equal category weights), only if the best pickup beats him clearly
-  const even = Object.fromEntries(CATS.map((c) => [c.k, 1]));
-  const bestFree = free.map((p) => fitScore(p, even)).filter(Boolean).reduce((m, f) => Math.max(m, f.perGame), -1e9);
-  const mineScored = mineP.map((p) => ({ p, f: fitScore(p, even) || { perGame: -1e9, score: 0 } }))
-    .filter((x) => x.f.perGame < bestFree - 0.5).sort((a, b) => a.f.perGame - b.f.perGame).slice(0, 3);
-  const pickRow = (x, i) => {
-    const top = [...x.f.parts].filter((q) => q.v > 0.15).sort((a, b) => b.v - a.v).slice(0, 3);
-    return `<li><span class="rk">${i + 1}</span>${x.p.img ? `<img class="mimg" src="${x.p.img}" alt="" loading="lazy" decoding="async">` : `<span class="mimg"></span>`}
-      <span class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</span>${teamLogo(x.p.team26)}${x.p.hurt ? injuryPill(x.p) : ""}
-      <span class="mg" title="משחקים צפויים השבוע">${fmt1(x.f.games).replace(/\.0$/, "")} משח׳</span>
-      <span class="mtags">${top.map((q) => `<i class="${weights[q.k] >= 1.4 ? "need" : ""}"><bdi>${q.l}</bdi></i>`).join("")}</span>
-      <b class="mfit" title="תרומה בקטגוריות שחשובות במצ'אפ, כפול המשחקים השבוע${x.f.recent ? " · מבוסס בעיקר על 14 הימים האחרונים" : ""}">${fitPct(x.f.score)}%</b></li>`;
-  };
-  // each player's week (played so far + projected) in all 9 categories
-  const weekCell = (r, k) => {
-    const t = (x) => r.done[x] + r.proj[x];
-    if (k === "FG_PCT") return t("FGA") ? fmt3(t("FGM") / t("FGA")) : "–";
-    if (k === "FT_PCT") return t("FTA") ? fmt3(t("FTM") / t("FTA")) : "–";
-    return fmt1(t(k));
-  };
-  const rosterTable = (T, title) => `<div class="muroster"><h4>${esc(title)}</h4><table class="box murt"><thead><tr><th class="nosort">שחקן</th><th class="nosort">שוחקו</th><th class="nosort">נותרו</th>${CATS.map((c) => `<th class="nosort">${c.l}</th>`).join("")}</tr></thead><tbody>${
-    [...T.rows].sort((a, b) => b.games - a.games || (b.p.F?.g ?? 0) - (a.p.F?.g ?? 0)).map((r) => `<tr><td class="pn"><span class="pw" data-pcard="${r.p.id}">${r.p.img ? `<img class="bimg" src="${r.p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(r.p.name)}</span></span>${r.p.hurt ? injuryPill(r.p) : ""}</td>
-      <td>${r.played}</td><td>${fmt1(r.games).replace(/\.0$/, "")}</td>${CATS.map((c) => `<td>${weekCell(r, c.k)}</td>`).join("")}</tr>`).join("")
-  }</tbody></table></div>`;
+  const chip = (c) => `<span class="mucat ${c.key}"><bdi>${c.l}</bdi></span>`;
+  const anyPlayed = A.played + B.played > 0;
+  const g1 = (x) => fmt1(x).replace(/\.0$/, "");
 
+  // injuries that cost games this week
+  const hurtRows = (roster, T, il) => roster.filter((p) => !il.has(p.id) && p.hurt).map((p) => {
+    const missed = weekDays().filter((d) => T.cell.get(`${p.id}|${d}`)?.out).length;
+    const gtd = weekDays().some((d) => (T.cell.get(`${p.id}|${d}`)?.ch ?? 1) < 1);
+    if (!missed && !gtd) return "";
+    return `<li>${injuryPill(p)}<span class="pn" data-pcard="${p.id}">${esc(p.name)}</span><span class="why">${missed ? `מפסיד ${missed} ${missed === 1 ? "משחק" : "משחקים"}` : "בספק"}</span></li>`;
+  }).join("");
+
+  // pickups
+  const left = Math.max(0, maxAdds - addsUsed());
+  const moves = left > 0 ? bestMoves(me, st.muOpp, mineP, ilA, B, odds) : [];
+  const dayShort = (d) => new Date(d + "T12:00:00Z").toLocaleDateString("he-IL", { weekday: "narrow", timeZone: "UTC" });
+  const moveRow = (x, i) => {
+    const ups = x.r.cats.map((c, j) => ({ l: c.l, d: c.q - odds.cats[j].q })).filter((u) => u.d > 0.02).sort((a, b) => b.d - a.d).slice(0, 3);
+    const days = weekDays().filter((d) => x.A2.cell.get(`${x.X.id}|${d}`)?.slot);
+    const dropTxt = x.drop ? `${x.kind === "il" ? "ל־IL" : "משחרר"}: <span class="pn" data-pcard="${x.drop.id}">${esc(x.drop.name)}</span>` : "יש מקום פנוי בסגל";
+    return `<li><span class="rk">${i + 1}</span>${x.X.img ? `<img class="mimg" src="${x.X.img}" alt="" loading="lazy" decoding="async">` : `<span class="mimg"></span>`}
+      <span class="mwho"><span class="pn" data-pcard="${x.X.id}">${esc(x.X.name)}</span>${teamLogo(x.X.team26)}${x.X.hurt ? injuryPill(x.X) : ""}
+        <small class="mdrop">${dropTxt}</small></span>
+      <span class="mdays" title="הימים שבהם הוא נכנס להרכב">${days.map(dayShort).join(" ") || "–"}</span>
+      <span class="mtags">${ups.map((u) => `<i class="need"><bdi>${u.l}</bdi> +${Math.round(u.d * 100)}%</i>`).join("")}</span>
+      <b class="mfit" title="סיכוי לנצח את המצ'אפ אחרי המהלך">${pctTxt(x.r.win)}<small>+${Math.max(0, Math.round((x.r.win - odds.win) * 100))}%</small></b>
+      <button type="button" class="mgo" data-mumove="${x.X.id}|${x.drop?.id ?? ""}|${x.kind ?? ""}">בצע</button></li>`;
+  };
+
+  // the daily grid of who plays and who starts
+  const gridSide = st.muGrid === "b" ? "b" : "a";
+  const G = gridSide === "a" ? { roster: mineP, T: A, il: ilA } : { roster: oppP, T: B, il: ilB };
+  const today = etDay(new Date());
+  const gridRows = [...G.roster].sort((a, b) => (G.il.has(a.id) - G.il.has(b.id)) || muValue(b) - muValue(a)).map((p) => {
+    const cells = weekDays().map((d) => {
+      const c = G.T.cell.get(`${p.id}|${d}`);
+      if (G.il.has(p.id)) return `<td class="dg il"></td>`;
+      if (!c) return `<td class="dg"></td>`;
+      const opp = c.gm ? `${c.gm.g.h === p.team26 ? "" : "@"}${c.gm.opp}` : c.r ? `${c.r[2] ? "" : "@"}${c.r[1]}` : "";
+      const cls = c.out ? "out" : c.slot ? (c.r ? "on done" : c.ch < 1 ? "on gtd" : "on") : "bn";
+      const tip = c.out ? "פצוע" : c.slot ? `בהרכב: ${c.slot}` : "על הספסל (אין מקום בהרכב)";
+      return `<td class="dg ${cls}" title="${tip}"><span>${esc(opp)}</span>${c.slot ? `<small>${c.slot}</small>` : c.out ? "<small>OUT</small>" : "<small>BN</small>"}</td>`;
+    }).join("");
+    return `<tr${G.il.has(p.id) ? ` class="ilrow"` : ""}><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span></span>${G.il.has(p.id) ? `<small class="iltag">IL</small>` : ""}</td>${cells}</tr>`;
+  }).join("");
+  const gridFoot = `<tr class="dgfoot"><td>בהרכב</td>${G.T.days.map((x) => `<td class="${!x.past && x.started < LINEUP.length && MU_DAY_GAMES(x.d) ? "gap" : ""}">${x.started}/${LINEUP.length}</td>`).join("")}</tr>`;
+
+  // rosters with the week's numbers of the starters and the moves
+  const freeList = players.filter((p) => p.team26 && p.L && !taken.has(p.id) && !mine.has(p.id) && !picks.some((x) => x.id === p.id))
+    .sort((a, b) => seasonValue(b) - seasonValue(a));
+  MU.freeLookup = new Map(freeList.map((p) => [`${p.name} · ${p.team26}`, p.id]));
+  const playerWeek = (p, T) => {
+    const o = zeroLine();
+    let starts = 0, games = 0;
+    for (const d of weekDays()) {
+      const c = T.cell.get(`${p.id}|${d}`);
+      if (!c || c.out) continue;
+      games++;
+      if (!c.slot) continue;
+      if (c.r) { const L = rowLine(c.r); for (const k of MU_KEYS) o[k] += L[k]; starts++; continue; }
+      const m = muModel(p); if (!m) continue;
+      const fct = oppFactor(p.team26, c.gm.opp) * c.ch;
+      for (const k of MU_KEYS) o[k] += m.mean[k] * fct;
+      starts += c.ch;
+    }
+    return { o, starts, games };
+  };
+  const cell9 = (o, k) => (k === "FG_PCT" ? (o.FGA ? fmt3(o.FGM / o.FGA) : "–") : k === "FT_PCT" ? (o.FTA ? fmt3(o.FTM / o.FTA) : "–") : fmt1(o[k]));
+  const rosterTable = (side, t, roster, T, il, title) => {
+    const active = roster.filter((p) => !il.has(p.id));
+    const rows = [...roster].sort((a, b) => (il.has(a.id) - il.has(b.id)) || muValue(b) - muValue(a)).map((p) => {
+      const w = playerWeek(p, T), onIL = il.has(p.id);
+      const acts = onIL ? `<button type="button" class="mact" data-muback="${t}|${p.id}">חזרה מ־IL</button>`
+        : `${p.hurt?.s === "OUT" && il.size < IL_SLOTS ? `<button type="button" class="mact" data-muil="${t}|${p.id}">IL</button>` : ""}<button type="button" class="mact" data-mudrop="${t}|${p.id}" title="שחרור">שחרר</button>`;
+      return `<tr class="${onIL ? "ilrow" : ""}"><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span></span>${p.hurt ? injuryPill(p) : ""}</td>
+        <td>${onIL ? "IL" : `${g1(w.starts)}/${w.games}`}</td>${CATS.map((c) => `<td>${onIL ? "" : cell9(w.o, c.k)}</td>`).join("")}<td class="macts">${acts}</td></tr>`;
+    }).join("");
+    const full = active.length >= st.roster;
+    return `<div class="muroster"><h4>${esc(title)}</h4><table class="box murt"><thead><tr><th class="nosort">שחקן</th><th class="nosort" data-tip="משחקים בהרכב מתוך המשחקים שלו השבוע">הרכב</th>${CATS.map((c) => `<th class="nosort">${c.l}</th>`).join("")}<th class="nosort"></th></tr></thead><tbody>${rows}</tbody></table>
+      <div class="muadd" data-muaddbox="${t}">
+        <input list="muFree" placeholder="הוספת שחקן חופשי…" autocomplete="off" data-muaddin="${t}" aria-label="שחקן להוספה">
+        <select data-muaddout="${t}" aria-label="במקום">${full ? "" : `<option value="">יש מקום בסגל (${active.length}/${st.roster})</option>`}${active.map((p) => `<option value="${p.id}">במקום ${esc(p.name)}</option>`).join("")}</select>
+        <button type="button" class="mact" data-muadd="${t}">הוסף</button>
+      </div></div>`;
+  };
+
+  const score = st.fmt === "pts"
+    ? `<div class="mnum"><span class="num${odds.fa > odds.fb ? " lead" : ""}">${Math.round(odds.fa)}</span><span class="sep">:</span><span class="num${odds.fb > odds.fa ? " lead" : ""}">${Math.round(odds.fb)}</span><small>FPTS · תחזית סוף השבוע</small></div>`
+    : `<div class="mnum"><span class="num${wins > 9 - wins ? " lead" : ""}">${wins}</span><span class="sep">:</span><span class="num${9 - wins > wins ? " lead" : ""}">${9 - wins}</span><small>תחזית סוף השבוע</small></div>`;
   out.innerHTML = `
     <div class="muscore">
-      <div class="mside"><b>${esc(myName)}</b><span>${fmt1(A.games).replace(/\.0$/, "")} משחקים נותרו · ${A.played} שוחקו</span></div>
-      ${st.fmt === "pts" ? (() => { const fa = fpts(A.total), fb = fpts(B.total);
-        return `<div class="mnum"><span class="num${fa > fb ? " lead" : ""}">${Math.round(fa)}</span><span class="sep">:</span><span class="num${fb > fa ? " lead" : ""}">${Math.round(fb)}</span><small>FPTS · תחזית סוף השבוע</small></div>`; })()
-      : `<div class="mnum"><span class="num${wins > losses ? " lead" : ""}">${wins}</span><span class="sep">:</span><span class="num${losses > wins ? " lead" : ""}">${losses}</span><small>תחזית סוף השבוע</small></div>`}
-      <div class="mside"><b>${esc(oppName)}</b><span>${fmt1(B.games).replace(/\.0$/, "")} משחקים נותרו · ${B.played} שוחקו</span></div>
+      <div class="mside"><b>${esc(myName)}</b><span>${g1(A.starts)} משחקים בהרכב נותרו${A.played ? ` · ${A.played} שוחקו` : ""}</span></div>
+      <div class="mmid">${score}<div class="mwin ${oddsKey(odds.win)}"><b>${pctTxt(odds.win)}</b><span>סיכוי לנצח</span></div></div>
+      <div class="mside"><b>${esc(oppName)}</b><span>${g1(B.starts)} משחקים בהרכב נותרו${B.played ? ` · ${B.played} שוחקו` : ""}</span></div>
     </div>
     <div class="mugrid">
       <section class="cmpsec"><h3>הקטגוריות</h3>
-        <table class="box mucats"><thead><tr><th class="nosort">קטגוריה</th><th class="nosort">${esc(myName)}</th><th class="nosort">${esc(oppName)}</th><th class="nosort">מצב</th></tr></thead><tbody>${
-          cats.map((c) => `<tr class="${c.punted ? "punted" : ""}"><td class="lbl">${c.l}</td><td class="${c.o.lead > 0 && !c.punted ? "w" : ""}">${f(c.k, c.a)}</td><td class="${c.o.lead < 0 && !c.punted ? "w" : ""}">${f(c.k, c.b)}</td><td>${c.punted ? "Punt" : `<span class="mucat ${c.o.key}">${c.o.label}</span>`}</td></tr>`).join("")
+        <table class="box mucats"><thead><tr><th class="nosort">קטגוריה</th><th class="nosort">${esc(myName)}</th><th class="nosort">${esc(oppName)}</th><th class="nosort">סיכוי לנצח</th></tr></thead><tbody>${
+          cats.map((c) => `<tr class="${c.punted ? "punted" : ""}"><td class="lbl">${c.l}</td>
+            <td class="${c.q > 0.5 ? "w" : ""}">${f(c.k, c.a)}${anyPlayed ? `<small class="sofar">עד כה ${f(c.k, c.done[0])}</small>` : ""}</td>
+            <td class="${c.q < 0.5 ? "w" : ""}">${f(c.k, c.b)}${anyPlayed ? `<small class="sofar">עד כה ${f(c.k, c.done[1])}</small>` : ""}</td>
+            <td><span class="mubar2 ${c.key}" title="${ODDS_LABEL[c.key]}"><i style="width:${Math.round(c.q * 100)}%"></i></span><b class="muq ${c.key}">${pctTxt(c.q)}</b>${c.punted ? `<small class="sofar">Punt</small>` : ""}</td></tr>`).join("")
         }</tbody></table>
-        <p class="munote">עד כה + תחזית למשחקים שנותרו: ממוצע משוקלל (60% שבועיים אחרונים, 40% העונות שנבחרו), לפי חוזק ההגנה וקצב היריבה בכל משחק, בלי פצועים OUT ו־50% ל־GTD.</p>
+        <p class="munote">עד כה + תחזית למשחקים שנותרו, רק לשחקנים שנכנסים להרכב בכל יום (10 משבצות). הסיכוי מחושב מהתנודתיות של כל שחקן בין משחק למשחק.</p>
       </section>
       <section class="cmpsec"><h3>המלצות</h3>
         <div class="muadv">
           ${chase.length ? `<div><b>לחזק</b>${chase.map(chip).join("")}<p>קטגוריות צמודות או בפיגור קטן: כאן פיק אפ יכול להכריע.</p></div>` : ""}
           ${hold.length ? `<div><b>לשמור</b>${hold.map(chip).join("")}<p>היתרון שלך. אל תשחרר שחקנים שמחזיקים אותן.</p></div>` : ""}
           ${drop.length ? `<div><b>לוותר</b>${drop.map(chip).join("")}<p>פיגור גדול: עדיף להשקיע במקום אחר.</p></div>` : ""}
-          <div><b>משחקים</b><p>${A.games > B.games + 0.5 ? `יש לך יתרון של ${fmt1(A.games - B.games).replace(/\.0$/, "")} משחקים: הכמות לטובתך בקטגוריות המצטברות.` : B.games > A.games + 0.5 ? `ליריב ${fmt1(B.games - A.games).replace(/\.0$/, "")} משחקים יותר: שחקן עם הרבה משחקים השבוע יכול לסגור את הפער.` : "מספר המשחקים דומה לשני הצדדים."}</p></div>
+          <div><b>משחקים</b><p>${A.starts > B.starts + 0.5 ? `יש לך ${g1(A.starts - B.starts)} משחקים יותר בהרכב: הכמות לטובתך בקטגוריות המצטברות.` : B.starts > A.starts + 0.5 ? `ליריב ${g1(B.starts - A.starts)} משחקים יותר בהרכב: שחקן שממלא ימים פנויים יכול לסגור את הפער.` : "מספר המשחקים בהרכב דומה לשני הצדדים."}</p></div>
         </div>
-        <div class="muinj"><div><h4>${esc(myName)}</h4><ul>${hurtRows(A) || `<li class="none">אין חסרים</li>`}</ul></div><div><h4>${esc(oppName)}</h4><ul>${hurtRows(B) || `<li class="none">אין חסרים</li>`}</ul></div></div>
+        <div class="muinj"><div><h4>${esc(myName)}</h4><ul>${hurtRows(mineP, A, ilA) || `<li class="none">אין חסרים</li>`}</ul></div><div><h4>${esc(oppName)}</h4><ul>${hurtRows(oppP, B, ilB) || `<li class="none">אין חסרים</li>`}</ul></div></div>
       </section>
     </div>
     <section class="cmpsec"><h3>פיק אפ מומלץ לשבוע הזה</h3>
-      ${scored.length ? `<div class="mupickhead"><span>אחוז התאמה</span></div>` : ""}
-      <ol class="mupicks">${scored.map(pickRow).join("") || `<li class="none">אין שחקנים חופשיים עם משחקים השבוע.</li>`}</ol>
-      ${mineScored.length ? `<p class="munote">מועמדים לשחרור (הכי מעט ערך בעונה, וחלש בבירור מהפיק אפ הטוב ביותר): ${mineScored.map((x) => `<span class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</span>`).join(" · ")}</p>` : ""}
+      ${left === 0 ? `<p class="munote">ניצלת את כל ${maxAdds} הפיק אפים של השבוע.</p>`
+        : moves.length ? `<div class="mupickhead"><span>סיכוי לנצח</span></div><ol class="mupicks">${moves.map(moveRow).join("")}</ol>`
+        : `<p class="munote">אין פיק אפ שמשפר את הסיכוי לנצח השבוע.</p>`}
+    </section>
+    <section class="cmpsec"><div class="dghead"><h3>הרכב יומי</h3>
+      <div class="seg" role="group"><button type="button" data-mugrid="a" aria-pressed="${gridSide === "a"}">${esc(myName)}</button><button type="button" data-mugrid="b" aria-pressed="${gridSide === "b"}">${esc(oppName)}</button></div></div>
+      <div class="tbl-wrap short"><table class="box daygrid"><thead><tr><th class="nosort">שחקן</th>${weekDays().map((d) => `<th class="nosort${d === today ? " today" : ""}">${esc(dayLabel(d))}</th>`).join("")}</tr></thead><tbody>${gridRows}</tbody><tfoot>${gridFoot}</tfoot></table></div>
     </section>
     <div class="muvs"><b>${esc(myName)}</b>${(D.logos || {}).NBA ? `<img src="${D.logos.NBA}" alt="NBA">` : ""}<b>${esc(oppName)}</b></div>
-    <div class="mugrid murosters">${rosterTable(A, myName)}${rosterTable(B, oppName)}</div>`;
+    <datalist id="muFree">${freeList.slice(0, 400).map((p) => `<option value="${esc(`${p.name} · ${p.team26}`)}"></option>`).join("")}</datalist>
+    <div class="mugrid murosters">${rosterTable("a", me, mineP, A, ilA, myName)}${rosterTable("b", st.muOpp, oppP, B, ilB, oppName)}</div>`;
 }
-$("muOpp").addEventListener("change", (e) => { st.muOpp = Number(e.target.value); renderMatchup(); });
+$("muOpp").addEventListener("change", (e) => { st.muOpp = Number(e.target.value); saveSettings(); renderMatchup(); });
+$("muAddsMax").addEventListener("input", (e) => { const v = Number(e.target.value); if (Number.isFinite(v)) { st.weekAdds = Math.min(14, Math.max(0, v)); saveSettings(); renderMatchup(); } });
+$("muAddsUsed").addEventListener("input", (e) => { const v = Number(e.target.value); if (Number.isFinite(v)) { st.muAdds = { week: WEEK.from, n: Math.min(14, Math.max(0, v)) }; saveSettings(); renderMatchup(); } });
+$("muOut").addEventListener("click", (e) => {
+  const b = e.target.closest("button");
+  if (!b) return;
+  const me = myIdx();
+  if (b.dataset.mugrid) { st.muGrid = b.dataset.mugrid; saveSettings(); return renderMatchup(); }
+  if (b.dataset.mumove) {
+    const [add, drop, kind] = b.dataset.mumove.split("|");
+    const pa = PLAYER_BY_ID.get(Number(add)), pd = drop ? PLAYER_BY_ID.get(Number(drop)) : null;
+    muMove(me, Number(add), drop ? Number(drop) : null, kind || null);
+    return showToast(`${pa.name} נוסף לקבוצה${pd ? (kind === "il" ? `, ${pd.name} עבר ל־IL` : `, ${pd.name} שוחרר`) : ""}. זכור לבצע את זה גם באפליקציה של הליגה.`);
+  }
+  const pair = (v) => v.split("|").map(Number);
+  if (b.dataset.mudrop) { const [t, id] = pair(b.dataset.mudrop); return muMove(t, null, id, "drop"); }
+  if (b.dataset.muil) { const [t, id] = pair(b.dataset.muil); return muMove(t, null, id, "il"); }
+  if (b.dataset.muback) { const [t, id] = pair(b.dataset.muback); return muFromIL(t, id); }
+  if (b.dataset.muadd != null) {
+    const t = Number(b.dataset.muadd), box = b.closest(".muadd");
+    const id = MU.freeLookup.get(box.querySelector("input").value);
+    if (!id) return showToast("בחר שחקן חופשי מהרשימה שנפתחת בזמן ההקלדה.");
+    const drop = Number(box.querySelector("select").value) || null;
+    const active = rosterOf(t).filter((p) => !ilOf(t).has(p.id)).length;
+    if (!drop && active >= st.roster) return showToast("הסגל מלא: בחר את מי לשחרר.");
+    muMove(t, id, drop, drop ? "drop" : null);
+  }
+});
 
 // ---------- header explanations on hover / keyboard focus ----------
 const tipBox = Object.assign(document.createElement("div"), { className: "tipbox", hidden: true, role: "tooltip" });
