@@ -492,7 +492,6 @@ table.box.daygrid td.dg.out { color: var(--neg); }
 table.box.daygrid .iltag { font-size: .66rem; font-weight: 800; color: var(--neg); margin-inline-start: 6px; }
 table.box.daygrid tr.dgfoot td { font-family: var(--font-num); font-weight: 800; }
 table.box.daygrid tr.dgfoot .over { color: var(--neg); }
-table.box.daygrid tr.dgfoot td.gap { color: var(--accent); background: color-mix(in srgb, var(--accent) 12%, transparent); }
 .muadv { display: grid; gap: 10px; }
 .muadv b { margin-inline-end: 8px; }
 .muadv p { margin: 3px 0 0; font-size: .82rem; color: var(--muted); }
@@ -3377,8 +3376,6 @@ function muFromIL(team, id) {
   saveSettings(); render();
 }
 
-// days with at least one regular-season game (an empty lineup slot only matters then)
-const MU_DAY_GAMES = (d) => GAMES.some((g) => !g.pre && g.d === d);
 // Browsing weeks: offset from the week to plan (0), within the regular season
 const shiftDay = (d, days) => new Date(new Date(d + "T12:00:00Z").getTime() + days * 864e5).toISOString().slice(0, 10);
 const SEASON_DAYS = GAMES.filter((g) => !g.pre).map((g) => g.d).sort();
@@ -3469,7 +3466,7 @@ function renderMatchup() {
     }).join("");
     return `<tr${G.il.has(p.id) ? ` class="ilrow"` : ""}><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span></span>${G.il.has(p.id) ? `<small class="iltag">IL</small>` : ""}</td>${cells}</tr>`;
   }).join("");
-  const gridFoot = `<tr class="dgfoot"><td>בהרכב</td>${G.T.days.map((x) => `<td class="${!x.past && x.started < LINEUP.length && MU_DAY_GAMES(x.d) ? "gap" : ""}"${x.playing > LINEUP.length ? ` title="${x.playing} שחקנים משחקים, רק ${LINEUP.length} נכנסים להרכב"` : ""}>${x.playing > LINEUP.length ? `<b class="over">${x.playing}</b>` : x.started}/${LINEUP.length}</td>`).join("")}</tr>`;
+  const gridFoot = `<tr class="dgfoot"><td>בהרכב</td>${G.T.days.map((x) => `<td${x.playing > LINEUP.length ? ` title="${x.playing} שחקנים משחקים, רק ${LINEUP.length} נכנסים להרכב"` : ""}>${x.playing > LINEUP.length ? `<b class="over">${x.playing}</b>` : x.started}/${LINEUP.length}</td>`).join("")}</tr>`;
 
   // rosters with the week's numbers of the starters and the moves
   const freeList = players.filter((p) => p.team26 && p.L && !taken.has(p.id) && !mine.has(p.id) && !picks.some((x) => x.id === p.id))
