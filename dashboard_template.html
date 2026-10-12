@@ -1377,6 +1377,7 @@ function picksFrom(d) {
 // Set by build_dashboard.py for the standalone website (Supabase login); null inside claude.ai
 const SITE = /*__SITE__*/null;
 
+const TAB_KEY = "fantasy-tab";
 const SETTINGS_KEY = "draftroom.settings.v1", PICKS_KEY = "draftroom.picks.v1", ACCOUNT_KEY = "draftroom.account.v1";
 // Website: the signed-in account's last known picks, kept in this browser under its user id, so a reload shows them
 // at once instead of the full player list until the account finishes loading (a few seconds)
@@ -1425,6 +1426,9 @@ function applySettings(s) {
 const settingsData = () => ({ ...st, punts: [...st.punts], pos: [...st.pos] });
 try {
   applySettings(JSON.parse(localStorage.getItem(SETTINGS_KEY) || "null"));
+  // A reload stays on the same tab (sessionStorage lives as long as the browser tab); a new visit opens the home tab
+  const tab = sessionStorage.getItem(TAB_KEY);
+  if (["board", "adv", "draft", "cmp", "mu"].includes(tab)) st.tab = tab;
   // On the website picks belong to the signed-in account, never to whoever used this browser before
   let k = SITE ? null : JSON.parse(localStorage.getItem(PICKS_KEY) || "null");
   if (SITE) {
@@ -3937,6 +3941,7 @@ function syncControls() {
   $("snake").checked = st.snake;
   for (const b of document.querySelectorAll("[data-tab]")) b.setAttribute("aria-selected", b.dataset.tab === st.tab);
   // The page title follows the open tab
+  try { sessionStorage.setItem(TAB_KEY, st.tab); } catch (e) {}
   $("pageTitle").textContent = { board: "נתונים כלליים", adv: "נתונים מתקדמים", draft: "חדר הדראפט", cmp: "השוואה", mu: "מצ'אפ שבועי" }[st.tab] || "נתונים כלליים";
   $("pageYear").hidden = st.tab !== "draft";  // the season shows only in the draft room
   $("viewBoard").hidden = st.tab !== "board"; $("viewAdv").hidden = st.tab !== "adv"; $("viewDraft").hidden = st.tab !== "draft"; $("viewCmp").hidden = st.tab !== "cmp"; $("viewMu").hidden = st.tab !== "mu";
