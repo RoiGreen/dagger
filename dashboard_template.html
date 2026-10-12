@@ -527,6 +527,7 @@ table.box.murt td.pn { min-width: 0; text-align: start; line-height: 1.25; }
 table.box.murt .pw { gap: 6px; }
 table.box.murt .bimg { width: 26px; height: 26px; }
 table.box.murt .injpill { display: table; margin: 2px 0 0 32px; }
+.fewg { font-style: normal; color: var(--muted); margin-inline-start: 2px; font-size: .8em; }
 .pn[data-pcard], .face [data-pcard], .wh[data-pcard] { cursor: pointer; }
 .face .fn[data-pcard]:hover, .wh[data-pcard]:hover { text-decoration: underline; text-underline-offset: 3px; }
 .tipbox { white-space: pre-line; }
@@ -1463,6 +1464,7 @@ function meanStd(xs) {
   const v = xs.reduce((a, b) => a + (b - m) ** 2, 0) / (n - 1);
   return [m, Math.sqrt(v) || 1];
 }
+const Z_CAP = 3;
 function zScores(list, pool, mode) {
   const out = new Map(list.map((p) => [p.id, { z: {}, total: 0 }]));
   for (const c of CATS) {
@@ -1477,13 +1479,23 @@ function zScores(list, pool, mode) {
     const [mu, sd] = meanStd(pool.map(get));
     const sign = c.k === "TOV" ? -1 : 1;
     for (const p of list) {
-      const z = sign * (get(p) - mu) / sd;
+      // one category can move a player by at most 3 (a free-throw disaster cannot wipe out everything else)
+      const z = Math.max(-Z_CAP, Math.min(Z_CAP, sign * (get(p) - mu) / sd));
       const r = out.get(p.id);
       r.z[c.k] = z;
       if (!st.punts.has(c.k)) r.total += z;
     }
   }
   return out;
+}
+// Sample weight of a player's average: 1 from a full sample (40 games; early in a season, half the games played so
+// far), then less and less with fewer games. Rookies' projections are not games, so they keep full weight.
+const Z_REPL = -1.5;  // about the level of the best players left after a draft
+function sampleWeight(p) {
+  if (p.rookie || !p.gp) return 1;
+  const full = chosenSeasons().every((y) => y === D.current) ? Math.max(1, 0.5 * (D.curMaxGp || 1)) : 40;
+  const k = full / 5, g = Math.min(p.gp, full);
+  return Math.min(1, (g / (g + k)) / (full / (full + k)));
 }
 function rankAll(list, mode) {
   const size = Math.max(1, st.teams * st.roster);
@@ -1494,8 +1506,18 @@ function rankAll(list, mode) {
     pool = [...real].sort((a, b) => z.get(b.id).total - z.get(a.id).total).slice(0, size);
   }
   z = zScores(list, pool, mode);
+  // Few games = a less certain average: the value is pulled part of the way toward replacement level
+  // (no change from FULL_GAMES games up; about half the distance at 5 games). The player still shows, only lower.
+  const fpRepl = pool.length ? [...pool].sort((a, b) => a.F[mode] - b.F[mode])[0].F[mode] : 0;
+  const fpAdj = new Map();
+  for (const p of list) {
+    const w = sampleWeight(p), r = z.get(p.id);
+    r.raw = r.total; r.w = w;
+    if (w < 1) r.total = Z_REPL + (r.total - Z_REPL) * w;
+    fpAdj.set(p.id, w < 1 ? fpRepl + (p.F[mode] - fpRepl) * w : p.F[mode]);
+  }
   const byCat = [...list].sort((a, b) => z.get(b.id).total - z.get(a.id).total);
-  const byPts = [...list].sort((a, b) => b.F[mode] - a.F[mode]);
+  const byPts = [...list].sort((a, b) => fpAdj.get(b.id) - fpAdj.get(a.id));
   const rCat = new Map(byCat.map((p, i) => [p.id, i + 1]));
   const rPts = new Map(byPts.map((p, i) => [p.id, i + 1]));
   return { z, rank: st.fmt === "cat" ? rCat : rPts, pool };
@@ -1621,7 +1643,7 @@ function render() {
       ${posR ? posTd(posR, p) : `<td class="rank${rank <= 3 ? " top" : ""}">${rank}</td>`}
       ${nameCell(p)}
       <td>${p.age ?? "–"}</td><td>${p.gp}</td>${availCell(p)}<td>${fmt1(p.L.g.MIN)}</td>${cats}
-      <td class="val">${z.total.toFixed(2)}</td><td class="val">${fmt1(p.F[m])}</td>
+      <td class="val"${z.w < 1 ? ` title="לפני תיקון המדגם: ${z.raw.toFixed(2)} (${p.gp} משחקים בלבד, הערך הוזז חלקית לכיוון הממוצע)"` : ""}>${z.total.toFixed(2)}${z.w < 0.97 ? `<i class="fewg">*</i>` : ""}</td><td class="val">${fmt1(p.F[m])}</td>
       <td class="acts">${actions(p)}</td></tr>`;
   }).join("") || EMPTY_ROW(COLS.length + (statRank ? 1 : 0));
 
