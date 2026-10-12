@@ -683,6 +683,12 @@ table.box { direction: ltr; }
 .pcl, [data-pcard] { cursor: pointer; }
 .pcl:hover, table.box [data-pcard]:hover span { text-decoration: underline; text-underline-offset: 3px; }
 .pstats { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 14px; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.22); direction: rtl;  /* PTS first, on the right */ }
+.phead { position: relative; }
+.pform { position: absolute; top: 50%; left: 28px; transform: translateY(-80%); display: grid; gap: 4px; justify-items: start; max-width: 190px; }
+.pform select { width: auto; min-width: 160px; background-color: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.28); font-weight: 700; }
+.pform select option { color: #10182b; }
+.pform small { font-size: .72rem; color: rgba(255,255,255,.8); }
+@media (max-width: 700px) { .pform { position: static; transform: none; margin: 0 auto 10px; justify-items: center; } }
 .pmodewrap { justify-self: stretch; display: flex; justify-content: center; margin-top: 10px; }
 .pmodewrap.withlogo { padding-right: 54px; }
 .pmode { width: fit-content; margin: 0; background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.18); }
@@ -2125,11 +2131,15 @@ function openPlayer(id) {
   const pk = picks.find((x) => x.id === p.id);
   const owner = pk ? teamName(pk.team) : mine.has(p.id) ? teamName(myIdx()) : taken.has(p.id) ? "נלקח" : null;
   const ownerTag = `<div class="powner${owner ? "" : " fa"}${p.team26 ? " withlogo" : ""}">${owner ? `<span dir="ltr">Team: <b dir="auto">${esc(owner)}</b></span>` : "שחקן חופשי"}</div>`;
+  // recent form: the same choice as the bar over the tables, so the numbers and the league ranks follow it
+  const formOpts = [["", "עונה שלמה"], ["7", "7 ימים אחרונים"], ["14", "14 ימים אחרונים"], ["30", "חודש אחרון"]];
+  const formSel = p.L ? `<div class="pform"><select data-cardform="${p.id}" aria-label="כושר עדכני">${formOpts.map(([v, l]) => `<option value="${v}"${(st.formWin || "") === v ? " selected" : ""}>${l}</option>`).join("")}</select>
+    ${st.formWin && !p.has ? `<small>פחות מ־${FORM_MIN[st.formWin]} משחקים בטווח: מוצגת העונה</small>` : ""}</div>` : "";
   // basic / advanced switch, under the name, team and owner lines and centred like them
   const modeSeg = p.L ? `<div class="pmodewrap${p.team26 ? " withlogo" : ""}"><div class="seg pmode" role="group" aria-label="סוג הנתונים">${[["basic", "נתונים בסיסיים"], ["adv", "נתונים מתקדמים"]].map(([k, l]) =>
     `<button type="button" data-cardmode="${k}" data-pid="${p.id}" aria-pressed="${cardMode === k}">${l}</button>`).join("")}</div></div>` : "";
   $("gameCard").innerHTML = `<button type="button" class="gclose" data-gclose="1" aria-label="סגירה">✕</button>
-    <div class="ghead phead" style="--jc:${jc}"><div class="pinfo">${p.img ? `<img class="pimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<div><div class="pnm${p.team26 ? " withlogo" : ""}">${esc(p.name)}</div>
+    <div class="ghead phead" style="--jc:${jc}">${formSel}<div class="pinfo">${p.img ? `<img class="pimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<div><div class="pnm${p.team26 ? " withlogo" : ""}">${esc(p.name)}</div>
       <div class="pmeta">${p.team26 ? teamLogo(p.team26) : ""}<span>${esc(TEAM_NAMES[p.team26] || p.team26 || "FA")} · ${esc(p.pos || "–")}</span>${p.hurt ? injuryPill(p) : ""}</div>${ownerTag}${modeSeg}</div></div>
       ${p.L ? `<div class="pstats">${(cardMode === "adv" ? CARD_ADV : CARD_CATS).map((c) => { const r = leagueRank(p, c), v = c.v(p);
         return `<div${c.tip ? ` data-tip="${esc(c.tip)}"` : ""}><span class="pv"><b>${v == null || (c.ok && !c.ok(p)) ? "–" : c.f(v)}</b>${r ? `<i title="מקום ${r.rank} מתוך ${r.of} בליגה">#${r.rank}</i>` : ""}</span><small>${c.l}</small></div>`; }).join("")}</div>` : ""}</div>
@@ -4142,6 +4152,12 @@ $("vsOpp").innerHTML += teams.map((t) => `<option value="${t}">${t}</option>`).j
 $("vsOpp").addEventListener("change", (e) => { st.vsOpp = e.target.value; update(); });
 $("formWin").addEventListener("change", (e) => { st.formWin = e.target.value; update(); });
 $("formWinTop").addEventListener("change", (e) => { st.formWin = e.target.value; update(); });
+document.addEventListener("change", (e) => {
+  const sel = e.target.closest("[data-cardform]");
+  if (!sel) return;
+  st.formWin = sel.value; update();
+  openPlayer(Number(sel.dataset.cardform));
+});
 $("teamChips").innerHTML = teams.map((t) => `<button class="chip" type="button" data-teamsel="${t}" aria-pressed="false">${t}</button>`).join("");
 $("teamClear").addEventListener("click", () => { st.teamSel = []; update(false); });
 $("vsNote").addEventListener("click", (e) => { if (e.target.id === "vsClear") { st.vsOpp = ""; update(); } });
