@@ -10,6 +10,7 @@ Needs only pandas; a failed pull keeps the previous file.
 """
 
 import json
+import urllib.parse
 import urllib.request
 from pathlib import Path
 
@@ -40,7 +41,53 @@ def pull_positions() -> str:
         return "Positions: ESPN returned no players, kept the previous list"
     OUT.mkdir(exist_ok=True)
     pd.DataFrame(rows).to_csv(OUT / "positions_espn.csv", index=False, encoding="utf-8-sig")
-    return f"Positions: {len(rows)} players"
+    return f"Positions: {len(rows)} players; " + fill_missing({r["PLAYER_NAME"] for r in rows})
+
+
+# Fallback for players ESPN fantasy does not list yet (two-way and undrafted rookies), whom the NBA also gives no
+# position: the position on their ESPN player page (G / F / C, or PG ... C), asked once per player
+FALLBACK = OUT / "positions_fallback.json"
+ROSTERS = HERE / "nba_2025_26" / "player_index_2026_27.csv"
+NBA_SEARCH = "https://site.web.api.espn.com/apis/common/v3/search?query={q}&limit=5&type=player"
+ATHLETE = "https://site.web.api.espn.com/apis/common/v3/sports/basketball/nba/athletes/{id}"
+
+
+def _key(name: str) -> str:
+    import re
+    import unicodedata
+    s = unicodedata.normalize("NFKD", str(name)).encode("ascii", "ignore").decode().lower()
+    return re.sub(r"[^a-z]", "", re.sub(r"(jr|sr|ii|iii|iv)\.?", "", s))
+
+
+def _get(url: str):
+    req = urllib.request.Request(url, headers={"User-Agent": "Mozilla/5.0"})
+    return json.load(urllib.request.urlopen(req, timeout=30))
+
+
+def fill_missing(espn_names: set) -> str:
+    if not ROSTERS.exists():
+        return "fallback skipped (no roster file)"
+    have = json.loads(FALLBACK.read_text(encoding="utf-8")) if FALLBACK.exists() else {}
+    known = {_key(n) for n in espn_names}
+    idx = pd.read_csv(ROSTERS)
+    idx = idx[idx["TEAM_ABBREVIATION"].notna() & idx["POSITION"].isna()]
+    new = 0
+    for r in idx.itertuples():
+        name = f"{r.PLAYER_FIRST_NAME} {r.PLAYER_LAST_NAME}"
+        if _key(name) in known or name in have:
+            continue
+        try:
+            hits = [h for h in _get(NBA_SEARCH.format(q=urllib.parse.quote(name))).get("items", []) if h.get("league") == "nba"]
+            if not hits:
+                continue
+            pos = (_get(ATHLETE.format(id=hits[0]["id"])).get("athlete") or {}).get("position") or {}
+            if pos.get("abbreviation"):
+                have[name] = pos["abbreviation"]
+                new += 1
+        except Exception:  # noqa: BLE001
+            continue
+    FALLBACK.write_text(json.dumps(have, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    return f"fallback positions: {len(have)} ({new} new)"
 
 
 if __name__ == "__main__":

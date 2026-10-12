@@ -362,11 +362,14 @@ def attach_positions(players: list[dict]) -> None:
     espn = {}
     if POSITIONS_CSV.exists():
         espn = {name_key(r.PLAYER_NAME): r.POSITIONS for r in pd.read_csv(POSITIONS_CSV).itertuples(index=False)}
+    # players neither ESPN fantasy nor the NBA gives a position: their ESPN player page (positions.py)
+    fb_file = HERE / "nba_2026_27" / "positions_fallback.json"
+    page = {name_key(k): v for k, v in json.loads(fb_file.read_text(encoding="utf-8")).items()} if fb_file.exists() else {}
     fallback = []
     for p in players:
         pos = espn.get(name_key(p["name"]))
         if pos is None:
-            pos = NBA_TO_FANTASY.get(p.get("pos") or "")
+            pos = NBA_TO_FANTASY.get(p.get("pos") or "") or NBA_TO_FANTASY.get(page.get(name_key(p["name"]), ""), page.get(name_key(p["name"])))
             fallback.append(p["name"])
         p["pos"] = pos
     print(f"Fantasy positions from ESPN for {len(players) - len(fallback)} players; "
