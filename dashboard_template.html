@@ -460,6 +460,7 @@ table.cmpt td.lbl { font-family: var(--font-num); font-weight: 700; text-align: 
 .muscore .mside:last-child { text-align: left; }
 .muscore .mside b { font-size: 1.25rem; }
 .muscore .mside span { font-size: .82rem; color: #aab5cf; }
+.muscore .gcount { font-family: var(--font-num); font-size: 1.05rem; color: #eef2fa; }
 .muscore .mnum { display: grid; grid-template-columns: auto auto auto; align-items: center; gap: 10px; font-family: var(--font-num); font-weight: 800; font-size: 3rem; line-height: 1; justify-items: center; }
 .muscore .mnum small { grid-column: 1 / -1; font-family: var(--font-body); font-size: .72rem; font-weight: 600; color: #93a0bd; }
 .muscore .num { color: #6f7c99; } .muscore .num.lead { color: #ffb020; text-shadow: 0 0 18px rgba(255,176,32,.5); } .muscore .sep { color: #3a4766; }
@@ -3768,9 +3769,9 @@ function renderMatchup() {
     : `<div class="mnum"><span class="num${wins > 9 - wins ? " lead" : ""}">${wins}</span><span class="sep">:</span><span class="num${9 - wins > wins ? " lead" : ""}">${9 - wins}</span><small>תחזית סוף השבוע</small></div>`;
   out.innerHTML = `
     <div class="muscore">
-      <div class="mside"><b>${esc(myName)}</b><span>${g1(A.starts)} משחקים בהרכב נותרו${A.played ? ` · ${A.played} שוחקו` : ""}</span></div>
+      <div class="mside"><b>${esc(myName)}</b><span title="משחקים בהרכב: שוחקו מתוך סך הכול השבוע">משחקים בהרכב: <b class="gcount" dir="ltr">${A.played}/${Math.round(A.played + A.starts)}</b></span></div>
       <div class="mmid">${score}<div class="mwin ${oddsKey(odds.win)}"><b>${pctTxt(odds.win)}</b><span>סיכוי לנצח</span></div></div>
-      <div class="mside"><b>${esc(oppName)}</b><span>${g1(B.starts)} משחקים בהרכב נותרו${B.played ? ` · ${B.played} שוחקו` : ""}</span></div>
+      <div class="mside"><b>${esc(oppName)}</b><span title="משחקים בהרכב: שוחקו מתוך סך הכול השבוע">משחקים בהרכב: <b class="gcount" dir="ltr">${B.played}/${Math.round(B.played + B.starts)}</b></span></div>
     </div>
     <div class="mugrid">
       <section class="cmpsec"><h3>הקטגוריות</h3>
