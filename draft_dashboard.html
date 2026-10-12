@@ -569,7 +569,9 @@ table.box.murt th, table.box.murt td { padding: 5px 3px; font-size: .8rem; }
 table.box.murt td.pn { min-width: 0; text-align: start; line-height: 1.25; }
 table.box.murt .pw { gap: 6px; }
 table.box.murt .bimg { width: 26px; height: 26px; }
-table.box.murt .injpill { display: table; margin: 2px 0 0 32px; }
+table.box.murt .injpill { display: inline-block; margin: 0; margin-inline-start: 6px; vertical-align: middle; }
+table.box.murt td.pn > .pw { vertical-align: middle; }
+table.box.murt .injpill { font-size: .66rem; padding: 0 6px; }
 .fewg { font-style: normal; color: var(--muted); margin-inline-start: 2px; font-size: .8em; }
 .pn[data-pcard], .face [data-pcard], .wh[data-pcard] { cursor: pointer; }
 .face .fn[data-pcard]:hover, .wh[data-pcard]:hover { text-decoration: underline; text-underline-offset: 3px; }
