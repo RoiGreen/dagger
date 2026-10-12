@@ -557,7 +557,8 @@ table.box.daygrid tr.dgfoot .over { color: var(--neg); }
 .mupicks .mtags i { font-style: normal; font-family: var(--font-num); font-weight: 700; font-size: .78rem; padding: 0 7px; border-radius: 6px; background: var(--sunk); }
 .mupicks .mtags i.need { background: color-mix(in srgb, var(--led) 26%, transparent); }
 .mupicks .mfit { font-family: var(--font-num); font-size: 1.15rem; min-width: 5.5rem; text-align: center; color: var(--accent); }
-.mupickhead { display: flex; justify-content: flex-end; padding-inline: 11px; margin-bottom: 4px; }
+.mupickhead { display: flex; justify-content: flex-end; padding-inline: 11px calc(11px + 64px + 10px); margin-bottom: 4px; }  /* over the % column: skip the button */
+.mupicks .mgo { width: 64px; flex: none; }
 .mupickhead span { min-width: 5.5rem; text-align: center; font-size: .8rem; font-weight: 700; color: var(--muted); }
 .mupicks li.none { color: var(--muted); background: none; border: 0; }
 .muroster h4 { margin: 0 0 6px; text-align: center; }
@@ -3805,7 +3806,7 @@ function renderMatchup() {
         <div class="muinj"><div><h4>${esc(myName)}</h4><ul>${hurtRows(mineP, A, ilA) || `<li class="none">אין חסרים</li>`}</ul></div><div><h4>${esc(oppName)}</h4><ul>${hurtRows(oppP, B, ilB) || `<li class="none">אין חסרים</li>`}</ul></div></div>
       </section>
     </div>
-    <section class="cmpsec"><h3>פיק אפ מומלץ לשבוע הזה</h3>
+    <section class="cmpsec"><h3 class="ctr">פיק אפ מומלץ לשבוע הזה</h3>
       ${left === 0 ? `<p class="munote">ניצלת את כל ${maxAdds} הפיק אפים של השבוע</p>`
         : moves.length ? `<div class="mupickhead"><span>סיכוי לנצח</span></div><ol class="mupicks">${moves.map(moveRow).join("")}</ol>`
         : `<p class="munote">אין פיק אפ שמשפר את הסיכוי לנצח השבוע</p>`}
