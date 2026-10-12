@@ -487,7 +487,21 @@ table.mucats tr.punted td { opacity: .4; }
 .muwnav #muNow { font-family: var(--font-body); font-size: .78rem; }
 .muadds { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; font-weight: 700; color: var(--muted); }
 .muadds input { width: 3.4em; padding: 4px 6px; text-align: center; }
-.muscore .mmid { display: grid; justify-items: center; gap: 8px; }
+.muscore .mmid { display: grid; justify-items: center; gap: 8px; min-width: 360px; }
+.mustack { display: flex; justify-content: center; padding-inline-start: 14px; margin-bottom: 8px; direction: ltr; }
+.mustack .mini { width: 44px; height: 44px; border-radius: 50%; margin-inline-start: -14px; border: 2px solid #0c1427; background: #1d2944; overflow: hidden; display: grid; place-items: center; cursor: pointer; }
+.mustack .mini img { width: 100%; height: 100%; object-fit: cover; }
+.mustack .mini.more { font-family: var(--font-num); font-weight: 800; font-size: .85rem; color: #aab5cf; cursor: default; }
+.muscore .wins { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; margin-top: 4px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.08); }
+.muscore .wcol { display: grid; gap: 3px; align-content: start; }
+.muscore .wcol.wb { border-inline-start: 1px solid rgba(255,255,255,.08); padding-inline-start: 18px; }
+.muscore .wh { font-size: .78rem; font-weight: 700; margin-bottom: 3px; text-align: center; margin-inline-start: calc(3.2em + 10px); color: #ffb020; }
+.muscore .wb .wh { color: #7fb2ff; }
+.muscore .wr { display: grid; grid-template-columns: 3.2em minmax(0, 1fr); gap: 10px; font-family: var(--font-num); font-weight: 700; font-size: .95rem; color: #eef2fa; }
+.muscore .wr .wk { color: #93a0bd; letter-spacing: .06em; direction: ltr; unicode-bidi: isolate; }
+.muscore .wr .num { text-align: center; direction: ltr; }
+.muscore .wr .num b { font-weight: 800; color: #ffffff; } .muscore .wr .num i { font-style: normal; font-weight: 600; color: #93a0bd; }
+.muscore .wr.none { color: #6f7c99; }
 .mwin { display: grid; justify-items: center; line-height: 1.1; }
 .mwin b { font-family: var(--font-num); font-size: 1.6rem; font-weight: 800; }
 .mwin span { font-size: .72rem; color: #93a0bd; }
@@ -3792,14 +3806,32 @@ function renderMatchup() {
       </div></div>`;
   };
 
+  // Player photos under each team name, like the team comparison (best players first, the rest as +N)
+  const faces = (roster, il) => {
+    const L = [...roster].filter((p) => !il.has(p.id)).sort((a, b) => muValue(b) - muValue(a)), shown = L.slice(0, 7);
+    return `<div class="mustack">${shown.map((p) => `<span class="mini" data-pcard="${p.id}" title="${esc(p.name)}">${p.img ? `<img src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}</span>`).join("")}${L.length > 7 ? `<span class="mini more">+${L.length - 7}</span>` : ""}</div>`;
+  };
+  // Categories each side is projected to win, like the team comparison: my side on the right, the leader's number bold
+  const leadCols = () => {
+    if (st.fmt === "pts") return "";
+    const col = (mineSide) => {
+      const rows = cats.filter((c) => !c.punted && (mineSide ? c.q > 0.5 : c.q < 0.5));
+      return rows.map((c) => {
+        const me = f(c.k, c.a), opp = f(c.k, c.b);
+        const lead = `<b>${mineSide ? me : opp}</b>`, rest = `<i>${mineSide ? opp : me}</i>`;
+        return `<div class="wr"><span class="wk">${c.l}</span><span class="num">${mineSide ? `${rest}-${lead}` : `${lead}-${rest}`}</span></div>`;
+      }).join("") || `<div class="wr none">–</div>`;
+    };
+    return `<div class="wins"><div class="wcol wa"><div class="wh">${esc(myName)}</div>${col(true)}</div><div class="wcol wb"><div class="wh">${esc(oppName)}</div>${col(false)}</div></div>`;
+  };
   const score = st.fmt === "pts"
     ? `<div class="mnum"><span class="num${odds.fa > odds.fb ? " lead" : ""}">${Math.round(odds.fa)}</span><span class="sep">:</span><span class="num${odds.fb > odds.fa ? " lead" : ""}">${Math.round(odds.fb)}</span><small>FPTS · תחזית סוף השבוע</small></div>`
     : `<div class="mnum"><span class="num${wins > 9 - wins ? " lead" : ""}">${wins}</span><span class="sep">:</span><span class="num${9 - wins > wins ? " lead" : ""}">${9 - wins}</span><small>תחזית סוף השבוע</small></div>`;
   out.innerHTML = `
     <div class="muscore">
-      <div class="mside"><b>${esc(myName)}</b><span title="משחקים בהרכב: שוחקו מתוך סך הכול השבוע"><b class="gcount" dir="ltr">${A.played}/${A.played + A.gamesAll}</b></span></div>
-      <div class="mmid">${score}<div class="mwin ${oddsKey(odds.win)}"><b>${pctTxt(odds.win)}</b><span>סיכוי לנצח</span></div></div>
-      <div class="mside"><b>${esc(oppName)}</b><span title="משחקים בהרכב: שוחקו מתוך סך הכול השבוע"><b class="gcount" dir="ltr">${B.played}/${B.played + B.gamesAll}</b></span></div>
+      <div class="mside">${faces(mineP, ilA)}<b>${esc(myName)}</b><span title="משחקים בהרכב: שוחקו מתוך סך הכול השבוע"><b class="gcount" dir="ltr">${A.played}/${A.played + A.gamesAll}</b></span></div>
+      <div class="mmid">${score}<div class="mwin ${oddsKey(odds.win)}"><b>${pctTxt(odds.win)}</b><span>סיכוי לנצח</span></div>${leadCols()}</div>
+      <div class="mside">${faces(oppP, ilB)}<b>${esc(oppName)}</b><span title="משחקים בהרכב: שוחקו מתוך סך הכול השבוע"><b class="gcount" dir="ltr">${B.played}/${B.played + B.gamesAll}</b></span></div>
     </div>
     <div class="mugrid">
       <section class="cmpsec"><h3 class="ctr">הקטגוריות</h3>
