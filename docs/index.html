@@ -476,6 +476,9 @@ table.box tr.ilrow td { opacity: .55; }
 .muadd input { flex: 1 1 180px; } .muadd select { flex: 0 1 200px; width: auto; }
 .dghead { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; }
 .dghead h3 { margin: 0; }
+.showseg { margin: 0 0 10px; justify-self: start; width: fit-content; }
+/* my team / favorites view: their rows are the point, so they are not faded */
+.no-fade tr.is-taken td:not(.acts), .no-fade tr.is-mine td:not(.acts):not(.name), .no-fade tr.is-mine td.name > * { opacity: 1; }
 .seg { display: inline-flex; border: 1px solid var(--line); border-radius: 10px; overflow: hidden; }
 .seg button { border: 0; background: none; padding: 5px 12px; font: inherit; font-size: .82rem; font-weight: 700; color: var(--muted); cursor: pointer; }
 .seg button[aria-pressed="true"] { background: var(--accent); color: #fff; }
@@ -1082,6 +1085,12 @@ table.cmpt td.lbl { min-width: 5.5em; }
           </div>
         </div>
       </div>
+      <div class="seg showseg" id="showSeg" role="group" aria-label="אילו שחקנים להציג">
+        <button type="button" data-show="free">שוק חופשי</button>
+        <button type="button" data-show="mine">הקבוצה שלי</button>
+        <button type="button" data-show="fav">המועדפים שלי</button>
+        <button type="button" data-show="all">כל השחקנים</button>
+      </div>
       <section class="view" id="viewBoard" role="tabpanel" aria-labelledby="tabBoard">
       <div class="legend">
         <span><span class="sw" style="background:color-mix(in srgb, var(--pos) 38%, transparent)"></span>חזק בקטגוריה</span>
@@ -1334,7 +1343,7 @@ const hasPos = (p, x) => (p.pos || "").split("/").includes(x);
 const st = {
   fmt: "cat", mode: "g", teams: 8, roster: 13, punts: new Set(), settingsVersion: 5,
   q: "", minGp: 50, minMin: 0, catFilters: [{ cat: "PTS", val: 0 }], pos: new Set(), teamSel: [], maxAge: 42,
-  hideTaken: true, onlyMoved: false, noHurt: false, weekGames: [], formWin: "", muOpp: null, weekAdds: 3, muAdds: null, il: {}, muGrid: "a", onlyFav: false, inj: "all", rookies: "all", myPos: 1, snake: true, roles: [], leagueName: "", teamNames: [], tags: {}, tagsMigrated: false,
+  hideTaken: true, onlyMine: false, onlyMoved: false, noHurt: false, weekGames: [], formWin: "", muOpp: null, weekAdds: 3, muAdds: null, il: {}, muGrid: "a", onlyFav: false, inj: "all", rookies: "all", myPos: 1, snake: true, roles: [], leagueName: "", teamNames: [], tags: {}, tagsMigrated: false,
   cmp: { mode: "players", a: [], b: [], ta: 0, tb: 1, tta: null, ttb: null, chart: "val", sw: { a: [], b: [] }, fold: { a: false, b: false }, drops: [], adds: [] },
   sort: "zTotal", asc: false, tab: "board", advSort: "USG", advAsc: false, teamSort: "PACE", teamAsc: false, availSeasons: [2], vsOpp: "",
 };
@@ -1399,7 +1408,7 @@ function applySettings(s) {
   // A new visit starts clean: season 2025-26, no search, filters, sorting or comparison from last time.
   // What the user built stays: league setup (format, teams, roster, Punt), draft settings, table marks
   // (favorites and draft picks are stored apart from the settings).
-  for (const k of ["q", "minGp", "minMin", "catFilters", "pos", "teamSel", "maxAge", "hideTaken", "onlyMoved", "noHurt", "onlyFav",
+  for (const k of ["q", "minGp", "minMin", "catFilters", "pos", "teamSel", "maxAge", "hideTaken", "onlyMine", "onlyMoved", "noHurt", "onlyFav",
     "inj", "rookies", "roles", "weekGames", "formWin", "sort", "asc", "tab", "advSort", "advAsc", "teamSort", "teamAsc", "availSeasons", "vsOpp", "mode", "cmp", "muWeekOff"]) delete s[k];
   if (s.onlyInj && !s.inj) s.inj = "only";
   if (!Array.isArray(s.roles)) s.roles = s.role ? [s.role] : [];
@@ -1537,6 +1546,7 @@ function passes(p) {
     (st.inj === "all" || (st.inj === "only") === !!p.injured) &&
     (!st.roles.length || st.roles.includes(p.role)) &&
     (!st.onlyFav || fav.has(p.id)) &&
+    (!st.onlyMine || mine.has(p.id)) &&
     catOk(p);
 }
 
@@ -4003,12 +4013,17 @@ function syncControls() {
   for (const b of document.querySelectorAll("[data-tab]")) b.setAttribute("aria-selected", b.dataset.tab === st.tab);
   // The page title follows the open tab
   try { sessionStorage.setItem(TAB_KEY, st.tab); } catch (e) {}
+  $("showSeg").hidden = !["board", "adv"].includes(st.tab);
   $("pageTitle").textContent = { board: "נתונים כלליים", adv: "נתונים מתקדמים", draft: "חדר הדראפט", cmp: "השוואה", mu: "מצ'אפ שבועי" }[st.tab] || "נתונים כלליים";
   $("pageYear").hidden = st.tab !== "draft";  // the season shows only in the draft room
   $("viewBoard").hidden = st.tab !== "board"; $("viewAdv").hidden = st.tab !== "adv"; $("viewDraft").hidden = st.tab !== "draft"; $("viewCmp").hidden = st.tab !== "cmp"; $("viewMu").hidden = st.tab !== "mu";
   // The table search does nothing in the draft room (it has its own pick box), so it is hidden there
   document.querySelector(".topsearch").hidden = st.tab === "draft" || st.tab === "cmp" || st.tab === "mu";
   $("onlyFav").checked = st.onlyFav;
+  // the quick switch over the tables: free agents / my team / favorites / everyone
+  const show = st.onlyMine ? "mine" : st.onlyFav ? "fav" : st.hideTaken ? "free" : "all";
+  for (const b of document.querySelectorAll("[data-show]")) b.setAttribute("aria-pressed", b.dataset.show === show);
+  document.body.classList.toggle("no-fade", show === "mine" || show === "fav");
   for (const b of document.querySelectorAll("[data-avs]")) b.setAttribute("aria-pressed", st.availSeasons.includes(Number(b.dataset.avs)));
   // Collapsed list shows the chosen seasons, newest first
   document.querySelector(".seasonlist").classList.toggle("locked", !!st.vsOpp);
@@ -4305,6 +4320,13 @@ $("undoBtn").addEventListener("click", () => {
   picks.pop(); rebuildSets(); render(); flushPicks();
 });
 $("q").addEventListener("input", (e) => { st.q = e.target.value; update(false); });
+$("showSeg").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-show]");
+  if (!b) return;
+  const v = b.dataset.show;
+  Object.assign(st, { hideTaken: v === "free", onlyMine: v === "mine", onlyFav: v === "fav" });
+  update(false);
+});
 for (const id of ["hideTaken", "onlyMoved", "onlyFav", "noHurt"]) $(id).addEventListener("change", (e) => { st[id] = e.target.checked; update(false); });
 
 if (D.seasons.includes(D.current)) document.querySelector('[data-avs="4"]').hidden = false;
