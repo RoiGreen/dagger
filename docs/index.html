@@ -684,7 +684,8 @@ table.box { direction: ltr; }
   linear-gradient(135deg, color-mix(in srgb, var(--jc) 85%, #000) 0%, color-mix(in srgb, var(--jc) 45%, #070b16) 100%); }  /* the team's jersey colour */
 .pinfo > div { display: grid; gap: 4px; justify-items: center; text-align: center; }  /* name centred over the team line */
 .pnm { text-align: center !important; }
-.powner { margin-top: 6px; text-align: center; font-size: .85rem; color: #dce4f5; }
+.powner { margin-top: 6px; text-align: center; font-size: .85rem; color: #dce4f5; justify-self: stretch; }
+.powner.withlogo { padding-inline-start: 54px; }  /* centred under the team name, not under the logo */
 .powner b { color: #ffb020; }
 .powner.fa { color: #3ddc97; font-weight: 700; }
 .phead .pnm, .phead .pmeta { color: #ffffff; text-shadow: 0 1px 3px rgba(0,0,0,.55); }
@@ -2045,7 +2046,7 @@ function openPlayer(id) {
   // His fantasy team: the draft-room team that has him, my team for a "שלי" mark, else a free agent
   const pk = picks.find((x) => x.id === p.id);
   const owner = pk ? teamName(pk.team) : mine.has(p.id) ? teamName(myIdx()) : taken.has(p.id) ? "נלקח" : null;
-  const ownerTag = `<div class="powner${owner ? "" : " fa"}">${owner ? `בקבוצה: <b>${esc(owner)}</b>` : "שחקן חופשי"}</div>`;
+  const ownerTag = `<div class="powner${owner ? "" : " fa"}${p.team26 ? " withlogo" : ""}">${owner ? `<span dir="ltr">Team: <b dir="auto">${esc(owner)}</b></span>` : "שחקן חופשי"}</div>`;
   $("gameCard").innerHTML = `<button type="button" class="gclose" data-gclose="1" aria-label="סגירה">✕</button>
     <div class="ghead phead" style="--jc:${jc}"><div class="pinfo">${p.img ? `<img class="pimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<div><div class="pnm">${esc(p.name)}</div>
       <div class="pmeta">${p.team26 ? teamLogo(p.team26) : ""}<span>${esc(TEAM_NAMES[p.team26] || p.team26 || "FA")} · ${esc(p.pos || "–")}</span>${p.hurt ? injuryPill(p) : ""}</div>${ownerTag}</div></div>
