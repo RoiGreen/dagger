@@ -1053,7 +1053,6 @@ table.cmpt td.lbl { min-width: 5.5em; }
         <div class="field">
           <label for="minGp">מינימום משחקים לעונה <output id="minGpOut">50</output></label>
           <input type="range" id="minGp" min="0" max="82" value="0">
-          <p class="hint">עונה שבה שיחק פחות משחקים לא נכנסת לחישוב שלו</p>
         </div>
         <div class="field">
           <label for="minMin">מינימום דקות למשחק <output id="minMinOut">0</output></label>
@@ -1072,6 +1071,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
           </details>
         </div>
         <label class="check"><input type="checkbox" id="noHurt"> ללא שחקנים פצועים</label>
+        <label class="check"><input type="checkbox" id="onlyMoved"> רק שחקנים שעברו קבוצה</label>
         <div class="field">
           <span class="lbl">רוקיז (תחזית)</span>
           <div class="seg" role="group" aria-label="רוקיז">
@@ -1081,7 +1081,6 @@ table.cmpt td.lbl { min-width: 5.5em; }
           </div>
         </div>
         <div class="field"><label for="maxAge">גיל מקסימלי</label><input type="number" id="maxAge" min="19" max="42" value="42"></div>
-        <label class="check"><input type="checkbox" id="onlyMoved"> רק שחקנים שעברו קבוצה</label>
       </section>
 
       <section class="panel" aria-labelledby="hMine">
@@ -1299,7 +1298,12 @@ const fpts = (o) => {
 const SEASONS = D.seasons;  // start years, e.g. [2023, 2024, 2025]
 const seasonLabel = (y) => y === D.preseason ? "26-27 Pre" : `${String(y).slice(2)}-${String(y + 1).slice(2)}`;
 // Rookies keep their projection to fall back on when no real games are chosen
-const players = D.players.map((p) => ({ ...p, proj: p.rookie ? p.s : null, projGp: p.rookie ? p.gp : null }));
+// Age today from the birth date (birthdates.py), so it moves on by itself on birthdays; the season age otherwise
+const ageToday = (born) => {
+  const b = new Date(born + "T12:00:00Z"), t = new Date();
+  return t.getUTCFullYear() - b.getUTCFullYear() - ((t.getUTCMonth() * 32 + t.getUTCDate()) < (b.getUTCMonth() * 32 + b.getUTCDate()) ? 1 : 0);
+};
+const players = D.players.map((p) => ({ ...p, age: p.born ? ageToday(p.born) : p.age, proj: p.rookie ? p.s : null, projGp: p.rookie ? p.gp : null }));
 // Games minimum per season: one game in the preseason; for the season in progress it scales with
 // how far the season has gone (60% of the most games anyone has played), capped by the slider
 function seasonMinGames(y) {
@@ -3414,8 +3418,13 @@ const zeroLine = () => Object.fromEntries([...MU_KEYS, "FP"].map((k) => [k, 0]))
 function planWeek(roster, il, team, swap = null) {
   const T = { done: zeroLine(), mean: zeroLine(), v: zeroLine(), covFG: 0, covFT: 0, starts: 0, played: 0, days: [], cell: new Map() };
   for (const d of weekDays()) {
-    const who = roster.filter((p) => !il.has(p.id) && !(swap && d >= swap.from && p.id === swap.drop));
-    if (swap && d >= swap.from) who.push(swap.add);
+    // A pickup counts from the moment it is made, except a game already under way: the added player misses it,
+    // and the released one (who cannot be dropped mid-game) still has it
+    const started = (p) => { const gm = gameOn(p.team26, d); return !!gm && gm.g.t <= new Date(); };
+    const on = swap && d >= swap.from;
+    const sameDay = on && d === swap.from;
+    const who = roster.filter((p) => !il.has(p.id) && !(on && p.id === swap.drop && !(sameDay && started(p))));
+    if (on && !(sameDay && started(swap.add))) who.push(swap.add);
     const cands = [];
     for (const p of who) {
       if (d <= LOG_END) {
@@ -3974,10 +3983,10 @@ function renderMine() {
   $("mineBars").innerHTML = sums.map(({ c, v }) => {
     const w = (Math.abs(v) / maxAbs) * 50;
     const side = v >= 0 ? `inset-inline-start:calc(50% - ${w}%)` : `inset-inline-start:50%`;
-    return `<div class="catbar${st.punts.has(c.k) ? " punted" : ""}"><span>${c.l}</span>
+    return `<div class="catbar${st.punts.has(c.k) ? " punted" : ""}"><span><bdi>${c.l}</bdi></span>
       <span class="track"><span class="fill" style="${side};width:${w}%;background:var(${v >= 0 ? "--pos" : "--neg"})"></span></span>
       <span class="v">${v >= 0 ? "+" : ""}${v.toFixed(1)}</span></div>`;
-  }).join("");
+  }).join("") + `<p class="hint">ביחס לקבוצה ממוצעת בליגה: 0 = ממוצע, פלוס = חוזקה, מינוס = חולשה</p>`;
 }
 
 // ---------- persistence of picks ----------

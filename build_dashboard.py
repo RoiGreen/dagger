@@ -464,6 +464,12 @@ def main() -> None:
         if f.exists():
             p["img"] = "data:image/webp;base64," + base64.b64encode(f.read_bytes()).decode()
             with_img += 1
+    # birth dates: the page works out each player's age on the day it is opened
+    births = json.loads(BIRTHDATES.read_text(encoding="utf-8")) if BIRTHDATES.exists() else {}
+    for p in players:
+        if str(p["id"]) in births:
+            p["born"] = births[str(p["id"])]
+    print(f"Birth dates for {sum('born' in p for p in players)} of {len(players)} players")
     site_players = site_images(players)
     print(f"Headshots embedded for {with_img} players")
 

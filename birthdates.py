@@ -1,6 +1,6 @@
 """
-Birth dates of the 2026 draft class, so a rookie's age is his real age today (the projection file carries
-the age of his last college / overseas season, and is blank for some international picks).
+Birth dates of every player on a 2026-27 roster and of the 2026 draft class, so the page shows each player's
+real age on the day it is opened (the season files only carry the age during that season).
 
     python birthdates.py
 
@@ -19,11 +19,15 @@ from nba_stats_2025_26 import fetch
 HERE = Path(__file__).parent
 OUT = HERE / "nba_2026_27" / "birthdates.json"
 ROOKIES = HERE / "rookie_projections_2026_27.csv"
+ROSTERS = HERE / "nba_2025_26" / "player_index_2026_27.csv"
 
 
 def pull_birthdates() -> str:
     have = json.loads(OUT.read_text(encoding="utf-8")) if OUT.exists() else {}
     ids = [str(int(x)) for x in pd.read_csv(ROOKIES)["PLAYER_ID"]] if ROOKIES.exists() else []
+    if ROSTERS.exists():
+        ids += [str(int(x)) for x in pd.read_csv(ROSTERS)["PERSON_ID"]]
+    ids = list(dict.fromkeys(ids))
     new = failed = 0
     for pid in ids:
         if pid in have:
@@ -37,8 +41,10 @@ def pull_birthdates() -> str:
         if b:
             have[pid] = b
             new += 1
+            if new % 50 == 0:  # keep what we have if a long first run is cut off
+                OUT.write_text(json.dumps(have, separators=(",", ":")), encoding="utf-8")
     OUT.write_text(json.dumps(have, separators=(",", ":")), encoding="utf-8")
-    return f"Rookie birth dates: {len(have)} ({new} new{f', {failed} failed' if failed else ''})"
+    return f"Birth dates: {len(have)} ({new} new{f', {failed} failed' if failed else ''})"
 
 
 if __name__ == "__main__":
