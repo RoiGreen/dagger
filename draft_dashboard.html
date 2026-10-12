@@ -966,7 +966,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
         </div>
         <div class="field">
           <label for="minGp">מינימום משחקים לעונה <output id="minGpOut">50</output></label>
-          <input type="range" id="minGp" min="10" max="82" value="50">
+          <input type="range" id="minGp" min="0" max="82" value="0">
           <p class="hint">עונה שבה שיחק פחות משחקים לא נכנסת לחישוב שלו.</p>
         </div>
         <div class="field">
@@ -1342,7 +1342,7 @@ const hasPos = (p, x) => (p.pos || "").split("/").includes(x);
 // ---------- state ----------
 const st = {
   fmt: "cat", mode: "g", teams: 8, roster: 13, punts: new Set(), settingsVersion: 5,
-  q: "", minGp: 50, minMin: 0, catFilters: [{ cat: "PTS", val: 0 }], pos: new Set(), teamSel: [], maxAge: 42,
+  q: "", minGp: 0, minMin: 0, catFilters: [{ cat: "PTS", val: 0 }], pos: new Set(), teamSel: [], maxAge: 42,
   hideTaken: true, onlyMine: false, onlyMoved: false, noHurt: false, weekGames: [], formWin: "", muOpp: null, weekAdds: 3, muAdds: null, il: {}, muGrid: "a", onlyFav: false, inj: "all", rookies: "all", myPos: 1, snake: true, roles: [], leagueName: "", teamNames: [], tags: {}, tagsMigrated: false,
   cmp: { mode: "players", a: [], b: [], ta: 0, tb: 1, tta: null, ttb: null, chart: "val", sw: { a: [], b: [] }, fold: { a: false, b: false }, drops: [], adds: [] },
   sort: "zTotal", asc: false, tab: "board", advSort: "USG", advAsc: false, teamSort: "PACE", teamAsc: false, availSeasons: [2], vsOpp: "",
@@ -3989,7 +3989,7 @@ function syncControls() {
   setField("teams", st.teams); setField("roster", st.roster); setField("q", st.q);
   // Only 2026-27 chosen: the games minimum runs up to the games played so far; earlier seasons stay free (10-82)
   const onlyCur = chosenSeasons().every((y) => y === D.current);
-  $("minGp").min = onlyCur ? 1 : 10; $("minGp").max = onlyCur ? Math.max(D.curMaxGp || 1, 1) : 82;
+  $("minGp").min = 0; $("minGp").max = onlyCur ? Math.max(D.curMaxGp || 1, 1) : 82;
   $("minGp").value = st.minGp; $("minGpOut").textContent = onlyCur ? Math.min(st.minGp, D.curMaxGp || 1) : st.minGp;
   $("formWin").value = st.formWin || "";
   const fh = $("formHint");
@@ -4209,7 +4209,7 @@ const num = (id, key, lo, hi, re = true) => $(id).addEventListener("input", (e) 
   st[key] = Math.min(hi, Math.max(lo, v)); update(re);
 });
 num("teams", "teams", 4, 30); num("roster", "roster", 5, 20);
-num("minGp", "minGp", 10, 82); num("minMin", "minMin", 0, 36);
+num("minGp", "minGp", 0, 82); num("minMin", "minMin", 0, 36);
 num("maxAge", "maxAge", 19, 42, false);
 $("catFilters").addEventListener("change", (e) => {
   const i = e.target.dataset.cfi;
