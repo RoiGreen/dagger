@@ -467,6 +467,12 @@ table.cmpt td.lbl { font-family: var(--font-num); font-weight: 700; text-align: 
 .mugrid { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 14px; align-items: start; }
 @media (max-width: 900px) { .mugrid { grid-template-columns: minmax(0, 1fr); } }
 table.mucats td.w { font-weight: 800; color: var(--pos); }
+/* every column centred, equal widths: names over their numbers, each category under "קטגוריה" */
+table.box.mucats { width: 100%; table-layout: fixed; }
+table.box.mucats th, table.box.mucats td, table.box.mucats td.lbl { text-align: center !important; direction: ltr; }
+table.box.mucats td.lbl { font-family: var(--font-num); font-weight: 800; }
+.cmpsec h3.ctr { text-align: center; justify-content: center; width: 100%; }
+table.box.mucats td:last-child { white-space: nowrap; }
 table.mucats tr.punted td { opacity: .4; }
 .mucat { display: inline-block; font-family: var(--font-body); font-size: .78rem; font-weight: 700; padding: 1px 9px; border-radius: 999px; margin-inline: 2px; }
 .mucat.win { background: color-mix(in srgb, var(--pos) 26%, transparent); color: var(--pos); }
@@ -3776,7 +3782,7 @@ function renderMatchup() {
       <div class="mside"><b>${esc(oppName)}</b><span title="משחקים בהרכב: שוחקו מתוך סך הכול השבוע"><b class="gcount" dir="ltr">${B.played}/${B.played + B.gamesAll}</b></span></div>
     </div>
     <div class="mugrid">
-      <section class="cmpsec"><h3>הקטגוריות</h3>
+      <section class="cmpsec"><h3 class="ctr">הקטגוריות</h3>
         <table class="box mucats"><thead><tr><th class="nosort">קטגוריה</th><th class="nosort">${esc(myName)}</th><th class="nosort">${esc(oppName)}</th><th class="nosort">סיכוי לנצח</th></tr></thead><tbody>${
           cats.map((c) => `<tr class="${c.punted ? "punted" : ""}"><td class="lbl">${c.l}</td>
             <td class="${c.q > 0.5 ? "w" : ""}">${f(c.k, c.a)}${anyPlayed ? `<small class="sofar">עד כה ${f(c.k, c.done[0])}</small>` : ""}</td>
