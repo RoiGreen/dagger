@@ -574,6 +574,9 @@ table.box.daygrid tr.dgfoot .over { color: var(--neg); }
 .mupicks .mtags { display: inline-flex; gap: 4px; margin-inline-start: auto; }
 .mupicks .mtags i { font-style: normal; font-family: var(--font-num); font-weight: 700; font-size: .78rem; padding: 0 7px; border-radius: 6px; background: var(--sunk); }
 .mupicks .mtags i.need { background: color-mix(in srgb, var(--led) 26%, transparent); }
+.mupicks .mtags { flex-wrap: wrap; }
+.mupicks .mtags i.loss { background: color-mix(in srgb, var(--neg) 16%, transparent); color: var(--neg); }
+.mupicks .mtags .mwarn { flex-basis: 100%; font-style: normal; font-size: .74rem; font-weight: 700; color: var(--neg); }
 .mupicks .mfit { font-family: var(--font-num); font-size: 1.15rem; min-width: 5.5rem; text-align: center; color: var(--accent); }
 .mupickhead { display: flex; justify-content: flex-end; padding-inline: 11px calc(11px + 64px + 10px); margin-bottom: 4px; }  /* over the % column: skip the button */
 .mupicks .mgo { width: 64px; flex: none; }
@@ -3733,13 +3736,19 @@ function renderMatchup() {
       ...active.map((p) => [`${p.id}|drop`, `משחרר: ${p.name}`])];
     const cur = `${x.drop?.id ?? ""}|${x.kind ?? ""}`;
     const dropSel = `<select class="mdropsel" data-mudropsel="${x0.X.id}" aria-label="את מי לשחרר">${opts.map(([v, l]) => `<option value="${v}"${v === cur ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
-    const ups = x.r.cats.map((c, j) => ({ l: c.l, d: c.q - odds.cats[j].q })).filter((u) => u.d > 0.02).sort((a, b) => b.d - a.d).slice(0, 3);
+    // categories that move: the biggest gains, and the losses too, so a swap's price is in view
+    const moved = x.r.cats.map((c, j) => ({ l: c.l, d: c.q - odds.cats[j].q, punt: st.punts.has(c.k) })).filter((u) => !u.punt && Math.abs(u.d) > 0.02);
+    const ups = moved.filter((u) => u.d > 0).sort((a, b) => b.d - a.d).slice(0, 3);
+    const downs = moved.filter((u) => u.d < 0).sort((a, b) => a.d - b.d).slice(0, 3);
+    // releasing someone clearly better for the season: good for this week only
+    const costly = x.drop && x.kind !== "il" && seasonValue(x.drop) > seasonValue(x.X) + (st.fmt === "pts" ? 3 : 0.75);
     const days = weekDays().filter((d) => x.A2.cell.get(`${x.X.id}|${d}`)?.slot);
     return `<li><span class="rk">${i + 1}</span>${x.X.img ? `<img class="mimg" src="${x.X.img}" alt="" loading="lazy" decoding="async">` : `<span class="mimg"></span>`}
       <span class="mwho"><span class="mline"><span class="pn" data-pcard="${x.X.id}">${esc(x.X.name)}</span>${teamLogo(x.X.team26)}${x.X.hurt ? injuryPill(x.X) : ""}
         <span class="mdays" title="הימים שבהם הוא נכנס להרכב">${days.map(dayShort).join(" ") || "–"}</span></span>
         <small class="mdrop">${dropSel}</small></span>
-      <span class="mtags">${ups.map((u) => `<i class="need"><bdi>${u.l}</bdi> +${Math.round(u.d * 100)}%</i>`).join("")}</span>
+      <span class="mtags">${ups.map((u) => `<i class="need"><bdi>${u.l}</bdi> +${Math.round(u.d * 100)}%</i>`).join("")}${downs.map((u) => `<i class="loss"><bdi>${u.l}</bdi> −${Math.round(-u.d * 100)}%</i>`).join("")}
+        ${costly ? `<em class="mwarn" title="השבוע זה משפר את הסיכוי, אבל ${esc(x.drop.name)} שווה יותר לאורך העונה">${esc(x.drop.name)} שווה יותר לאורך העונה</em>` : ""}</span>
       <b class="mfit" title="סיכוי לנצח את המצ'אפ אחרי המהלך">${pctTxt(x.r.win)}<small>+${Math.max(0, Math.round((x.r.win - odds.win) * 100))}%</small></b>
       <button type="button" class="mgo" data-mumove="${x.X.id}|${x.drop?.id ?? ""}|${x.kind ?? ""}">בצע</button></li>`;
   };
