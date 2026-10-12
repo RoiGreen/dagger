@@ -976,7 +976,6 @@ table.cmpt td.lbl { min-width: 5.5em; }
           <div class="field"><label for="myTeam">הקבוצה שלי</label><select id="myTeam"></select></div>
           <div class="field"><label for="muAddsMax">פיק אפים בשבוע</label><input type="number" id="muAddsMax" min="0" max="14"></div>
         </div>
-        <p class="hint" id="myTeamLock" hidden>הקבוצה שלי נעולה מאז תחילת הדראפט. איפוס הדראפט משחרר אותה.</p>
         <label class="check"><input type="checkbox" id="snake" checked> סדר סנייק בדראפט</label>
         <details class="tnames"><summary>שמות הקבוצות (לפי סדר הבחירה בסיבוב הראשון)</summary><div class="teamnames" id="teamNames"></div></details>
         </div>
@@ -984,7 +983,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
         <div class="field" id="puntField">
           <span class="lbl">ויתור על קטגוריות (Punt)</span>
           <div class="chips" id="puntChips"></div>
-          <p class="hint">קטגוריה מסומנת לא נספרת: בליגת קטגוריות היא יוצאת מה־Z, ובליגת נקודות הנקודות שלה לא נכנסות ל־FPTS.</p>
+          <p class="hint">קטגוריה מסומנת לא נספרת.</p>
         </div>
         <p class="hint" id="ptsHint" hidden>ניקוד FPTS: נקודה 1, שלשה 1, קליעה 2, זריקה ‎-1, עונשין 1, ניסיון עונשין ‎-1, ריבאונד 1, אסיסט 2, חטיפה 4, חסימה 4, איבוד ‎-2.</p>
       </section>
@@ -1031,18 +1030,14 @@ table.cmpt td.lbl { min-width: 5.5em; }
           <p class="hint">אפשר גם ללחוץ על כותרת עמודה בטבלה.</p>
         </div>
         <div class="field">
-          <label for="minGp">מינימום משחקים לעונה <output id="minGpOut">50</output></label>
-          <input type="range" id="minGp" min="0" max="82" value="0">
-          <p class="hint">עונה שבה שיחק פחות משחקים לא נכנסת לחישוב שלו.</p>
-        </div>
-        <div class="field">
-          <label for="minMin">מינימום דקות למשחק <output id="minMinOut">0</output></label>
-          <input type="range" id="minMin" min="0" max="36" value="0">
-        </div>
-        <div class="field">
-          <span class="lbl">מינימום לפי קטגוריה</span>
-          <div class="catfilters" id="catFilters"></div>
-          <p class="hint" id="minCatHint">ריק או 0 = בלי סינון. + מוסיף סינון על קטגוריה נוספת, וכל הסינונים חלים יחד. הערכים לפי מצב התצוגה (אמיתי או 36 דקות).</p>
+          <span class="lbl">עמדה</span>
+          <div class="chips" id="posChips">
+            <button class="chip" data-pos="PG" aria-pressed="false">PG</button>
+            <button class="chip" data-pos="SG" aria-pressed="false">SG</button>
+            <button class="chip" data-pos="SF" aria-pressed="false">SF</button>
+            <button class="chip" data-pos="PF" aria-pressed="false">PF</button>
+            <button class="chip" data-pos="C" aria-pressed="false">C</button>
+          </div>
         </div>
         <div class="field">
           <span class="lbl">משחקים שנשארו השבוע</span>
@@ -1056,34 +1051,27 @@ table.cmpt td.lbl { min-width: 5.5em; }
           </div>
         </div>
         <div class="field">
-          <span class="lbl">עמדה</span>
-          <div class="chips" id="posChips">
-            <button class="chip" data-pos="PG" aria-pressed="false">PG</button>
-            <button class="chip" data-pos="SG" aria-pressed="false">SG</button>
-            <button class="chip" data-pos="SF" aria-pressed="false">SF</button>
-            <button class="chip" data-pos="PF" aria-pressed="false">PF</button>
-            <button class="chip" data-pos="C" aria-pressed="false">C</button>
-          </div>
+          <label for="minGp">מינימום משחקים לעונה <output id="minGpOut">50</output></label>
+          <input type="range" id="minGp" min="0" max="82" value="0">
+          <p class="hint">עונה שבה שיחק פחות משחקים לא נכנסת לחישוב שלו.</p>
         </div>
         <div class="field">
-          <span class="lbl">קבוצות 2026-27</span>
+          <label for="minMin">מינימום דקות למשחק <output id="minMinOut">0</output></label>
+          <input type="range" id="minMin" min="0" max="36" value="0">
+        </div>
+        <div class="field">
+          <span class="lbl">מינימום לפי קטגוריה</span>
+          <div class="catfilters" id="catFilters"></div>
+        </div>
+        <div class="field">
+          <span class="lbl">קבוצת NBA</span>
           <details class="multi" id="teamPick">
             <summary id="teamSummary">כל הקבוצות</summary>
             <div class="chips" id="teamChips" role="group" aria-label="בחירת קבוצות"></div>
             <button class="linkbtn" type="button" id="teamClear">ניקוי הבחירה</button>
           </details>
         </div>
-        <div class="field"><label for="maxAge">גיל מקסימלי</label><input type="number" id="maxAge" min="19" max="42" value="42"></div>
-        <label class="check"><input type="checkbox" id="onlyMoved"> רק שחקנים שעברו קבוצה</label>
         <label class="check"><input type="checkbox" id="noHurt"> ללא שחקנים פצועים</label>
-        <div class="field">
-          <span class="lbl">נפצעו בעונה שעברה</span>
-          <div class="seg" role="group" aria-label="שחקנים שנפצעו">
-            <button data-inj="all" aria-pressed="true">כולם</button>
-            <button data-inj="only" aria-pressed="false">רק פצועים</button>
-            <button data-inj="hide" aria-pressed="false">בלי פצועים</button>
-          </div>
-        </div>
         <div class="field">
           <span class="lbl">רוקיז (תחזית)</span>
           <div class="seg" role="group" aria-label="רוקיז">
@@ -1092,6 +1080,8 @@ table.cmpt td.lbl { min-width: 5.5em; }
             <button data-rk="hide" aria-pressed="false">בלי רוקיז</button>
           </div>
         </div>
+        <div class="field"><label for="maxAge">גיל מקסימלי</label><input type="number" id="maxAge" min="19" max="42" value="42"></div>
+        <label class="check"><input type="checkbox" id="onlyMoved"> רק שחקנים שעברו קבוצה</label>
       </section>
 
       <section class="panel" aria-labelledby="hFav">
@@ -1108,7 +1098,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
 
       <section class="panel" aria-labelledby="hDist" id="distPanel">
         <h2 id="hDist">פיזור חשיבות</h2>
-        <p class="hint">בכל משחק בעונות שנבחרו: איך נקודות הפנטזי (FPTS) של הקבוצה התחלקו בין מי ששיחק. 3 המובילים במשחק = מפתח, 4-8 = רוטציה, 9+ = ספסל. ממוצע על כל המשחקים. לחיצה על קבוצה או על תפקיד מסננת את הטבלה.</p>
+        <p class="hint">איך נקודות הפנטזי (FPTS) של הקבוצה התחלקו בין מי ששיחק.</p>
         <div class="dist-legend" role="group" aria-label="סינון לפי תפקיד בקבוצה">
           <button data-role="key" aria-pressed="false"><i class="seg-key"></i>מפתח (1-3)</button>
           <button data-role="rotation" aria-pressed="false"><i class="seg-rot"></i>רוטציה (4-8)</button>
@@ -2527,7 +2517,7 @@ function syncTeamNames() {
   if ($("myTeam") !== document.activeElement) { $("myTeam").innerHTML = opts; $("myTeam").value = String(myIdx()); }
   // my team is chosen once: after the first pick the site always looks from that team
   const locked = picks.length > 0;
-  $("myTeam").disabled = locked; $("myTeamLock").hidden = !locked;
+  $("myTeam").disabled = locked;
   setField("leagueName", st.leagueName || "");
 }
 
@@ -2536,7 +2526,7 @@ const FILTER_DEFAULTS = () => ({ minGp: 0, minMin: 0, catFilters: [{ cat: "PTS",
   maxAge: 42, onlyMoved: false, noHurt: false, inj: "all", rookies: "all", roles: [] });
 function activeFilters() {
   return [st.minGp > 0, st.minMin > 0, st.catFilters.some((f) => Number(f.val) > 0), st.weekGames.length, st.pos.size, st.teamSel.length,
-    st.maxAge < 42, st.onlyMoved, st.noHurt, st.inj !== "all", st.rookies !== "all", st.roles.length].filter(Boolean).length;
+    st.maxAge < 42, st.onlyMoved, st.noHurt, st.rookies !== "all", st.roles.length].filter(Boolean).length;
 }
 function syncLeaguePanel() {
   const fmtTxt = st.fmt === "pts" ? "נקודות" : "9 קטגוריות";
@@ -3985,7 +3975,7 @@ function renderMine() {
   }
   const sums = CATS.map((c) => ({ c, v: mp.reduce((a, p) => a + (zAll.get(p.id)?.z[c.k] ?? 0), 0) }));
   const maxAbs = Math.max(3, ...sums.map((s) => Math.abs(s.v)));
-  $("mineBars").innerHTML = `<p class="hint">סכום ציוני z לכל קטגוריה. ירוק = חוזקה, אדום = חולשה.</p>` + sums.map(({ c, v }) => {
+  $("mineBars").innerHTML = sums.map(({ c, v }) => {
     const w = (Math.abs(v) / maxAbs) * 50;
     const side = v >= 0 ? `inset-inline-start:calc(50% - ${w}%)` : `inset-inline-start:50%`;
     return `<div class="catbar${st.punts.has(c.k) ? " punted" : ""}"><span>${c.l}</span>
@@ -4252,7 +4242,7 @@ document.addEventListener("change", (e) => {
   st.formWin = sel.value; update();
   openPlayer(Number(sel.dataset.cardform));
 });
-$("teamChips").innerHTML = teams.map((t) => `<button class="chip" type="button" data-teamsel="${t}" aria-pressed="false">${t}</button>`).join("");
+$("teamChips").innerHTML = [...teams].sort((a, b) => (TEAM_NAMES[a] || a).localeCompare(TEAM_NAMES[b] || b)).map((t) => `<button class="chip" type="button" data-teamsel="${t}" aria-pressed="false">${esc(TEAM_NAMES[t] || t)}</button>`).join("");
 $("teamClear").addEventListener("click", () => { st.teamSel = []; update(false); });
 $("vsNote").addEventListener("click", (e) => { if (e.target.id === "vsClear") { st.vsOpp = ""; update(); } });
 
