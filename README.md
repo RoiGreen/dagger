@@ -4,7 +4,7 @@ Fantasy basketball draft dashboard built from official NBA stats (stats.nba.com)
 with rookie projections for the 2026 draft class. Each user signs in and keeps their own favorites,
 draft picks and settings.
 
-Website: https://roigreen.github.io/nba-fantasy-draft/
+Website: https://roigreen.github.io/dagger/
 
 ## How it fits together
 
