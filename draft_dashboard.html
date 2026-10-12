@@ -683,7 +683,9 @@ table.box { direction: ltr; }
 .pcl, [data-pcard] { cursor: pointer; }
 .pcl:hover, table.box [data-pcard]:hover span { text-decoration: underline; text-underline-offset: 3px; }
 .pstats { display: flex; flex-wrap: wrap; justify-content: space-between; gap: 6px 14px; margin-top: 12px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.22); direction: rtl;  /* PTS first, on the right */ }
-.pmode { width: fit-content; margin: 14px auto 0; background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.18); }
+.pmodewrap { justify-self: stretch; display: flex; justify-content: center; margin-top: 10px; }
+.pmodewrap.withlogo { padding-right: 54px; }
+.pmode { width: fit-content; margin: 0; background: rgba(255,255,255,.1); border-color: rgba(255,255,255,.18); }
 .pmode button { color: rgba(255,255,255,.75); font-size: .82rem; padding: 4px 14px; }
 .pstats div { display: grid; justify-items: center; min-width: 3.4em; }
 .pstats .pv { display: inline-flex; align-items: baseline; gap: 5px; direction: ltr; }  /* numbers read left to right; the rank sits to their right */
@@ -2123,12 +2125,13 @@ function openPlayer(id) {
   const pk = picks.find((x) => x.id === p.id);
   const owner = pk ? teamName(pk.team) : mine.has(p.id) ? teamName(myIdx()) : taken.has(p.id) ? "נלקח" : null;
   const ownerTag = `<div class="powner${owner ? "" : " fa"}${p.team26 ? " withlogo" : ""}">${owner ? `<span dir="ltr">Team: <b dir="auto">${esc(owner)}</b></span>` : "שחקן חופשי"}</div>`;
+  // basic / advanced switch, under the name, team and owner lines and centred like them
+  const modeSeg = p.L ? `<div class="pmodewrap${p.team26 ? " withlogo" : ""}"><div class="seg pmode" role="group" aria-label="סוג הנתונים">${[["basic", "נתונים בסיסיים"], ["adv", "נתונים מתקדמים"]].map(([k, l]) =>
+    `<button type="button" data-cardmode="${k}" data-pid="${p.id}" aria-pressed="${cardMode === k}">${l}</button>`).join("")}</div></div>` : "";
   $("gameCard").innerHTML = `<button type="button" class="gclose" data-gclose="1" aria-label="סגירה">✕</button>
     <div class="ghead phead" style="--jc:${jc}"><div class="pinfo">${p.img ? `<img class="pimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<div><div class="pnm${p.team26 ? " withlogo" : ""}">${esc(p.name)}</div>
-      <div class="pmeta">${p.team26 ? teamLogo(p.team26) : ""}<span>${esc(TEAM_NAMES[p.team26] || p.team26 || "FA")} · ${esc(p.pos || "–")}</span>${p.hurt ? injuryPill(p) : ""}</div>${ownerTag}</div></div>
-      ${p.L ? `<div class="seg pmode" role="group" aria-label="סוג הנתונים">${[["basic", "נתונים בסיסיים"], ["adv", "נתונים מתקדמים"]].map(([k, l]) =>
-        `<button type="button" data-cardmode="${k}" data-pid="${p.id}" aria-pressed="${cardMode === k}">${l}</button>`).join("")}</div>
-      <div class="pstats">${(cardMode === "adv" ? CARD_ADV : CARD_CATS).map((c) => { const r = leagueRank(p, c), v = c.v(p);
+      <div class="pmeta">${p.team26 ? teamLogo(p.team26) : ""}<span>${esc(TEAM_NAMES[p.team26] || p.team26 || "FA")} · ${esc(p.pos || "–")}</span>${p.hurt ? injuryPill(p) : ""}</div>${ownerTag}${modeSeg}</div></div>
+      ${p.L ? `<div class="pstats">${(cardMode === "adv" ? CARD_ADV : CARD_CATS).map((c) => { const r = leagueRank(p, c), v = c.v(p);
         return `<div${c.tip ? ` data-tip="${esc(c.tip)}"` : ""}><span class="pv"><b>${v == null || (c.ok && !c.ok(p)) ? "–" : c.f(v)}</b>${r ? `<i title="מקום ${r.rank} מתוך ${r.of} בליגה">#${r.rank}</i>` : ""}</span><small>${c.l}</small></div>`; }).join("")}</div>` : ""}</div>
     <div class="psec"><h4>המשחקים האחרונים</h4>${recent ? `<div class="tbl-wrap plogwrap"><table class="box plog"><thead><tr>
       ${["Date", "Opp", "Result", "MIN", "PTS", "FG", "FG%", "FT", "FT%", "3PT", "3P%", "REB", "AST", "STL", "BLK", "TOV", "FPTS"].map((c) => `<th class="nosort">${c}</th>`).join("")}
