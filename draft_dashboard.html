@@ -1022,7 +1022,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
             <button role="tab" id="tabAdv" data-tab="adv" aria-selected="false" aria-controls="viewAdv">נתונים מתקדמים</button>
             <button role="tab" id="tabDraft" data-tab="draft" aria-selected="false" aria-controls="viewDraft">חדר דראפט</button>
             <button role="tab" id="tabCmp" data-tab="cmp" aria-selected="false" aria-controls="viewCmp">השוואה</button>
-            <button role="tab" id="tabMu" data-tab="mu" aria-selected="false" aria-controls="viewMu">מאץ'-אפ שבועי</button>
+            <button role="tab" id="tabMu" data-tab="mu" aria-selected="false" aria-controls="viewMu">מצ'אפ שבועי</button>
           </div>
         </div>
       </div>
@@ -3154,7 +3154,7 @@ function renderMatchup() {
   const out = $("muOut");
   const mineP = myRoster(), oppP = teamRoster(st.muOpp);
   if (!mineP.length || !oppP.length) {
-    out.innerHTML = `<p class="gnote">${!mineP.length ? "כדי לתכנן מאץ'-אפ צריך את הסגל שלך: בחר שחקנים לקבוצה שלך בחדר הדראפט או סמן אותם \"שלי\" בטבלה." : "לקבוצה הזו אין עדיין שחקנים בחדר הדראפט."}</p>`;
+    out.innerHTML = `<p class="gnote">${!mineP.length ? "כדי לתכנן מצ'אפ צריך את הסגל שלך: בחר שחקנים לקבוצה שלך בחדר הדראפט או סמן אותם \"שלי\" בטבלה." : "לקבוצה הזו אין עדיין שחקנים בחדר הדראפט."}</p>`;
     return;
   }
   const A = teamWeek(mineP), B = teamWeek(oppP);
@@ -3187,7 +3187,7 @@ function renderMatchup() {
       <span class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</span>${teamLogo(x.p.team26)}${x.p.hurt ? injuryPill(x.p) : ""}
       <span class="mg" title="משחקים צפויים השבוע">${fmt1(x.f.games).replace(/\.0$/, "")} משח׳</span>
       <span class="mtags">${top.map((q) => `<i class="${weights[q.k] >= 1.4 ? "need" : ""}"><bdi>${q.l}</bdi></i>`).join("")}</span>
-      <b class="mfit" title="תרומה בקטגוריות שחשובות במאץ'-אפ, כפול המשחקים השבוע${x.f.recent ? " · מבוסס בעיקר על 14 הימים האחרונים" : ""}">${fitPct(x.f.score)}%</b></li>`;
+      <b class="mfit" title="תרומה בקטגוריות שחשובות במצ'אפ, כפול המשחקים השבוע${x.f.recent ? " · מבוסס בעיקר על 14 הימים האחרונים" : ""}">${fitPct(x.f.score)}%</b></li>`;
   };
   // each player's week (played so far + projected) in all 9 categories
   const weekCell = (r, k) => {
@@ -3592,7 +3592,7 @@ function syncControls() {
   $("snake").checked = st.snake;
   for (const b of document.querySelectorAll("[data-tab]")) b.setAttribute("aria-selected", b.dataset.tab === st.tab);
   // The page title follows the open tab
-  $("pageTitle").textContent = { board: "נתונים כלליים", adv: "נתונים מתקדמים", draft: "חדר הדראפט", cmp: "השוואה", mu: "מאץ'-אפ שבועי" }[st.tab] || "נתונים כלליים";
+  $("pageTitle").textContent = { board: "נתונים כלליים", adv: "נתונים מתקדמים", draft: "חדר הדראפט", cmp: "השוואה", mu: "מצ'אפ שבועי" }[st.tab] || "נתונים כלליים";
   $("pageYear").hidden = st.tab !== "draft";  // the season shows only in the draft room
   $("viewBoard").hidden = st.tab !== "board"; $("viewAdv").hidden = st.tab !== "adv"; $("viewDraft").hidden = st.tab !== "draft"; $("viewCmp").hidden = st.tab !== "cmp"; $("viewMu").hidden = st.tab !== "mu";
   // The table search does nothing in the draft room (it has its own pick box), so it is hidden there
