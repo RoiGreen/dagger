@@ -985,7 +985,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
           <div class="chips" id="puntChips"></div>
           <p class="hint">קטגוריה מסומנת לא נספרת</p>
         </div>
-        <p class="hint" id="ptsHint" hidden>ניקוד FPTS: נקודה 1, שלשה 1, קליעה 2, זריקה ‎-1, עונשין 1, ניסיון עונשין ‎-1, ריבאונד 1, אסיסט 2, חטיפה 4, חסימה 4, איבוד ‎-2.</p>
+        <p class="hint" id="ptsHint" hidden>ניקוד FPTS: נקודה 1, שלשה 1, קליעה 2, זריקה ‎-1, עונשין 1, ניסיון עונשין ‎-1, ריבאונד 1, אסיסט 2, חטיפה 4, חסימה 4, איבוד ‎-2</p>
       </section>
 
       <section class="panel" aria-labelledby="hView">
@@ -1003,7 +1003,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
               <button class="chip" type="button" data-avs="0" aria-pressed="false">2023-24</button>
             </div>
           </details>
-          <p class="hint">כל הנתונים בכל הטבלאות מחושבים מהעונות שנבחרו. כמה עונות = ממוצע משוקלל לפי משחקים.</p>
+          <p class="hint">כל הנתונים בכל הטבלאות מחושבים מהעונות שנבחרו. כמה עונות = ממוצע משוקלל לפי משחקים</p>
         </div>
         <div class="field">
           <span class="lbl">סטטיסטיקה</span>
@@ -1022,7 +1022,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
             <select id="sortBy"></select>
             <button class="dirbtn" id="sortDir" type="button"></button>
           </div>
-          <p class="hint">אפשר גם ללחוץ על כותרת עמודה בטבלה.</p>
+          <p class="hint">אפשר גם ללחוץ על כותרת עמודה בטבלה</p>
         </div>
       </section>
 
@@ -1053,7 +1053,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
         <div class="field">
           <label for="minGp">מינימום משחקים לעונה <output id="minGpOut">50</output></label>
           <input type="range" id="minGp" min="0" max="82" value="0">
-          <p class="hint">עונה שבה שיחק פחות משחקים לא נכנסת לחישוב שלו.</p>
+          <p class="hint">עונה שבה שיחק פחות משחקים לא נכנסת לחישוב שלו</p>
         </div>
         <div class="field">
           <label for="minMin">מינימום דקות למשחק <output id="minMinOut">0</output></label>
@@ -1093,7 +1093,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
 
       <section class="panel" aria-labelledby="hDist" id="distPanel">
         <h2 id="hDist">פיזור חשיבות</h2>
-        <p class="hint">איך נקודות הפנטזי (FPTS) של הקבוצה התחלקו בין מי ששיחק.</p>
+        <p class="hint">איך נקודות הפנטזי (FPTS) של הקבוצה התחלקו בין מי ששיחק</p>
         <div class="dist-legend" role="group" aria-label="סינון לפי תפקיד בקבוצה">
           <button data-role="key" aria-pressed="false"><i class="seg-key"></i>מפתח (1-3)</button>
           <button data-role="rotation" aria-pressed="false"><i class="seg-rot"></i>רוטציה (4-8)</button>
@@ -1717,7 +1717,7 @@ function nameCell(p) {
   // Badge when he has no games in the latest chosen season, so the numbers come from an older one
   const newest = chosenSeasons().filter((y) => y !== D.preseason).slice(-1)[0];  // the preseason never triggers the badge
   const inj = !p.rookie && newest && p.srcSeason && p.srcSeason < newest
-    ? `<span class="inj" title="אין לו משחקים ב־${seasonLabel(newest)}. הנתונים מגיעים מעד ${seasonLabel(p.srcSeason)}, ב־${esc(from)}.">${seasonLabel(p.srcSeason)}</span>`
+    ? `<span class="inj" title="אין לו משחקים ב־${seasonLabel(newest)}. הנתונים מגיעים מעד ${seasonLabel(p.srcSeason)}, ב־${esc(from)}">${seasonLabel(p.srcSeason)}</span>`
     : "";
   const team = !p.team26 ? `${rk}${inj}<span title="ללא קבוצה ל־2026-27">FA</span>`
     : hasMoved(p) ? `${rk}${inj}<span class="moved" title="עבר מ־${esc(from)} ל־${esc(p.team26)}">${esc(from)} → <b>${esc(p.team26)}</b></span>`
@@ -2082,7 +2082,7 @@ function openGame(gid) {
     body = `<div class="gtabs" role="tablist">${teams.map((t, i) => `<button type="button" role="tab" data-gtab="${t}" aria-selected="${i === 0}">${teamLogo(t)}<span>${esc(TEAM_NAMES[t] || t)}</span></button>`).join("")}</div>` +
       teams.map((t, i) => boxTable(t, box[t]).replace(`data-gbox="${t}"`, `data-gbox="${t}"${i ? " hidden" : ""}`)).join("");
   } else if (g.fin) {
-    body = `<p class="gnote">ה־Box Score של המשחק הזה כבר לא שמור באתר.</p>`;
+    body = `<p class="gnote">ה־Box Score של המשחק הזה כבר לא שמור באתר</p>`;
   } else {
     const A = previewTeam(g.a), H = previewTeam(g.h);
     const who = (x) => x.p ? `<span class="pn">${esc(x.p.name)}</span>${x.p.hurt ? injuryPill(x.p) : ""}` : "–";
@@ -2109,8 +2109,8 @@ const tsPct = (p) => { const d = 2 * (p.L.g.FGA + 0.44 * p.L.g.FTA); return d ? 
 const CARD_ADV = [
   { l: "MIN", v: (p) => p.L.g.MIN, f: fmt1, tip: "דקות למשחק" },
   { l: "USG%", v: (p) => advVal(p, "USG"), f: fmt1, ok: (p) => !!p.adv, tip: "אחוז מההתקפות של הקבוצה שמסתיימות אצלו כשהוא על המגרש: בזריקה לסל, בזריקות עונשין או באיבוד. אסיסטים לא נספרים" },
-  { l: "EFG%", v: (p) => advVal(p, "EFG"), f: fmt3, ok: (p) => p.L.g.FGA >= 5, tip: "יעילות הקליעה מהשדה בלבד, בלי זריקות עונשין: כמו FG%, אבל שלשה שנכנסה שווה פי 1.5 מסל של 2 (3 נקודות במקום 2). מראה כמה טובות הזריקות שלו מהשדה." },
-  { l: "TS%", v: tsPct, f: fmt3, ok: (p) => p.L.g.FGA >= 5, tip: "יעילות הקליעה הכוללת: כמו EFG%, אבל כוללת גם את זריקות העונשין. שחקן שמגיע הרבה לקו וקולע שם יקבל TS% גבוה מה־EFG% שלו." },
+  { l: "EFG%", v: (p) => advVal(p, "EFG"), f: fmt3, ok: (p) => p.L.g.FGA >= 5, tip: "יעילות הקליעה מהשדה בלבד, בלי זריקות עונשין: כמו FG%, אבל שלשה שנכנסה שווה פי 1.5 מסל של 2 (3 נקודות במקום 2). מראה כמה טובות הזריקות שלו מהשדה" },
+  { l: "TS%", v: tsPct, f: fmt3, ok: (p) => p.L.g.FGA >= 5, tip: "יעילות הקליעה הכוללת: כמו EFG%, אבל כוללת גם את זריקות העונשין. שחקן שמגיע הרבה לקו וקולע שם יקבל TS% גבוה מה־EFG% שלו" },
   { l: "AST/TOV", v: (p) => astTovRatio(p), f: (x) => x.toFixed(2), ok: (p) => p.L.g.TOV > 0, tip: "כמה אסיסטים על כל איבוד" },
   { l: "ORTG", v: (p) => advVal(p, "ORTG"), f: fmt1, ok: (p) => !!p.adv, tip: "נקודות שהקבוצה קולעת ל־100 פוזשנים כשהשחקן על המגרש" },
   { l: "PACE", v: (p) => advVal(p, "PACE"), f: fmt1, ok: (p) => !!p.adv, tip: "פוזשנים ל־48 דקות כשהשחקן על המגרש" },
@@ -2161,7 +2161,7 @@ function openPlayer(id) {
         return `<div${c.tip ? ` data-tip="${esc(c.tip)}"` : ""}><span class="pv"><b>${v == null || (c.ok && !c.ok(p)) ? "–" : c.f(v)}</b>${r ? `<i title="מקום ${r.rank} מתוך ${r.of} בליגה">#${r.rank}</i>` : ""}</span><small>${c.l}</small></div>`; }).join("")}</div>` : ""}</div>
     <div class="psec"><h4>המשחקים האחרונים</h4>${recent ? `<div class="tbl-wrap plogwrap"><table class="box plog"><thead><tr>
       ${["Date", "Opp", "Result", "MIN", "PTS", "FG", "FG%", "FT", "FT%", "3PT", "3P%", "REB", "AST", "STL", "BLK", "TOV", "FPTS"].map((c) => `<th class="nosort">${c}</th>`).join("")}
-      </tr></thead><tbody>${recent}</tbody></table></div>` : `<p class="gnote">אין עדיין משחקים.</p>`}</div>
+      </tr></thead><tbody>${recent}</tbody></table></div>` : `<p class="gnote">אין עדיין משחקים</p>`}</div>
     ${upcoming ? `<div class="psec"><h4>המשחקים הבאים</h4><div class="nglist">${upcoming}</div></div>` : ""}`;
   $("gameCard").style.setProperty("--jc", jc);
   $("gameModal").hidden = false;
@@ -2303,8 +2303,8 @@ const ADV_COLS = [
   { k: "rank", l: "#", asc: true }, { k: "name", l: "Player Name", asc: true },
   { k: "gp", l: "GP", asc: false }, { k: "min", l: "MIN", asc: false },
   { k: "USG", l: "USG%", asc: false, tip: "אחוז מההתקפות של הקבוצה שמסתיימות אצלו כשהוא על המגרש: בזריקה לסל, בזריקות עונשין או באיבוד. אסיסטים לא נספרים" },
-  { k: "EFG", l: "EFG%", asc: false, tip: "יעילות הקליעה מהשדה בלבד, בלי זריקות עונשין: כמו FG%, אבל שלשה שנכנסה שווה פי 1.5 מסל של 2 (3 נקודות במקום 2). מראה כמה טובות הזריקות שלו מהשדה." },
-  { k: "TS", l: "TS%", asc: false, tip: "יעילות הקליעה הכוללת: כמו EFG%, אבל כוללת גם את זריקות העונשין. שחקן שמגיע הרבה לקו וקולע שם יקבל TS% גבוה מה־EFG% שלו." },
+  { k: "EFG", l: "EFG%", asc: false, tip: "יעילות הקליעה מהשדה בלבד, בלי זריקות עונשין: כמו FG%, אבל שלשה שנכנסה שווה פי 1.5 מסל של 2 (3 נקודות במקום 2). מראה כמה טובות הזריקות שלו מהשדה" },
+  { k: "TS", l: "TS%", asc: false, tip: "יעילות הקליעה הכוללת: כמו EFG%, אבל כוללת גם את זריקות העונשין. שחקן שמגיע הרבה לקו וקולע שם יקבל TS% גבוה מה־EFG% שלו" },
   { k: "PACE", l: "PACE", asc: false, tip: "פוזשנים ל־48 דקות כשהשחקן על המגרש" },
   { k: "ORTG", l: "ORTG", asc: false, tip: "נקודות שהקבוצה קולעת ל־100 פוזשנים כשהשחקן על המגרש" },
   { k: "ASTTOV", l: "AST/TOV", asc: false, tip: "כמה אסיסטים השחקן נותן על כל איבוד" },
@@ -3684,21 +3684,21 @@ function renderMatchup() {
   function lineupWhy() {
     if (gridSide !== "a") return "";
     const lines = [];
-    if (st.fmt === "pts") lines.push("נבחרים מי שצפויים לתת הכי הרבה FPTS באותו יום, כולל חוזק ההגנה והקצב של היריבה.");
+    if (st.fmt === "pts") lines.push("נבחרים מי שצפויים לתת הכי הרבה FPTS באותו יום, כולל חוזק ההגנה והקצב של היריבה");
     else {
       const open = base.cats.filter((c) => !st.punts.has(c.k) && c.q > 0.2 && c.q < 0.8).sort((a, b) => Math.abs(a.q - 0.5) - Math.abs(b.q - 0.5));
       const done = base.cats.filter((c) => !st.punts.has(c.k) && (c.q >= 0.8 || c.q <= 0.2));
-      if (open.length) lines.push(`עדיפות לשחקנים שתורמים ב־${open.slice(0, 4).map((c) => `<b><bdi>${c.l}</bdi></b>`).join(", ")}: הקטגוריות הצמודות, שבהן כל משחק יכול להכריע.`);
-      if (done.length) lines.push(`פחות משקל ל־${done.map((c) => `<bdi>${c.l}</bdi> (${c.q >= 0.8 ? "יתרון בטוח" : "פיגור גדול"})`).join(", ")}, שכמעט הוכרעו.`);
-      if (st.punts.size) lines.push(`${[...st.punts].map((k) => CATS.find((c) => c.k === k)?.l).filter(Boolean).join(", ")} לא נספרות (Punt).`);
-      lines.push("בכל משחק נלקחים בחשבון גם חוזק ההגנה והקצב של היריבה, ושחקן GTD מקבל עדיפות נמוכה יותר.");
+      if (open.length) lines.push(`עדיפות לשחקנים שתורמים ב־${open.slice(0, 4).map((c) => `<b><bdi>${c.l}</bdi></b>`).join(", ")}: הקטגוריות הצמודות, שבהן כל משחק יכול להכריע`);
+      if (done.length) lines.push(`פחות משקל ל־${done.map((c) => `<bdi>${c.l}</bdi> (${c.q >= 0.8 ? "יתרון בטוח" : "פיגור גדול"})`).join(", ")}, שכמעט הוכרעו`);
+      if (st.punts.size) lines.push(`${[...st.punts].map((k) => CATS.find((c) => c.k === k)?.l).filter(Boolean).join(", ")} לא נספרות (Punt)`);
+      lines.push("בכל משחק נלקחים בחשבון גם חוזק ההגנה והקצב של היריבה, ושחקן GTD מקבל עדיפות נמוכה יותר");
     }
     for (const day of A.days) {
       if (day.past) continue;
       const benched = mineP.filter((p) => { const c = A.cell.get(`${p.id}|${day.d}`); return c && !c.out && !c.slot; });
       if (!benched.length) continue;
       const names = benched.map((p) => `<span class="pn" data-pcard="${p.id}">${esc(p.name)}</span>`).join(", ");
-      lines.push(`${esc(dayLabel(day.d))}: ${names} על הספסל — ${day.empty.length ? `המשבצות שמתאימות ${benched.length > 1 ? "להם" : "לו"} תפוסות (פנויה רק ${day.empty.join(", ")})` : `ל־${LINEUP.length} שנכנסו יש ערך גבוה יותר במצ'אפ הזה`}.`);
+      lines.push(`${esc(dayLabel(day.d))}: ${names} על הספסל — ${day.empty.length ? `המשבצות שמתאימות ${benched.length > 1 ? "להם" : "לו"} תפוסות (פנויה רק ${day.empty.join(", ")})` : `ל־${LINEUP.length} שנכנסו יש ערך גבוה יותר במצ'אפ הזה`}`);
     }
     return `<ul class="dgwhy">${lines.map((l) => `<li>${l}</li>`).join("")}</ul>`;
   }
@@ -3760,7 +3760,7 @@ function renderMatchup() {
             <td class="${c.q < 0.5 ? "w" : ""}">${f(c.k, c.b)}${anyPlayed ? `<small class="sofar">עד כה ${f(c.k, c.done[1])}</small>` : ""}</td>
             <td><span class="mubar2 ${c.key}" title="${ODDS_LABEL[c.key]}"><i style="width:${Math.round(c.q * 100)}%"></i></span><b class="muq ${c.key}">${pctTxt(c.q)}</b>${c.punted ? `<small class="sofar">Punt</small>` : ""}</td></tr>`).join("")
         }</tbody></table>
-        <p class="munote">עד כה + תחזית למשחקים שנותרו, רק לשחקנים שנכנסים להרכב בכל יום (10 משבצות). הסיכוי מחושב מהתנודתיות של כל שחקן בין משחק למשחק.</p>
+        <p class="munote">עד כה + תחזית למשחקים שנותרו, רק לשחקנים שנכנסים להרכב בכל יום (10 משבצות). הסיכוי מחושב מהתנודתיות של כל שחקן בין משחק למשחק</p>
       </section>
       <section class="cmpsec"><h3>המלצות</h3>
         <div class="muadv">
@@ -3773,9 +3773,9 @@ function renderMatchup() {
       </section>
     </div>
     <section class="cmpsec"><h3>פיק אפ מומלץ לשבוע הזה</h3>
-      ${left === 0 ? `<p class="munote">ניצלת את כל ${maxAdds} הפיק אפים של השבוע.</p>`
+      ${left === 0 ? `<p class="munote">ניצלת את כל ${maxAdds} הפיק אפים של השבוע</p>`
         : moves.length ? `<div class="mupickhead"><span>סיכוי לנצח</span></div><ol class="mupicks">${moves.map(moveRow).join("")}</ol>`
-        : `<p class="munote">אין פיק אפ שמשפר את הסיכוי לנצח השבוע.</p>`}
+        : `<p class="munote">אין פיק אפ שמשפר את הסיכוי לנצח השבוע</p>`}
     </section>
     <section class="cmpsec"><div class="dghead"><h3>הרכב יומי</h3>
       <div class="seg" role="group"><button type="button" data-mugrid="a" aria-pressed="${gridSide === "a"}">${esc(myName)}</button><button type="button" data-mugrid="b" aria-pressed="${gridSide === "b"}">${esc(oppName)}</button></div></div>
