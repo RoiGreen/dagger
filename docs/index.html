@@ -573,9 +573,13 @@ table.dboard tfoot td { font-weight: 700; font-family: var(--font-num); border-t
 .signout { border: 1px solid var(--line); background: var(--surface); color: var(--muted); font: inherit; font-size: .8rem; padding: 2px 10px; border-radius: 6px; cursor: pointer; }
 
 /* ===== Prime Time ===== */
-body { margin: 0; background: radial-gradient(1100px 520px at 88% -8%, var(--glow-a), transparent 62%),
-  radial-gradient(900px 480px at 8% -6%, var(--glow-b), transparent 62%), var(--bg); background-attachment: fixed; min-height: 100vh; }
-body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none; background: var(--court) center 62% / min(1500px, 140vw) auto no-repeat; }
+/* The glow and the court sit on one fixed layer: a fixed body background (background-attachment: fixed) makes the
+   browser repaint the page on every scroll step on the main thread, so scrolling froze while the page was busy loading */
+body { margin: 0; background: var(--bg); min-height: 100vh; }
+body::before { content: ""; position: fixed; inset: 0; z-index: -1; pointer-events: none;
+  background: var(--court) center 62% / min(1500px, 140vw) auto no-repeat,
+    radial-gradient(1100px 520px at 88% -8%, var(--glow-a), transparent 62%),
+    radial-gradient(900px 480px at 8% -6%, var(--glow-b), transparent 62%); will-change: transform; }
 .wrap { max-width: 1640px; padding-block: 14px 48px; }
 
 /* scoreboard header: night in both themes, like a real arena board */
