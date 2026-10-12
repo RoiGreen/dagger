@@ -1084,11 +1084,6 @@ table.cmpt td.lbl { min-width: 5.5em; }
         <label class="check"><input type="checkbox" id="onlyMoved"> רק שחקנים שעברו קבוצה</label>
       </section>
 
-      <section class="panel" aria-labelledby="hFav">
-        <h2 id="hFav">המועדפים שלי</h2>
-        <ul class="fav-list" id="favList"></ul>
-      </section>
-
       <section class="panel" aria-labelledby="hMine">
         <h2 id="hMine">הקבוצה שלי</h2>
         <ul class="roster-list" id="mineList"></ul>
@@ -2232,6 +2227,7 @@ function actions(p) {
 }
 
 function renderFav() {
+  if (!$("favList")) return;  // the sidebar card is gone: favorites are a view of the table (top bar)
   const fp = players.filter((p) => fav.has(p.id));
   if (!fp.length) {
     $("favList").innerHTML = `<li class="empty" style="display:block">לחץ ★ ליד שחקן כדי לשמור אותו כאן.</li>`;
