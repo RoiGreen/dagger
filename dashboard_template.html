@@ -477,6 +477,7 @@ table.box.murt .pw { gap: 6px; }
 table.box.murt .bimg { width: 26px; height: 26px; }
 table.box.murt .injpill { display: table; margin: 2px 0 0 32px; }
 .pn[data-pcard] { cursor: pointer; }
+.tipbox { white-space: pre-line; }
 .tipbox { position: fixed; z-index: 50; max-width: 280px; padding: 7px 10px; border-radius: 8px; background: var(--ink); color: var(--surface);
   font-size: .82rem; font-weight: 500; line-height: 1.45; pointer-events: none; box-shadow: 0 4px 14px rgb(0 0 0 / .18); white-space: pre-line; direction: rtl; }
 .injpill[data-tip] { cursor: help; }
@@ -2122,6 +2123,7 @@ const ADV_COLS = [
   { k: "rank", l: "#", asc: true }, { k: "name", l: "Player Name", asc: true },
   { k: "gp", l: "GP", asc: false }, { k: "min", l: "MIN", asc: false },
   { k: "USG", l: "USG%", asc: false, tip: "אחוז מהפוזשנים של הקבוצה שהשחקן מסיים כשהוא על המגרש" },
+  { k: "EFG", l: "EFG%", asc: false, tip: "יעילות הקליעה מהשדה, כשקליעה לשלוש שווה פי 1.5 מקליעה לשתיים (כי היא שווה נקודה נוספת).\n⁦eFG% = (FGM + 0.5 × 3PM) / FGA⁩" },
   { k: "PACE", l: "PACE", asc: false, tip: "פוזשנים ל־48 דקות כשהשחקן על המגרש" },
   { k: "ORTG", l: "ORTG", asc: false, tip: "נקודות שהקבוצה קולעת ל־100 פוזשנים כשהשחקן על המגרש" },
   { k: "ASTTOV", l: "AST/TOV", asc: false, tip: "כמה אסיסטים השחקן נותן על כל איבוד" },
@@ -2136,6 +2138,7 @@ function astTovRatio(p) {
 function advVal(p, k) {
   if (k === "TPACE") return TEAM_STATS.get(p.team26)?.PACE ?? null;
   if (k === "ASTTOV") return astTovRatio(p);
+  if (k === "EFG") return p.L.g.FGA > 0 ? (p.L.g.FGM + 0.5 * p.L.g.FG3M) / p.L.g.FGA : null;
   if (!p.adv) return null;
   return { USG: p.adv[0] * 100, PACE: p.adv[1], ORTG: p.adv[2] }[k];
 }
@@ -2154,7 +2157,7 @@ function renderAdv() {
   if (st.tab !== "adv") return;
   const { list, now } = last;
   const rows = list.filter((p) => passes(p));
-  const heats = Object.fromEntries(["USG", "PACE", "ORTG", "ASTTOV", "TPACE"].map((k) => [k, percentileHeat(list.map((p) => advVal(p, k)))]));
+  const heats = Object.fromEntries(["USG", "EFG", "PACE", "ORTG", "ASTTOV", "TPACE"].map((k) => [k, percentileHeat(list.map((p) => advVal(p, k)))]));
   const key = (p) => st.advSort === "rank" ? now.rank.get(p.id) : st.advSort === "name" ? p.name
     : st.advSort === "gp" ? p.gp : st.advSort === "min" ? p.L.g.MIN : (advVal(p, st.advSort) ?? -Infinity);
   rows.sort((a, b) => {
@@ -2164,7 +2167,7 @@ function renderAdv() {
   });
 
   // Sorting by a stat adds that stat's league rank (1 = highest) at the right edge
-  const statCol = ["USG", "PACE", "ORTG", "ASTTOV", "TPACE", "gp", "min"].includes(st.advSort)
+  const statCol = ["USG", "EFG", "PACE", "ORTG", "ASTTOV", "TPACE", "gp", "min"].includes(st.advSort)
     ? ADV_COLS.find((c) => c.k === st.advSort) : null;
   let statRank = null;
   if (statCol) {
@@ -2189,7 +2192,7 @@ function renderAdv() {
   $("advBody").innerHTML = rows.map((p) => {
     const cell = (k) => {
       const v = advVal(p, k);
-      const txt = v == null ? "–" : k === "ASTTOV" ? v.toFixed(2) : v.toFixed(1);
+      const txt = v == null ? "–" : k === "ASTTOV" ? v.toFixed(2) : k === "EFG" ? fmt3(v) : v.toFixed(1);
       return `<td style="${heats[k](v)}">${txt}</td>`;
     };
     return `<tr class="${mine.has(p.id) ? "is-mine" : ""} ${taken.has(p.id) ? "is-taken" : ""} ${fav.has(p.id) ? "is-fav" : ""}">
@@ -2197,7 +2200,7 @@ function renderAdv() {
       ${posR ? posTd(posR, p) : `<td class="rank">${now.rank.get(p.id)}</td>`}
       ${nameCell(p)}
       <td>${p.gp}</td><td>${fmt1(p.L.g.MIN)}</td>
-      ${cell("USG")}${cell("PACE")}${cell("ORTG")}${cell("ASTTOV")}${cell("TPACE")}
+      ${cell("USG")}${cell("EFG")}${cell("PACE")}${cell("ORTG")}${cell("ASTTOV")}${cell("TPACE")}
       <td class="acts">${actions(p)}</td></tr>`;
   }).join("") || EMPTY_ROW(ADV_COLS.length + (statCol ? 1 : 0));
 
@@ -3736,6 +3739,7 @@ const SORT_OPTS = {
   ],
   adv: [
     { k: "USG", l: "USG%", asc: false },
+    { k: "EFG", l: "EFG% (יעילות קליעה)", asc: false },
     { k: "PACE", l: "PACE", asc: false },
     { k: "ORTG", l: "ORTG", asc: false },
     { k: "ASTTOV", l: "AST/TOV (אסיסטים לכל איבוד)", asc: false },
