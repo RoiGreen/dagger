@@ -34,7 +34,9 @@ def pull_starters() -> str:
         except RuntimeError:
             failed += 1
             continue
-        five = df[df["position"].fillna("").str.strip() != ""]
+        # each team lists its starting five first (a few bench players can carry a position too: ignore them)
+        df = df[df["position"].fillna("").str.strip() != ""]
+        five = df.groupby("teamTricode", sort=False).head(5)
         if len(five) < 10:  # box score not final yet: try again next run
             continue
         have[gid] = {str(int(r.personId)): r.position.strip() for r in five.itertuples()}

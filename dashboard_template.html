@@ -1782,15 +1782,27 @@ function boxTable(team, rows) {
   const tot = (i) => rows.reduce((a, r) => a + r[i], 0);
   // the player's photo on the left, the name centred in the rest of the cell
   const face = (r) => { const p = PLAYER_BY_ID.get(r[1]); return p && p.img ? `<img class="bimg" src="${p.img}" alt="">` : `<span class="bimg"></span>`; };
-  // position next to the name: the fantasy positions, or the starting spot when the player has none
-  const posOf = (r) => { const p = PLAYER_BY_ID.get(r[1]); return (p && p.pos) || r[15] || ""; };
+  // Starters: the spot they started at. The NBA box score only says G / F / C, so the two guards are split into
+  // PG / SG and the two forwards into SF / PF by how each one is listed (a PG runs the point, a forward starting
+  // in the backcourt is the SG; a PF or C is the PF), then by assists / rebounds. Bench: the fantasy positions.
+  const startAt = new Map();
+  const split = (kind, lead, other, key, tags) => {
+    const g = rows.filter((r) => r[15] === kind).map((r) => { const p = PLAYER_BY_ID.get(r[1]), pos = (p?.pos || "").split("/");
+      return { r, v: Math.max(0, ...tags.map((t, i) => (pos.includes(t) ? 100 - 50 * i : 0))) + (p?.L?.g?.[key] ?? 0) }; }).sort((a, b) => b.v - a.v);
+    g.forEach((x, i) => startAt.set(x.r[1], g.length === 1 ? (x.v >= 100 ? lead : other) : i === 0 ? lead : other));
+  };
+  split("G", "PG", "SG", "AST", ["PG", "SG"]);
+  split("F", "PF", "SF", "REB", ["PF", "C"]);
+  rows.filter((r) => r[15] === "C").forEach((r) => startAt.set(r[1], "C"));
+  const posOf = (r) => { if (r[15]) return startAt.get(r[1]) || r[15]; const p = PLAYER_BY_ID.get(r[1]); return (p && p.pos) || ""; };
   const line = (r, cls = "") => `<tr class="${cls}${fp(r) === best && !cls ? " star" : ""}"><td class="pn"><span class="pw"${!cls && PLAYER_BY_ID.has(r[1]) ? ` data-pcard="${r[1]}"` : ""}>${cls ? "" : face(r)}<span>${esc(r[0])}</span>${!cls && posOf(r) ? `<small class="bpos">${esc(posOf(r))}</small>` : ""}</span></td>` +
     [r[2], r[3], r[4], r[5], r[6], r[7], `${r[8]}-${r[14] ?? "?"}`, `${r[9]}-${r[10]}`, `${r[11]}-${r[12]}`, r[13], fp(r)].map((v) => `<td>${v}</td>`).join("") + `</tr>`;
   const total = ["Total", 0, "", tot(3), tot(4), tot(5), tot(6), tot(7), tot(8), tot(9), tot(10), tot(11), tot(12), tot(13), tot(14)];
   return `<div class="gbox" data-gbox="${team}"><div class="tbl-wrap short"><table class="box"><thead><tr><th class="nosort">Player</th>${BOX_COLS.map((c) => `<th class="nosort">${c}</th>`).join("")}</tr></thead>
     <tbody>${(() => {
       // starting five on top, then the bench by minutes
-      const five = rows.filter((r) => r[15]), bench = rows.filter((r) => !r[15]).sort((a, b) => b[2] - a[2]);
+      const spot = (r) => "PG SG G SF PF F C".split(" ").indexOf(posOf(r));
+      const five = rows.filter((r) => r[15]).sort((a, b) => spot(a) - spot(b)), bench = rows.filter((r) => !r[15]).sort((a, b) => b[2] - a[2]);
       if (!five.length) return bench.map((r) => line(r)).join("");
       const head = (t) => `<tr class="bsec"><td colspan="${BOX_COLS.length + 1}">${t}</td></tr>`;
       return head("Starters") + five.map((r) => line(r)).join("") + (bench.length ? head("Bench") + bench.map((r) => line(r)).join("") : "");
