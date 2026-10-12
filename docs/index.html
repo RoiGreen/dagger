@@ -263,6 +263,8 @@ tr.sel-team td { box-shadow: inset 0 -2px 0 var(--accent), inset 0 2px 0 var(--a
 .lpanel[open] .lsum { display: none; }
 .lpanel[open] > summary { margin-bottom: 4px; }
 .lpanel { display: block; }
+.lcard { gap: 14px; }
+.chip.puntreset { color: var(--muted); border-style: dashed; }
 .lbody { display: grid; gap: 14px; }
 .lbody input[type="text"] { font: inherit; color: var(--ink); background: var(--surface-2); border: 1px solid var(--line); border-radius: 10px; padding: 7px 10px; width: 100%; min-width: 0; box-sizing: border-box; }
 .tnames > summary { cursor: pointer; font-weight: 700; font-size: .88rem; }
@@ -944,7 +946,8 @@ table.cmpt td.lbl { min-width: 5.5em; }
 
   <div class="layout">
     <aside>
-      <details class="panel lpanel" id="leaguePanel">
+      <section class="panel lcard">
+      <details class="lpanel" id="leaguePanel">
         <summary><h2 id="hLeague">הליגה שלי</h2><span class="lsum" id="leagueSum"></span></summary>
         <div class="lbody">
         <div class="field"><label for="leagueName">שם הליגה</label><input type="text" id="leagueName" maxlength="40" placeholder="הליגה שלי"></div>
@@ -965,14 +968,15 @@ table.cmpt td.lbl { min-width: 5.5em; }
         </div>
         <label class="check"><input type="checkbox" id="snake" checked> סדר סנייק בדראפט</label>
         <details class="tnames"><summary>שמות הקבוצות (לפי סדר הבחירה בסיבוב הראשון)</summary><div class="teamnames" id="teamNames"></div></details>
+        </div>
+      </details>
         <div class="field" id="puntField">
           <span class="lbl">ויתור על קטגוריות (Punt)</span>
           <div class="chips" id="puntChips"></div>
           <p class="hint">קטגוריה מסומנת לא נספרת: בליגת קטגוריות היא יוצאת מה־Z, ובליגת נקודות הנקודות שלה לא נכנסות ל־FPTS.</p>
         </div>
         <p class="hint" id="ptsHint" hidden>ניקוד FPTS: נקודה 1, שלשה 1, קליעה 2, זריקה ‎-1, עונשין 1, ניסיון עונשין ‎-1, ריבאונד 1, אסיסט 2, חטיפה 4, חסימה 4, איבוד ‎-2.</p>
-        </div>
-      </details>
+      </section>
 
       <section class="panel" aria-labelledby="hView">
         <h2 id="hView">תצוגה</h2>
@@ -2519,7 +2523,7 @@ function activeFilters() {
 function syncLeaguePanel() {
   const fmtTxt = st.fmt === "pts" ? "נקודות" : "9 קטגוריות";
   const punts = [...st.punts].map((k) => CATS.find((c) => c.k === k)?.l).filter(Boolean);
-  $("leagueSum").textContent = [st.leagueName, fmtTxt, `${st.teams} קבוצות`, `${st.roster} בסגל`, punts.length ? `Punt ${punts.join(", ")}` : ""].filter(Boolean).join(" · ");
+  $("leagueSum").textContent = [st.leagueName, fmtTxt, `${st.teams} קבוצות`, `${st.roster} בסגל`].filter(Boolean).join(" · ");  // Punt shows below anyway
   setField("muAddsMax", st.weekAdds ?? 3);
   const n = activeFilters();
   $("filtCount").hidden = !n; $("filtCount").textContent = n;
@@ -4176,7 +4180,8 @@ function update(recompute = true) {
   render();
 }
 
-$("puntChips").innerHTML = CATS.map((c) => `<button class="chip punt" data-punt="${c.k}" aria-pressed="false">${c.l}</button>`).join("");
+$("puntChips").innerHTML = CATS.map((c) => `<button class="chip punt" data-punt="${c.k}" aria-pressed="false">${c.l}</button>`).join("")
+  + `<button class="chip puntreset" type="button" data-puntreset="1">איפוס</button>`;
 const teams = [...new Set(players.map((p) => p.team26).filter(Boolean))].sort();
 $("vsOpp").innerHTML += teams.map((t) => `<option value="${t}">${t}</option>`).join("");
 $("vsOpp").addEventListener("change", (e) => { st.vsOpp = e.target.value; update(); });
@@ -4238,6 +4243,7 @@ document.addEventListener("click", (e) => {
   if (t.dataset.mode) { st.mode = t.dataset.mode; return update(); }
   if (t.dataset.wg) { const n = Number(t.dataset.wg); st.weekGames = st.weekGames.includes(n) ? st.weekGames.filter((x) => x !== n) : [...st.weekGames, n]; return update(false); }
   if (t.dataset.pos) { st.pos.has(t.dataset.pos) ? st.pos.delete(t.dataset.pos) : st.pos.add(t.dataset.pos); return update(false); }
+  if (t.dataset.puntreset) { st.punts.clear(); return update(); }
   if (t.dataset.punt) { st.punts.has(t.dataset.punt) ? st.punts.delete(t.dataset.punt) : st.punts.add(t.dataset.punt); return update(); }
   if (t.dataset.k) {
     const col = COLS.find((c) => c.k === t.dataset.k);
