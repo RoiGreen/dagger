@@ -1,6 +1,6 @@
 # Refreshes the injury badges from ESPN's injury list during the day and republishes the site.
 # Game logs come from stats.nba.com, which blocks GitHub's servers, so those stay on the daily
-# run on Roi's computer (run_daily.ps1, 09:00). Times are UTC: 16:00 / 19:00 / 23:00 =
+# run on Roi's computer (run_daily.py). Times are UTC: 16:00 / 19:00 / 23:00 =
 # 18:00 / 21:00 / 01:00 Israel winter time (19:00 / 22:00 / 02:00 until the clocks change on Oct 25).
 name: Injury update
 
@@ -24,24 +24,31 @@ concurrency:
 jobs:
   injuries:
     runs-on: ubuntu-latest
-    timeout-minutes: 10
+    timeout-minutes: 15
     steps:
-      - uses: actions/checkout@v4
-      - uses: actions/setup-python@v5
+      - uses: actions/checkout@v5
+      - uses: actions/setup-python@v6
         with:
           python-version: "3.12"
       - run: pip install pandas numpy
-      - name: Pull injuries and rebuild
-        run: |
-          python injuries.py
-          python positions.py
-          python build_dashboard.py
-      - name: Publish
+      # The page files are rebuilt on every update, so a push from Roi's computer in the meantime makes a
+      # rebase conflict on them. Instead of rebasing, each attempt starts from the latest main, rebuilds
+      # and pushes; a push that loses the race simply tries again.
+      - name: Pull injuries, rebuild and publish
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
-          git add nba_2026_27 docs draft_dashboard.html
-          git diff --cached --quiet && exit 0
-          git commit -m "Injury update"
-          git pull --rebase --autostash
-          git push
+          for attempt in 1 2 3 4; do
+            git fetch -q origin main
+            git reset -q --hard origin/main
+            python injuries.py
+            python positions.py
+            python build_dashboard.py
+            git add nba_2026_27 docs draft_dashboard.html
+            if git diff --cached --quiet; then echo "Nothing new"; exit 0; fi
+            git commit -q -m "Injury update"
+            if git push -q origin HEAD:main; then echo "Published (attempt $attempt)"; exit 0; fi
+            echo "Push lost a race, trying again"
+            sleep $((attempt * 15))
+          done
+          exit 1
