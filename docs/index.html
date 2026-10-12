@@ -3421,7 +3421,7 @@ const zeroLine = () => Object.fromEntries([...MU_KEYS, "FP"].map((k) => [k, 0]))
 // Days to come: the best lineup of those with a game, and what they should add (chance to play x opponent).
 // swap = { add, drop, from, kind }: from that day on, `add` is on the team and `drop` is not.
 function planWeek(roster, il, team, swap = null) {
-  const T = { done: zeroLine(), mean: zeroLine(), v: zeroLine(), covFG: 0, covFT: 0, starts: 0, played: 0, days: [], cell: new Map() };
+  const T = { done: zeroLine(), mean: zeroLine(), v: zeroLine(), covFG: 0, covFT: 0, starts: 0, played: 0, gamesAll: 0, days: [], cell: new Map() };
   for (const d of weekDays()) {
     // A pickup counts from the moment it is made, except a game already under way: the added player misses it,
     // and the released one (who cannot be dropped mid-game) still has it
@@ -3430,8 +3430,9 @@ function planWeek(roster, il, team, swap = null) {
     const sameDay = on && d === swap.from;
     const who = roster.filter((p) => !il.has(p.id) && !(on && p.id === swap.drop && !(sameDay && started(p))));
     if (on && !(sameDay && started(swap.add))) who.push(swap.add);
-    const cands = [];
+    const cands = [], all = [];  // all: every scheduled game, injured or not (for the games count only)
     for (const p of who) {
+      if (d > LOG_END) { const g0 = gameOn(p.team26, d); if (g0) all.push({ p, v: muValue(p) }); }
       if (d <= LOG_END) {
         const r = playedOn(p, d);
         if (r) cands.push({ p, v: muValue(p), r });
@@ -3445,6 +3446,7 @@ function planWeek(roster, il, team, swap = null) {
       }
     }
     const slot = lineupFor(cands);
+    if (d > LOG_END) T.gamesAll += lineupFor(all).size;  // GTD / OUT count as a game here
     for (const c of cands) {
       const on = slot.get(c.p.id);
       T.cell.set(`${c.p.id}|${d}`, { gm: c.gm, r: c.r, slot: on, ch: c.ch });
@@ -3769,9 +3771,9 @@ function renderMatchup() {
     : `<div class="mnum"><span class="num${wins > 9 - wins ? " lead" : ""}">${wins}</span><span class="sep">:</span><span class="num${9 - wins > wins ? " lead" : ""}">${9 - wins}</span><small>תחזית סוף השבוע</small></div>`;
   out.innerHTML = `
     <div class="muscore">
-      <div class="mside"><b>${esc(myName)}</b><span title="משחקים בהרכב: שוחקו מתוך סך הכול השבוע"><b class="gcount" dir="ltr">${A.played}/${Math.round(A.played + A.starts)}</b></span></div>
+      <div class="mside"><b>${esc(myName)}</b><span title="משחקים בהרכב: שוחקו מתוך סך הכול השבוע"><b class="gcount" dir="ltr">${A.played}/${A.played + A.gamesAll}</b></span></div>
       <div class="mmid">${score}<div class="mwin ${oddsKey(odds.win)}"><b>${pctTxt(odds.win)}</b><span>סיכוי לנצח</span></div></div>
-      <div class="mside"><b>${esc(oppName)}</b><span title="משחקים בהרכב: שוחקו מתוך סך הכול השבוע"><b class="gcount" dir="ltr">${B.played}/${Math.round(B.played + B.starts)}</b></span></div>
+      <div class="mside"><b>${esc(oppName)}</b><span title="משחקים בהרכב: שוחקו מתוך סך הכול השבוע"><b class="gcount" dir="ltr">${B.played}/${B.played + B.gamesAll}</b></span></div>
     </div>
     <div class="mugrid">
       <section class="cmpsec"><h3>הקטגוריות</h3>
