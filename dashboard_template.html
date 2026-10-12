@@ -1344,6 +1344,7 @@ function seasonRange() {
 function applySeasons() {
   const ys = chosenSeasons();
   for (const p of players) {
+    p.noWin = false;
     if (p.rookie && !ys.some((y) => p.seasons?.[y]?.gp >= seasonMinGames(y))) {
       p.s = p.proj; p.gp = p.projGp; p.gpTotal = p.projGp; p.adv = null; p.team25 = null; p.srcSeason = null;
       setLines(p); p.has = true; continue;
@@ -1354,15 +1355,21 @@ function applySeasons() {
     // With several seasons chosen, he must reach the minimum in every past season among them (a missed season counts
     // as short). The 2026-27 preseason and regular season never take a player off: they only add when he qualifies.
     // Rookies are judged only on what they have played (they had no earlier seasons to miss).
-    const short = !p.rookie && ys.some((y) => y !== D.preseason && y !== D.current && !(p.seasons[y]?.gp >= seasonMinGames(y)));
+    const firstY = Math.min(...Object.keys(p.seasons).map(Number).filter((y) => y !== D.preseason && p.seasons[y].gp > 0));
+    const short = !p.rookie && ys.some((y) => y !== D.preseason && y !== D.current && y >= firstY && !(p.seasons[y]?.gp >= seasonMinGames(y)));
     // No qualifying season: off the board, but keep numbers for his favorites / my-team entries
     p.has = chosen.length > 0 && !short;
     let lines = p.has ? chosen : Object.keys(p.seasons).map(Number).sort().map((y) => ({ y, ...p.seasons[y] }));
     // Missed the chosen season(s) through injury (the "24-25" badge): he still shows, with his latest earlier
     // full regular season, so a rostered star does not vanish from the tables
-    if (!p.has && p.injured) {
-      const back = Object.keys(p.seasons).map(Number).filter((y) => y !== D.preseason && y < Math.min(...ys) && p.seasons[y].gp >= seasonMinGames(y)).sort();
-      if (back.length) { const y = back[back.length - 1]; lines = [{ y, ...p.seasons[y] }]; p.has = true; }
+    if (!p.has && p.team26) {
+      const real = Object.keys(p.seasons).map(Number).filter((y) => y !== D.preseason && p.seasons[y].gp > 0).sort();
+      const inChosen = real.filter((y) => ys.includes(y));
+      const back = real.filter((y) => y < Math.min(...ys)), fwd = real.filter((y) => y > Math.max(...ys));
+      // the chosen seasons he did play; else his nearest season; else (only preseason games) the preseason
+      const use = inChosen.length ? inChosen : back.length ? [back[back.length - 1]] : fwd.length ? [fwd[0]]
+        : p.seasons[D.preseason]?.gp > 0 ? [D.preseason] : [];
+      if (use.length) { lines = use.map((y) => ({ y, ...p.seasons[y] })); p.has = true; }
     }
     const games = lines.reduce((a, l) => a + l.gp, 0);
     p.s = S.map((_, i) => lines.reduce((a, l) => a + l.s[i] * l.gp, 0) / games);
@@ -1380,7 +1387,7 @@ function applySeasons() {
   if (st.formWin && !st.vsOpp) {
     for (const p of players) {
       const f = p.form?.[st.formWin];
-      if (!f || f[0] < FORM_MIN[st.formWin]) { p.has = false; continue; }
+      if (!f || f[0] < FORM_MIN[st.formWin]) { if (!(p.has && (mine.has(p.id) || fav.has(p.id)))) p.has = false; else p.noWin = true; continue; }
       p.s = f[1]; p.gp = f[0]; p.gpTotal = f[0]; p.adv = null;
       p.has = true;
       setLines(p);
@@ -1390,7 +1397,7 @@ function applySeasons() {
   if (st.vsOpp) {
     for (const p of players) {
       const v = p.vs?.[st.vsOpp];
-      if (!v) { p.has = false; continue; }
+      if (!v) { if (!(p.has && (mine.has(p.id) || fav.has(p.id)))) p.has = false; else p.noWin = true; continue; }
       p.s = v.slice(1); p.gp = v[0]; p.gpTotal = v[0]; p.adv = null;
       p.has = true;
       setLines(p);
@@ -1742,8 +1749,10 @@ function nameCell(p) {
     : "";
   // Badge when he has no games in the latest chosen season, so the numbers come from an older one
   const newest = chosenSeasons().filter((y) => y !== D.preseason).slice(-1)[0];  // the preseason never triggers the badge
-  const inj = !p.rookie && newest && p.srcSeason && p.srcSeason < newest
-    ? `<span class="inj" title="אין לו משחקים ב־${seasonLabel(newest)}. הנתונים מגיעים מעד ${seasonLabel(p.srcSeason)}, ב־${esc(from)}">${seasonLabel(p.srcSeason)}</span>`
+  const inj = p.noWin
+    ? `<span class="inj" title="אין לו מספיק משחקים ב${st.vsOpp ? "מול היריבה" : "טווח הכושר"}: מוצגים נתוני העונה">עונה</span>`
+    : !p.rookie && newest && p.srcSeason && (p.srcSeason < newest || !chosenSeasons().includes(p.srcSeason))
+    ? `<span class="inj" title="אין לו משחקים בעונות שנבחרו. הנתונים מעונת ${seasonLabel(p.srcSeason)}, ב־${esc(from)}">${seasonLabel(p.srcSeason)}</span>`
     : "";
   const team = !p.team26 ? `${rk}${inj}<span title="ללא קבוצה ל־2026-27">FA</span>`
     : hasMoved(p) ? `${rk}${inj}<span class="moved" title="עבר מ־${esc(from)} ל־${esc(p.team26)}">${esc(from)} → <b>${esc(p.team26)}</b></span>`
