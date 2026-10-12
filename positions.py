@@ -56,7 +56,7 @@ def _key(name: str) -> str:
     import re
     import unicodedata
     s = unicodedata.normalize("NFKD", str(name)).encode("ascii", "ignore").decode().lower()
-    return re.sub(r"[^a-z]", "", re.sub(r"(jr|sr|ii|iii|iv)\.?", "", s))
+    return re.sub(r"[^a-z]", "", re.sub(r"\b(jr|sr|ii|iii|iv)\b\.?", "", s))
 
 
 def _get(url: str):
