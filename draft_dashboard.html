@@ -1301,7 +1301,16 @@ function picksFrom(d) {
 // Set by build_dashboard.py for the standalone website (Supabase login); null inside claude.ai
 const SITE = /*__SITE__*/null;
 
-const SETTINGS_KEY = "draftroom.settings.v1", PICKS_KEY = "draftroom.picks.v1";
+const SETTINGS_KEY = "draftroom.settings.v1", PICKS_KEY = "draftroom.picks.v1", ACCOUNT_KEY = "draftroom.account.v1";
+// Website: the signed-in account's last known picks, kept in this browser under its user id, so a reload shows them
+// at once instead of the full player list until the account finishes loading (a few seconds)
+let siteUid = null;
+function siteSessionUid() {
+  try {
+    const ref = new URL(SITE.supabaseUrl).hostname.split(".")[0];
+    return JSON.parse(localStorage.getItem(`sb-${ref}-auth-token`) || "null")?.user?.id || null;
+  } catch (e) { return null; }
+}
 function applySettings(s) {
   if (s && !Array.isArray(s.teamNames)) s.teamNames = [];
   if (s && (typeof s.tags !== "object" || s.tags === null || Array.isArray(s.tags))) delete s.tags;
@@ -1341,7 +1350,11 @@ const settingsData = () => ({ ...st, punts: [...st.punts], pos: [...st.pos] });
 try {
   applySettings(JSON.parse(localStorage.getItem(SETTINGS_KEY) || "null"));
   // On the website picks belong to the signed-in account, never to whoever used this browser before
-  const k = SITE ? null : JSON.parse(localStorage.getItem(PICKS_KEY) || "null");
+  let k = SITE ? null : JSON.parse(localStorage.getItem(PICKS_KEY) || "null");
+  if (SITE) {
+    const c = JSON.parse(localStorage.getItem(ACCOUNT_KEY) || "null"), uid = siteSessionUid();
+    if (c && uid && c.uid === uid) { k = c.data; siteUid = uid; }  // only the same account that is signed in now
+  }
   if (k) { picks = picksFrom(k); rebuildSets(); fav = new Set(k.fav || []); }
 } catch (e) {}
 let settingsTimer = null;
@@ -3301,8 +3314,10 @@ function renderMine() {
 let remote = null, writing = false, dirty = false;
 const userData = () => ({ picks, taken: [...taken], mine: [...mine], fav: [...fav], settings: settingsData() });
 function savePicksLocal() {
-  if (SITE) return;
-  try { localStorage.setItem(PICKS_KEY, JSON.stringify(userData())); } catch (e) {}
+  try {
+    if (!SITE) localStorage.setItem(PICKS_KEY, JSON.stringify(userData()));
+    else if (siteUid) localStorage.setItem(ACCOUNT_KEY, JSON.stringify({ uid: siteUid, data: { picks, fav: [...fav] } }));
+  } catch (e) {}
 }
 async function flushPicks() {
   savePicksLocal();
@@ -3389,6 +3404,9 @@ async function connectSite() {
   async function signedIn(user) {
     if (signedInAs === user.id) return;
     signedInAs = user.id;
+    if (siteUid !== user.id) {  // another account than the cached one: start from nothing until its data arrives
+      siteUid = user.id; picks = []; rebuildSets(); fav = new Set(); render();
+    }
     showAuth(false);
     $("viewerName").textContent = `שלום, ${user.user_metadata?.username || user.email}`;
     $("signOutBtn").hidden = false;
@@ -3400,6 +3418,7 @@ async function connectSite() {
       picks = picksFrom(data); rebuildSets(); fav = new Set(data.fav || []);
       applySettings(data.settings);
     }
+    savePicksLocal();
     remote = {
       async save(d) {
         const { error } = await sb.from("user_state").upsert({
@@ -3412,7 +3431,8 @@ async function connectSite() {
     syncControls(); compute(); render();
   }
   function signedOut() {
-    signedInAs = null; remote = null;
+    signedInAs = null; remote = null; siteUid = null;
+    try { localStorage.removeItem(ACCOUNT_KEY); } catch (e) {}
     picks = []; rebuildSets(); fav = new Set();
     $("viewer").hidden = true; $("signOutBtn").hidden = true;
     render();
