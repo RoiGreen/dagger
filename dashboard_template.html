@@ -275,6 +275,15 @@ tr.sel-team td { box-shadow: inset 0 -2px 0 var(--accent), inset 0 2px 0 var(--a
 .dsetlink:hover { text-decoration: underline; }
 .dsetup { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 10px 14px; }
 .dsetup summary { cursor: pointer; font-weight: 700; }
+.tradebox { margin-bottom: 10px; }
+.tgrid { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: start; margin: 10px 0; }
+.tswap { align-self: center; font-size: 1.4rem; color: var(--muted); }
+.tside { display: grid; gap: 8px; }
+.tside select { width: 100%; }
+.tlist { display: grid; gap: 4px; max-height: 260px; overflow: auto; padding: 4px; border: 1px solid var(--line); border-radius: 10px; }
+.tlist .check { direction: ltr; justify-content: flex-end; font-weight: 600; }
+.tlist small { color: var(--muted); }
+@media (max-width: 700px) { .tgrid { grid-template-columns: 1fr; } .tswap { justify-self: center; } }
 .dgrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 10px; margin: 10px 0; align-items: end; }
 .teamnames { display: grid; grid-template-columns: repeat(auto-fill, minmax(140px, 1fr)); gap: 6px; }
 .teamnames input { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 6px 8px; width: 100%; }
@@ -488,6 +497,7 @@ table.mucats .sofar { display: block; font-size: .68rem; font-weight: 600; color
 .mgo, .mact { border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); border-radius: 8px; padding: 3px 10px; font: inherit; font-size: .78rem; font-weight: 700; cursor: pointer; }
 .mgo { background: var(--accent); border-color: var(--accent); color: #fff; }
 .mact:hover, .mgo:hover { filter: brightness(1.08); }
+.mgo:disabled { opacity: .45; cursor: default; filter: none; }
 table.box.murt td.macts { white-space: nowrap; text-align: end; }
 table.box.murt .mact { padding: 2px 7px; font-size: .72rem; margin-inline-start: 3px; }
 table.box tr.ilrow td { opacity: .55; }
@@ -966,6 +976,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
           <div class="field"><label for="myTeam">הקבוצה שלי</label><select id="myTeam"></select></div>
           <div class="field"><label for="muAddsMax">פיק אפים בשבוע</label><input type="number" id="muAddsMax" min="0" max="14"></div>
         </div>
+        <p class="hint" id="myTeamLock" hidden>הקבוצה שלי נעולה מאז תחילת הדראפט. איפוס הדראפט משחרר אותה.</p>
         <label class="check"><input type="checkbox" id="snake" checked> סדר סנייק בדראפט</label>
         <details class="tnames"><summary>שמות הקבוצות (לפי סדר הבחירה בסיבוב הראשון)</summary><div class="teamnames" id="teamNames"></div></details>
         </div>
@@ -1197,6 +1208,10 @@ table.cmpt td.lbl { min-width: 5.5em; }
             </div>
           </div>
         </div>
+        <details class="dsetup tradebox" id="tradeBox">
+          <summary>טרייד בין קבוצות</summary>
+          <div id="tradeBody"></div>
+        </details>
         <div class="pickedit" id="pickEdit" hidden></div>
         <div class="tbl-wrap short">
           <table class="dboard">
@@ -2510,6 +2525,9 @@ function syncTeamNames() {
   });
   const opts = Array.from({ length: n }, (_, i) => `<option value="${i}">${esc(teamName(i))}</option>`).join("");
   if ($("myTeam") !== document.activeElement) { $("myTeam").innerHTML = opts; $("myTeam").value = String(myIdx()); }
+  // my team is chosen once: after the first pick the site always looks from that team
+  const locked = picks.length > 0;
+  $("myTeam").disabled = locked; $("myTeamLock").hidden = !locked;
   setField("leagueName", st.leagueName || "");
 }
 
@@ -2529,9 +2547,51 @@ function syncLeaguePanel() {
   $("filtCount").hidden = !n; $("filtCount").textContent = n;
   $("filtClear").hidden = !n;
 }
+// Trade: players change teams to match a trade made in the real league. Pairs swap board cells (the board keeps
+// its shape); the extra players of an uneven trade move to the other team.
+const TRADE = { a: null, b: null, ga: new Set(), gb: new Set() };
+function renderTrade() {
+  const n = Math.max(st.teams, 1), me = myIdx();
+  if (TRADE.a == null || TRADE.a >= n) TRADE.a = me;
+  if (TRADE.b == null || TRADE.b >= n || TRADE.b === TRADE.a) TRADE.b = (TRADE.a + 1) % n;
+  const roster = (t) => picks.filter((x) => x.team === t).map((x) => PLAYER_BY_ID.get(x.id)).filter(Boolean);
+  const opts = (sel, other) => Array.from({ length: n }, (_, i) => i).filter((i) => i !== other)
+    .map((i) => `<option value="${i}"${i === sel ? " selected" : ""}>${esc(teamName(i))}${i === me ? " (אני)" : ""}</option>`).join("");
+  const side = (k, t, g) => `<div class="tside"><select data-tradeteam="${k}">${opts(t, k === "a" ? TRADE.b : TRADE.a)}</select>
+    <div class="tlist">${roster(t).map((p) => `<label class="check"><input type="checkbox" data-tradep="${k}" value="${p.id}"${g.has(p.id) ? " checked" : ""}> ${esc(p.name)} <small>${esc(p.pos || "")}</small></label>`).join("") || `<p class="hint">אין שחקנים</p>`}</div></div>`;
+  const ready = TRADE.ga.size && TRADE.gb.size;
+  $("tradeBody").innerHTML = `<div class="tgrid">${side("a", TRADE.a, TRADE.ga)}<span class="tswap">⇄</span>${side("b", TRADE.b, TRADE.gb)}</div>
+    <button type="button" class="mgo" id="tradeGo"${ready ? "" : " disabled"}>בצע טרייד${ready ? ` (${TRADE.ga.size} מול ${TRADE.gb.size})` : ""}</button>`;
+}
+function doTrade() {
+  const A = TRADE.a, B = TRADE.b, ga = [...TRADE.ga], gb = [...TRADE.gb];
+  const cell = (id, t) => picks.find((x) => x.id === id && x.team === t);
+  // pairs swap places on the board
+  const pairs = Math.min(ga.length, gb.length);
+  for (let i = 0; i < pairs; i++) { const x = cell(ga[i], A), y = cell(gb[i], B); [x.id, y.id] = [y.id, x.id]; }
+  // the rest move to the other team
+  for (const id of ga.slice(pairs)) cell(id, A).team = B;
+  for (const id of gb.slice(pairs)) cell(id, B).team = A;
+  // IL lists and table marks follow the players
+  st.il = st.il || {};
+  for (const t of [A, B]) st.il[t] = (st.il[t] || []).filter((id) => !ga.includes(id) && !gb.includes(id));
+  for (const id of [...ga, ...gb]) if (st.tags[id]) delete st.tags[id];
+  const names = (ids) => ids.map((id) => PLAYER_BY_ID.get(id)?.name).join(", ");
+  showToast(`טרייד בוצע: ${names(ga)} ל${teamName(B)}, ${names(gb)} ל${teamName(A)}.`);
+  TRADE.ga.clear(); TRADE.gb.clear();
+  rebuildSets(); saveSettings(); render(); flushPicks();
+}
+$("tradeBody").addEventListener("change", (e) => {
+  const tt = e.target.closest("[data-tradeteam]"), tp = e.target.closest("[data-tradep]");
+  if (tt) { TRADE[tt.dataset.tradeteam] = Number(tt.value); TRADE.ga.clear(); TRADE.gb.clear(); }
+  if (tp) { const g = tp.dataset.tradep === "a" ? TRADE.ga : TRADE.gb; tp.checked ? g.add(Number(tp.value)) : g.delete(Number(tp.value)); }
+  renderTrade();
+});
+$("tradeBody").addEventListener("click", (e) => { if (e.target.id === "tradeGo") doTrade(); });
 function renderDraft() {
   if (st.tab !== "draft") return;
   syncTeamNames();
+  renderTrade();
   const byId = new Map(players.map((p) => [p.id, p]));
   const n = Math.max(st.teams, 1), me = myIdx();
   const { next, onClock } = DRAFT;
