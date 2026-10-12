@@ -589,7 +589,11 @@ td.tteam .t { margin-inline-start: 4px; }
 .ghead { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; gap: 12px; padding: 22px 56px; color: #eef2fa;
   background: radial-gradient(rgba(255,255,255,.05) 1px, transparent 1.3px) 0 0 / 4px 4px, linear-gradient(180deg, #0c1427, #070b16); }
 .gteam { display: flex; align-items: center; gap: 12px; font-family: var(--font-num); font-weight: 800; font-size: 1.6rem; letter-spacing: .04em; direction: ltr; }
-.ghead .gteam:first-child { justify-content: flex-end; }
+/* logos outside, scores inside, both teams pulled toward the middle */
+.ghead { direction: rtl; gap: 28px; }
+.ghead .gteam.ga { justify-content: flex-start; }
+.ghead .gteam.gh { justify-content: flex-end; }
+.ghead .gsc { min-width: 2.2ch; text-align: center; }
 .gteam .sw, .gbox h4 .sw, table.lead .sw, .ginj h4 .sw { display: inline-block; width: 7px; height: 22px; border-radius: 2px; background: linear-gradient(var(--c1) 0 60%, var(--c2) 60%); vertical-align: middle; margin-inline-end: 6px; }
 .gsc { font-size: 2.4rem; color: #93a0bd; } .gsc.won { color: #ffb020; text-shadow: 0 0 16px rgba(255,176,32,.45); }
 .gmid { text-align: center; font-family: var(--font-num); font-weight: 700; letter-spacing: .14em; color: #aab5cf; display: grid; gap: 2px; }
@@ -1776,7 +1780,7 @@ $("ticker").addEventListener("click", (e) => {
 });
 
 // ---------- one game: box score (played) or preview (coming) ----------
-const BOX_COLS = ["MIN", "PTS", "REB", "AST", "STL", "BLK", "3PT", "FG", "FT", "TOV", "FPTS"];
+const BOX_COLS = ["MIN", "PTS", "REB", "AST", "STL", "BLK", "FG", "3PT", "FT", "TOV", "FPTS"];
 function boxTable(team, rows) {
   const fp = (r) => r[3] + r[8] + 2 * r[9] - r[10] + r[11] - r[12] + r[4] + 2 * r[5] + 4 * r[6] + 4 * r[7] - 2 * r[13];
   const best = Math.max(...rows.map(fp));
@@ -1797,7 +1801,7 @@ function boxTable(team, rows) {
   rows.filter((r) => r[15] === "C").forEach((r) => startAt.set(r[1], "C"));
   const posOf = (r) => { if (r[15]) return startAt.get(r[1]) || r[15]; const p = PLAYER_BY_ID.get(r[1]); return (p && p.pos) || ""; };
   const line = (r, cls = "") => `<tr class="${cls}${fp(r) === best && !cls ? " star" : ""}"><td class="pn"><span class="pw"${!cls && PLAYER_BY_ID.has(r[1]) ? ` data-pcard="${r[1]}"` : ""}>${cls ? "" : face(r)}<span>${esc(r[0])}</span>${!cls && posOf(r) ? `<small class="bpos">${esc(posOf(r))}</small>` : ""}</span></td>` +
-    [r[2], r[3], r[4], r[5], r[6], r[7], `${r[8]}-${r[14] ?? "?"}`, `${r[9]}-${r[10]}`, `${r[11]}-${r[12]}`, r[13], fp(r)].map((v) => `<td>${v}</td>`).join("") + `</tr>`;
+    [r[2], r[3], r[4], r[5], r[6], r[7], `${r[9]}-${r[10]}`, `${r[8]}-${r[14] ?? "?"}`, `${r[11]}-${r[12]}`, r[13], fp(r)].map((v) => `<td>${v}</td>`).join("") + `</tr>`;
   const total = ["Total", 0, "", tot(3), tot(4), tot(5), tot(6), tot(7), tot(8), tot(9), tot(10), tot(11), tot(12), tot(13), tot(14)];
   return `<div class="gbox" data-gbox="${team}"><div class="tbl-wrap short"><table class="box"><thead><tr><th class="nosort">Player</th>${BOX_COLS.map((c) => `<th class="nosort">${c}</th>`).join("")}</tr></thead>
     <tbody>${(() => {
@@ -1836,9 +1840,9 @@ function openGame(gid) {
   const box = (D.box || {})[gid];
   const when = g.t.toLocaleString("he-IL", { weekday: "long", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
   const head = `<div class="ghead">
-      <div class="gteam">${sideTag(g.a)}${g.fin ? `<b class="gsc${g.as > g.hs ? " won" : ""}">${g.as}</b>` : ""}</div>
+      <div class="gteam ga">${g.fin ? `<b class="gsc${g.as > g.hs ? " won" : ""}">${g.as}</b>` : ""}<span>${esc(g.a)}</span>${teamLogo(g.a)}</div>
       <div class="gmid">${g.fin ? "FINAL" : esc(when)}</div>
-      <div class="gteam">${g.fin ? `<b class="gsc${g.hs > g.as ? " won" : ""}">${g.hs}</b>` : ""}${sideTag(g.h)}</div>
+      <div class="gteam gh">${teamLogo(g.h)}<span>${esc(g.h)}</span>${g.fin ? `<b class="gsc${g.hs > g.as ? " won" : ""}">${g.hs}</b>` : ""}</div>
     </div>`;
   let body;
   if (g.fin && box) {
