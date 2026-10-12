@@ -3581,6 +3581,13 @@ function muMove(team, addId, dropId, kind) {
   }
   rebuildSets(); flushPicks(); saveSettings(); render();
 }
+// Adding a player whose game is already under way: that game will not count for you
+function liveNote(p) {
+  if (!p || !p.team26) return "";
+  const today = etDay(new Date()), now = new Date();
+  const g = GAMES.find((x) => x.d === today && (x.h === p.team26 || x.a === p.team26) && x.t <= now);
+  return g ? `המשחק של ${p.team26} כבר התחיל: ${p.name} ייספר רק מהמשחק הבא` : "";
+}
 function muFromIL(team, id) {
   st.il[team] = (st.il[team] || []).filter((x) => x !== id);
   const over = rosterOf(team).filter((p) => !ilOf(team).has(p.id)).length - st.roster;
@@ -3810,7 +3817,7 @@ $("muOut").addEventListener("click", (e) => {
     const [add, drop, kind] = b.dataset.mumove.split("|");
     const pa = PLAYER_BY_ID.get(Number(add)), pd = drop ? PLAYER_BY_ID.get(Number(drop)) : null;
     muMove(me, Number(add), drop ? Number(drop) : null, kind || null);
-    return showToast(`${pa.name} נוסף לקבוצה${pd ? (kind === "il" ? `, ${pd.name} עבר ל־IL` : `, ${pd.name} שוחרר`) : ""}. זכור לבצע את זה גם באפליקציה של הליגה.`);
+    return showToast(liveNote(pa) || `${pa.name} נוסף לקבוצה${pd ? (kind === "il" ? `, ${pd.name} עבר ל־IL` : `, ${pd.name} שוחרר`) : ""}. זכור לבצע את זה גם באפליקציה של הליגה.`);
   }
   const pair = (v) => v.split("|").map(Number);
   if (b.dataset.mudrop) { const [t, id] = pair(b.dataset.mudrop); return muMove(t, null, id, "drop"); }
@@ -3824,6 +3831,8 @@ $("muOut").addEventListener("click", (e) => {
     const active = rosterOf(t).filter((p) => !ilOf(t).has(p.id)).length;
     if (!drop && active >= st.roster) return showToast("הסגל מלא: בחר את מי לשחרר.");
     muMove(t, id, drop, drop ? "drop" : null);
+    const note = liveNote(PLAYER_BY_ID.get(id));
+    if (note) showToast(note);
   }
 });
 
