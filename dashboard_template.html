@@ -642,6 +642,7 @@ table.dboard tfoot td { font-weight: 700; font-family: var(--font-num); border-t
 .zhelp summary { cursor: pointer; font-weight: 700; color: var(--accent); }
 .zhelp div { margin-top: 6px; display: grid; gap: 4px; color: var(--ink); max-width: 75ch; line-height: 1.6; }
 .zhelp table { border-collapse: collapse; width: auto; }
+.zhelp .zex { color: var(--muted); padding-inline-start: 12px; }
 .zhelp td { border: 0; padding: 1px 10px 1px 0; text-align: start; font-family: var(--font-body); font-size: .85rem; }
 .tabs button { border: 0; background: transparent; font: inherit; font-weight: 700; font-size: 1rem; color: var(--muted); padding: 8px 14px; cursor: pointer; border-bottom: 3px solid transparent; margin-bottom: -1px; }
 .tabs button[aria-selected="true"] { color: var(--ink); border-bottom-color: var(--accent); }
@@ -1207,10 +1208,11 @@ table.cmpt td.lbl { min-width: 5.5em; }
         <details class="zhelp" style="flex-basis:100%">
           <summary>איך מחושב ציון Z?</summary>
           <div>
-            <span><b>1. ציון בכל קטגוריה:</b> משווים את השחקן לממוצע של <span id="zPool">104</span> השחקנים הטובים בשוק. מעל הממוצע = פלוס (ירוק), מתחת = מינוס (אדום). ככל שהפער נדיר יותר בקטגוריה, הציון גבוה יותר</span>
-            <span id="zExCat"></span>
-            <span><b>2. מחברים את 9 הקטגוריות</b></span>
-            <span id="zExSum"></span>
+            <span><b>ציון Z אומר כמה השחקן טוב לעומת השחקנים הטובים שעדיין זמינים בשוק.</b> 0 = ממוצע של <span id="zPool">104</span> הזמינים הטובים, פלוס = טוב מהם, מינוס = חלש מהם</span>
+            <span><b>שלב 1, כל קטגוריה:</b> בכמה השחקן מעל או מתחת לממוצע (ירוק או אדום בטבלה). פער נדיר בקטגוריה שווה יותר</span>
+            <span class="zex" id="zExCat"></span>
+            <span><b>שלב 2, מחברים את 9 הקטגוריות</b></span>
+            <span class="zex" id="zExSum"></span>
             <span id="zMarket"></span>
             <span><b>כדאי לדעת:</b> חטיפות וחסימות שוות פחות, כי הן משתנות הרבה משבוע לשבוע. באחוזים נספרת גם כמות הזריקות. קטגוריה ב־Punt לא נספרת. כוכבית = מעט משחקים, אז הציון מחושב בזהירות</span>
           </div>
@@ -1777,17 +1779,17 @@ function fillZHelp(list, now) {
   const byR = [...list].sort((a, b) => now.rank.get(a.id) - now.rank.get(b.id));
   const top = byR[0];
   if (!top) return;
-  const z = now.z.get(top.id), pool = byR.slice(0, size);
+  const z = now.z.get(top.id), pool = byR.slice(0, size), nm = `<bdi>${esc(top.name)}</bdi>`;
   // his strongest counting category, with his average next to the league's
   const c = CATS.filter((k) => !k.k.endsWith("_PCT") && k.k !== "TOV" && !st.punts.has(k.k)).sort((a, b) => z.z[b.k] - z.z[a.k])[0];
   const avg = pool.reduce((a, p) => a + p.L.g[c.k], 0) / pool.length;
-  $("zExCat").innerHTML = `לדוגמה, <bdi>${esc(top.name)}</bdi> ב־<bdi>${c.l}</bdi>: ${top.L.g[c.k].toFixed(1)} למשחק, לעומת ממוצע של ${avg.toFixed(1)}, ולכן ציון של ${fx(z.z[c.k])}`;
+  $("zExCat").innerHTML = `לדוגמה, ${nm} ב־<bdi>${c.l}</bdi>: ${top.L.g[c.k].toFixed(1)} למשחק לעומת ממוצע של ${avg.toFixed(1)}, ולכן ${fx(z.z[c.k])}`;
   const parts = CATS.filter((k) => !st.punts.has(k.k)).map((k) => `<bdi>${k.l} ${fx(z.z[k.k])}</bdi>`).join(", ");
   // once players are taken, the market is weaker: every score rises by the same amount (the order stays)
   const shift = Math.abs(AVAIL_LEVEL) >= 0.05;
-  $("zExSum").innerHTML = `<bdi>${esc(top.name)}</bdi>: ${parts}. ביחד ${shift ? `${fx(z.total)}, ועוד ${fx(-AVAIL_LEVEL)} = ` : ""}ציון Z של <b>${fx(shownVal(z.total))}</b>`;
+  $("zExSum").innerHTML = `${nm}: ${parts}. ביחד <b>${fx(z.total)}</b>`;
   $("zMarket").innerHTML = shift
-    ? `<b>למה ועוד ${fx(-AVAIL_LEVEL)}:</b> השחקנים שכבר נבחרו יצאו מהשוק, אז השוק חלש יותר וכל הציונים עולים באותו מספר. הסדר בין השחקנים לא משתנה` : "";
+    ? `<b>שלב 3, השוק נחלש:</b> השחקנים שכבר נבחרו יצאו מהשוק, אז כל הציונים עולים ב־${fx(-AVAIL_LEVEL)}. הסדר בין השחקנים לא משתנה<br><span class="zex">${nm}: ${fx(z.total)} ועוד ${fx(-AVAIL_LEVEL)} = ציון Z של <b>${fx(shownVal(z.total))}</b></span>` : "";
 }
 let BODY_JOB = 0;  // a newer render stops the batches of the one before
 function render() {
