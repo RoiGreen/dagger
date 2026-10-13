@@ -1459,7 +1459,7 @@ function applySeasons() {
   }
 }
 
-const FORM_MIN = { 7: 2, 14: 4, 30: 8 };  // games needed in the window (a team plays ~3.5 a week)
+const FORM_MIN = { 7: 1, 14: 1, 30: 1 };  // no games minimum: one game in the window is enough
 // Fantasy positions: a player is eligible at each one in his "PG/SG" string
 const POSITIONS = ["PG", "SG", "SF", "PF", "C"];
 const hasPos = (p, x) => (p.pos || "").split("/").includes(x);
@@ -2254,11 +2254,11 @@ function openGame(gid) {
 }
 // ---------- player card: last games and the next ones ----------
 // The 9 categories with the player's place in the league: among everyone on the board for the chosen seasons
-// (shooting percentages among players who shoot enough: 5 FGA / 2 FTA a game); fewer turnovers ranks higher
+// (every value is shown; the league place for shooting percentages counts players with 5 FGA / 2 FTA a game); fewer turnovers ranks higher
 const CARD_CATS = [
   { l: "PTS", v: (p) => p.L.g.PTS, f: fmt1 }, { l: "REB", v: (p) => p.L.g.REB, f: fmt1 }, { l: "AST", v: (p) => p.L.g.AST, f: fmt1 },
   { l: "STL", v: (p) => p.L.g.STL, f: fmt1 }, { l: "BLK", v: (p) => p.L.g.BLK, f: fmt1 }, { l: "3PM", v: (p) => p.L.g.FG3M, f: fmt1 },
-  { l: "FG%", v: (p) => p.L.g.FG_PCT, f: fmt3, ok: (p) => p.L.g.FGA >= 5 }, { l: "FT%", v: (p) => p.L.g.FT_PCT, f: fmt3, ok: (p) => p.L.g.FTA >= 2 },
+  { l: "FG%", v: (p) => (p.L.g.FGA ? p.L.g.FG_PCT : null), f: fmt3, ok: (p) => p.L.g.FGA >= 5 }, { l: "FT%", v: (p) => (p.L.g.FTA ? p.L.g.FT_PCT : null), f: fmt3, ok: (p) => p.L.g.FTA >= 2 },
   { l: "TOV", v: (p) => p.L.g.TOV, f: fmt1, low: true },
 ];
 // Advanced numbers of the player himself (team-level ones such as TEAM PACE are left out)
@@ -2307,7 +2307,7 @@ function openPlayer(id) {
   // recent form: the same choice as the bar over the tables, so the numbers and the league ranks follow it
   const formOpts = [["", "עונה שלמה"], ["7", "7 ימים אחרונים"], ["14", "14 ימים אחרונים"], ["30", "חודש אחרון"]];
   const formSel = p.L ? `<div class="pform"><select data-cardform="${p.id}" aria-label="כושר עדכני">${formOpts.map(([v, l]) => `<option value="${v}"${(st.formWin || "") === v ? " selected" : ""}>${l}</option>`).join("")}</select>
-    ${st.formWin && !p.has ? `<small>פחות מ־${FORM_MIN[st.formWin]} משחקים בטווח: מוצגת העונה</small>` : ""}</div>` : "";
+    ${st.formWin && !p.has ? `<small>אין משחקים בטווח: מוצגת העונה</small>` : ""}</div>` : "";
   // basic / advanced switch, under the name, team and owner lines and centred like them
   const modeSeg = p.L ? `<div class="pmodewrap${p.team26 ? " withlogo" : ""}"><div class="seg pmode" role="group" aria-label="סוג הנתונים">${[["basic", "נתונים בסיסיים"], ["adv", "נתונים מתקדמים"]].map(([k, l]) =>
     `<button type="button" data-cardmode="${k}" data-pid="${p.id}" aria-pressed="${cardMode === k}">${l}</button>`).join("")}</div></div>` : "";
@@ -2315,7 +2315,7 @@ function openPlayer(id) {
     <div class="ghead phead" style="--jc:${jc}">${formSel}<div class="pinfo">${p.img ? `<img class="pimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<div><div class="pnm${p.team26 ? " withlogo" : ""}">${esc(p.name)}</div>
       <div class="pmeta">${p.team26 ? teamLogo(p.team26) : ""}<span>${esc(TEAM_NAMES[p.team26] || p.team26 || "FA")} · ${esc(p.pos || "–")}</span>${p.hurt ? injuryPill(p) : ""}</div>${ownerTag}${modeSeg}</div></div>
       ${p.L ? `<div class="pstats">${(cardMode === "adv" ? CARD_ADV : CARD_CATS).map((c) => { const r = leagueRank(p, c), v = c.v(p);
-        return `<div${c.tip ? ` data-tip="${esc(c.tip)}"` : ""}><span class="pv"><b>${v == null || (c.ok && !c.ok(p)) ? "–" : c.f(v)}</b>${r ? `<i title="מקום ${r.rank} מתוך ${r.of} בליגה">#${r.rank}</i>` : ""}</span><small>${c.l}</small></div>`; }).join("")}</div>` : ""}</div>
+        return `<div${c.tip ? ` data-tip="${esc(c.tip)}"` : ""}><span class="pv"><b>${v == null ? "–" : c.f(v)}</b>${r ? `<i title="מקום ${r.rank} מתוך ${r.of} בליגה">#${r.rank}</i>` : ""}</span><small>${c.l}</small></div>`; }).join("")}</div>` : ""}</div>
     <div class="psec"><h4>המשחקים האחרונים</h4>${recent ? `<div class="tbl-wrap plogwrap"><table class="box plog"><thead><tr>
       ${["Date", "Opp", "Result", "MIN", "PTS", "FG", "FG%", "FT", "FT%", "3PT", "3P%", "REB", "AST", "STL", "BLK", "TOV", "FPTS"].map((c) => `<th class="nosort">${c}</th>`).join("")}
       </tr></thead><tbody>${recent}</tbody></table></div>` : `<p class="gnote">אין עדיין משחקים</p>`}</div>
@@ -4542,7 +4542,7 @@ function syncControls() {
   if (st.formWin && D.formEnd) {
     const end = new Date(D.formEnd + "T12:00:00Z"), start = new Date(end - (Number(st.formWin) - 1) * 864e5);
     const d = (x) => x.toLocaleDateString("he-IL", { day: "numeric", month: "numeric", year: "2-digit", timeZone: "UTC" });
-    formTip = `משחקי העונה הסדירה מ־${d(start)} עד ${d(end)}. נספרים שחקנים עם ${FORM_MIN[st.formWin]} משחקים לפחות.`;
+    formTip = `משחקי העונה הסדירה מ־${d(start)} עד ${d(end)}`;
   }
   $("formWinTop").title = formTip;
   $("minMin").value = st.minMin; $("minMinOut").textContent = st.minMin;
