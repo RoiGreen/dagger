@@ -503,7 +503,7 @@ table.mucats tr.punted td { opacity: .4; }
 .muscore .wb .wh { color: #7fb2ff; }
 .muscore .wr { display: grid; grid-template-columns: 3.2em minmax(0, 1fr); gap: 10px; font-family: var(--font-num); font-weight: 700; font-size: .95rem; color: #eef2fa; }
 .muscore .wr .wk { color: #93a0bd; letter-spacing: .06em; direction: ltr; unicode-bidi: isolate; }
-.muscore .wr .num { text-align: center; direction: ltr; }
+.muscore .wr .num { text-align: center; direction: ltr;  white-space: nowrap; }
 .muscore .wr .num b { font-weight: 800; color: #ffffff; } .muscore .wr .num i { font-style: normal; font-weight: 600; color: #93a0bd; }
 .muscore .wr.none { color: #6f7c99; }
 .mwin { display: grid; justify-items: center; line-height: 1.1; }
@@ -942,7 +942,7 @@ td.lbl { text-align: right; }
 .vsboard .wcol.wb { border-inline-start: 1px solid rgba(255,255,255,.08); padding-inline-start: 18px; }
 .vsboard .wh { font-size: .78rem; font-weight: 700; margin-bottom: 3px; text-align: center; margin-inline-start: calc(3.2em + 10px); }  /* over the numbers, past the category column */
 .vsboard .wa .wh { color: color-mix(in srgb, var(--sa) 75%, #ffffff); } .vsboard .wb .wh { color: color-mix(in srgb, var(--sb) 75%, #ffffff); }
-.vsboard .wr .num { text-align: center; }
+.vsboard .wr .num { text-align: center;  white-space: nowrap; }
 .vsboard .wr .num b { font-weight: 800; color: #ffffff; } .vsboard .wr .num i { font-style: normal; font-weight: 600; color: #93a0bd; }
 .vsboard .wr { display: grid; grid-template-columns: 3.2em minmax(0, 1fr); gap: 10px; font-family: var(--font-num); font-weight: 700; font-size: .95rem; color: #eef2fa; }
 .vsboard .wr .wk { color: #93a0bd; letter-spacing: .06em; direction: ltr; unicode-bidi: isolate; }
@@ -2836,7 +2836,7 @@ function renderDraft() {
     return `<td data-cell="${i},${r}" class="${i === me ? "me" : ""}${editing ? " editing" : ""}" title="${pl ? "עריכת הבחירה" : "הוספת שחקן לקבוצה"}">${pl ? `<span class="dcell"><span class="pk">${DRAFT.labels.get(x.id)}</span><span class="dn">${esc(pl.name)}</span>${pl.img ? `<img class="dimg" src="${pl.img}" alt="" loading="lazy" decoding="async">` : ""}</span>` : ""}</td>`;
   }).join("") + `</tr>`).join("");
   const zAll = last.now.z, m = st.mode;
-  const value = (id) => { const pl = byId.get(id); if (!pl) return 0; return st.fmt === "cat" ? (zAll.get(id)?.total ?? 0) : (pl.F?.[m] ?? 0); };
+  const value = (id) => { const pl = byId.get(id); if (!pl) return 0; return st.fmt === "cat" ? (zAll.has(id) ? shownVal(zAll.get(id).total) : 0) : (pl.F?.[m] ?? 0); };  // the Z the tables show
   $("dbFoot").innerHTML = `<td>${st.fmt === "cat" ? "סה״כ Z" : "סה״כ FPTS"}</td>` +
     byTeam.map((t, i) => `<td class="${i === me ? "me" : ""}">${t.reduce((a, x) => a + value(x.id), 0).toFixed(1)}</td>`).join("");
   $("undoBtn").disabled = !picks.length;
@@ -3518,7 +3518,9 @@ let MU_DAY = null;  // the day the roster tables show
 let MU_ROSTER = "a";  // which roster is shown: mine (default) or the opponent's
 function slotsOf(t, active, d, T) {
   const set = st.daySlots?.[d]?.[t];
-  if (set) return Object.fromEntries(active.map((p) => [p.id, set[p.id] || "BN"]));
+  // a player without a game that day (or out) sits on the bench, whatever slot was set for him
+  const plays = (p) => { const c = T?.cell.get(`${p.id}|${d}`); return !!c && !c.out; };
+  if (set) return Object.fromEntries(active.map((p) => [p.id, plays(p) ? set[p.id] || "BN" : "BN"]));
   return Object.fromEntries(active.map((p) => [p.id, T.cell.get(`${p.id}|${d}`)?.slot || "BN"]));
 }
 function lineupFor(cands, fixed = {}) {
@@ -4022,7 +4024,8 @@ function renderMatchup() {
     const rows = [...roster].sort((a, b) => at(a) - at(b) || muValue(b) - muValue(a)).map((p) => {
       const w = playerWeek(p, T), onIL = il.has(p.id);
       const cur = shown[p.id] || "BN";
-      const can = [...new Set(LINEUP.filter(([, pos]) => !pos || pos.some((x) => hasPos(p, x))).map(([n]) => n))];
+      const cd = T.cell.get(`${p.id}|${d}`), plays = !!cd && !cd.out;  // no game that day: bench only
+      const can = plays ? [...new Set(LINEUP.filter(([, pos]) => !pos || pos.some((x) => hasPos(p, x))).map(([n]) => n))] : [];
       // a slot already taken by someone else is not offered (C and UTIL hold two)
       const full = (n) => n !== "BN" && n !== cur && (used[n] || 0) >= SLOT_CAP[n];
       const slotSel = `<select class="mslot${manual ? " set" : ""}" data-muslot="${t}|${p.id}" aria-label="עמדה בהרכב" title="איפה הוא משובץ בהרכב">
