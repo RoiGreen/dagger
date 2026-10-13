@@ -534,6 +534,9 @@ table.box.murt td.macts { white-space: nowrap; text-align: end; }
 table.box.murt .mact { padding: 2px 7px; font-size: .72rem; margin-inline-start: 3px; }
 table.box.murt .mact.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 .muauto { display: flex; justify-content: flex-end; gap: 6px; margin: -2px 0 6px; }
+.murosterbox { display: grid; gap: 8px; margin-top: 6px; }
+.murswitch { justify-self: center; width: fit-content; }
+.murosterbox .muroster h4 { display: none; }
 .muday { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; margin: 14px 0 4px; font-weight: 700; color: var(--muted); }
 .muday .mact.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 table.box.murt .pday { font-family: var(--font-num); font-size: .68rem; font-weight: 700; color: var(--pos); margin-inline-start: 6px; }
@@ -3467,6 +3470,7 @@ const SLOT_CAP = LINEUP.reduce((m, [n]) => ({ ...m, [n]: (m[n] || 0) + 1 }), {})
 // A team's lineup on one day: what I set for that day, or else the best lineup of those who play that day
 // (T = the team's week plan, so a player without a game that day is on the bench)
 let MU_DAY = null;  // the day the roster tables show
+let MU_ROSTER = "a";  // which roster is shown: mine (default) or the opponent's
 function slotsOf(t, active, d, T) {
   const set = st.daySlots?.[d]?.[t];
   if (set) return Object.fromEntries(active.map((p) => [p.id, set[p.id] || "BN"]));
@@ -4057,10 +4061,12 @@ function renderMatchup() {
       <div class="tbl-wrap short"><table class="box daygrid"><thead><tr><th class="nosort">שחקן</th>${weekDays().map((d, i) => `<th class="nosort${d === today ? " today" : ""}">${esc(dayLabel(d))}${gridSide === "a" ? `<span class="luday">${i ? `<button type="button" class="lubtn" data-lucopy="${d}" title="העתק את ההרכב של אתמול">⤶</button>` : ""}${st.lineup?.[d] && Object.keys(st.lineup[d]).length ? `<button type="button" class="lubtn" data-lureset="${d}" title="אפס להמלצה">↺</button>` : ""}</span>` : ""}</th>`).join("")}</tr></thead><tbody>${gridRows}</tbody><tfoot>${gridFoot}</tfoot></table></div>
       ${lineupWhy()}
     </section>
-    <div class="muvs"><b>${esc(myName)}</b>${(D.logos || {}).NBA ? `<img src="${D.logos.NBA}" alt="NBA">` : ""}<b>${esc(oppName)}</b></div>
     <datalist id="muFree">${freeList.slice(0, 400).map((p) => `<option value="${esc(`${p.name} · ${p.team26}`)}"></option>`).join("")}</datalist>
     <div class="muday"><span>ההרכב ליום</span>${weekDays().map((d) => `<button type="button" class="mact${d === MU_DAY ? " on" : ""}" data-muday="${d}">${esc(dayLabel(d))}</button>`).join("")}</div>
-    <div class="mugrid murosters">${rosterTable("a", me, mineP, A, ilA, myName)}${rosterTable("b", st.muOpp, oppP, B, ilB, oppName)}</div>`;
+    <div class="murosterbox">
+      <div class="seg murswitch" role="group" aria-label="איזה סגל להציג"><button type="button" data-murost="a" aria-pressed="${MU_ROSTER === "a"}">${esc(myName)}</button><button type="button" data-murost="b" aria-pressed="${MU_ROSTER === "b"}">${esc(oppName)}</button></div>
+      ${MU_ROSTER === "b" ? rosterTable("b", st.muOpp, oppP, B, ilB, oppName) : rosterTable("a", me, mineP, A, ilA, myName)}
+    </div>`;
 }
 $("muOpp").addEventListener("change", (e) => { st.muOpp = Number(e.target.value); saveSettings(); renderMatchup(); });
 for (const [id, d] of [["muPrev", -1], ["muNext", 1], ["muNow", 0]]) {
@@ -4136,6 +4142,7 @@ $("muOut").addEventListener("click", (e) => {
   if (b.dataset.muil) { const [t, id] = pair(b.dataset.muil); return muMove(t, null, id, "il"); }
   if (b.dataset.muback) { const [t, id] = pair(b.dataset.muback); return muFromIL(t, id); }
   if (b.dataset.muday) { MU_DAY = b.dataset.muday; return renderMatchup(); }
+  if (b.dataset.murost) { MU_ROSTER = b.dataset.murost; return renderMatchup(); }
   if (b.dataset.muclear != null) {
     const t = Number(b.dataset.muclear);
     st.daySlots = st.daySlots || {}; st.daySlots[MU_DAY] = st.daySlots[MU_DAY] || {};
