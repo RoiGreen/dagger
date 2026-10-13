@@ -533,6 +533,8 @@ table.mucats .sofar { display: block; font-size: .68rem; font-weight: 600; color
 table.box.murt td.macts { white-space: nowrap; text-align: end; }
 table.box.murt .mact { padding: 2px 7px; font-size: .72rem; margin-inline-start: 3px; }
 table.box.murt .mact.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+.muauto { display: flex; justify-content: flex-end; margin: -2px 0 6px; }
+.muauto .mact.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 table.box.murt .mslot { width: 4.6em; padding: 2px 2px; font-size: .72rem; font-weight: 700; border-radius: 6px; margin-inline-start: 3px; }
 table.box.murt .mslot.set { border-color: var(--accent); color: var(--accent); }
 table.box tr.ilrow td { opacity: .55; }
@@ -3455,6 +3457,17 @@ const LINEUP = [["PG", ["PG"]], ["SG", ["SG"]], ["G", ["PG", "SG"]], ["SF", ["SF
 const IL_SLOTS = 2;
 // The best lineup of one day: the most valuable players first, each one placed if the slots can still hold everyone
 // placed so far (moving earlier players between slots when needed). Greedy is exact here (a transversal matroid).
+const SLOT_CAP = LINEUP.reduce((m, [n]) => ({ ...m, [n]: (m[n] || 0) + 1 }), {});
+// a team's standing lineup: what I set, or else the strongest fit of the active players (everyone else on BN)
+function slotsOf(t, active) {
+  if (st.slots?.[t]) {
+    const out = {};
+    for (const p of active) out[p.id] = st.slots[t][p.id] || "BN";
+    return out;
+  }
+  const slot = lineupFor(active.map((p) => ({ p, v: muValue(p) })));
+  return Object.fromEntries(active.map((p) => [p.id, slot.get(p.id) || "BN"]));
+}
 function lineupFor(cands, fixed = {}) {
   const at = new Array(LINEUP.length).fill(-1);
   const fits = (c, s) => !LINEUP[s][1] || LINEUP[s][1].some((x) => hasPos(c.p, x));
@@ -3587,8 +3600,7 @@ function planWeek(roster, il, team, swap = null) {
     }
     // my own lineup: a player set "on" is placed first, one set "off" stays on the bench (my team only)
     const mineDay = { ...(team === myIdx() ? (st.lineup?.[d] || {}) : {}) };
-    const fixed = { ...(st.slots?.[team] || {}) };
-    for (const id of (st.bn?.[team] || [])) fixed[id] = "BN";
+    const fixed = st.slots?.[team] ? Object.fromEntries(who.map((p) => [p.id, st.slots[team][p.id] || "BN"])) : {};
     for (const [id, sl] of Object.entries(fixed)) if (sl === "BN" && !mineDay[id]) mineDay[id] = "off";  // BN: never in the lineup
     const benchLock = cands.filter((c) => mineDay[c.p.id] === "off");
     const pool = cands.filter((c) => mineDay[c.p.id] !== "off").map((c) => (mineDay[c.p.id] === "on" ? { ...c, v: 1e6 + c.v } : c));
@@ -3945,19 +3957,30 @@ function renderMatchup() {
   const cell9 = (o, k) => (k === "FG_PCT" ? (o.FGA ? fmt3(o.FGM / o.FGA) : "–") : k === "FT_PCT" ? (o.FTA ? fmt3(o.FTM / o.FTA) : "–") : fmt1(o[k]));
   const rosterTable = (side, t, roster, T, il, title) => {
     const active = roster.filter((p) => !il.has(p.id));
-    const rows = [...roster].sort((a, b) => (il.has(a.id) - il.has(b.id)) || muValue(b) - muValue(a)).map((p) => {
+    // the lineup shown: the one I set, or the strongest one (each slot filled once, the rest on the bench)
+    const manual = !!st.slots?.[t];
+    const shown = slotsOf(t, active);
+    const used = {};
+    for (const v of Object.values(shown)) used[v] = (used[v] || 0) + 1;
+    // in lineup order, like the league app: PG SG G SF PF F C C UTIL UTIL, then the bench, then IL
+    const ORDER = ["PG", "SG", "G", "SF", "PF", "F", "C", "UTIL", "BN"];
+    const at = (p) => (il.has(p.id) ? 99 : ORDER.indexOf(shown[p.id] || "BN"));
+    const rows = [...roster].sort((a, b) => at(a) - at(b) || muValue(b) - muValue(a)).map((p) => {
       const w = playerWeek(p, T), onIL = il.has(p.id);
-      const cur = (st.bn?.[t] || []).includes(p.id) ? "BN" : (st.slots?.[t]?.[p.id] || "");
+      const cur = shown[p.id] || "BN";
       const can = [...new Set(LINEUP.filter(([, pos]) => !pos || pos.some((x) => hasPos(p, x))).map(([n]) => n))];
-      const slotSel = `<select class="mslot${cur ? " set" : ""}" data-muslot="${t}|${p.id}" aria-label="עמדה בהרכב" title="איפה הוא משובץ בהרכב">
-        <option value="">אוטו</option>${[...can, "BN"].map((n) => `<option value="${n}"${n === cur ? " selected" : ""}>${n}</option>`).join("")}</select>`;
+      // a slot already taken by someone else is not offered (C and UTIL hold two)
+      const full = (n) => n !== "BN" && n !== cur && (used[n] || 0) >= SLOT_CAP[n];
+      const slotSel = `<select class="mslot${manual ? " set" : ""}" data-muslot="${t}|${p.id}" aria-label="עמדה בהרכב" title="איפה הוא משובץ בהרכב">
+        ${[...can, "BN"].map((n) => `<option value="${n}"${n === cur ? " selected" : ""}${full(n) ? " disabled" : ""}>${n}</option>`).join("")}</select>`;
       const acts = onIL ? `<button type="button" class="mact" data-muback="${t}|${p.id}">חזרה מ־IL</button>`
         : `${p.hurt?.s === "OUT" && il.size < IL_SLOTS ? `<button type="button" class="mact" data-muil="${t}|${p.id}">IL</button>` : ""}${slotSel}<button type="button" class="mact" data-mudrop="${t}|${p.id}" title="שחרור">שחרר</button>`;
       return `<tr class="${onIL ? "ilrow" : ""}"><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span></span>${p.hurt ? injuryPill(p) : ""}</td>
         <td>${onIL ? "IL" : `${g1(w.starts)}/${w.games}`}</td>${CATS.map((c) => `<td>${onIL ? "" : cell9(w.o, c.k)}</td>`).join("")}<td class="macts">${acts}</td></tr>`;
     }).join("");
     const full = active.length >= st.roster;
-    return `<div class="muroster"><h4>${esc(title)}</h4><table class="box murt"><thead><tr><th class="nosort">שחקן</th><th class="nosort" data-tip="משחקים בהרכב מתוך המשחקים שלו השבוע">הרכב</th>${CATS.map((c) => `<th class="nosort">${c.l}</th>`).join("")}<th class="nosort"></th></tr></thead><tbody>${rows}</tbody></table>
+    return `<div class="muroster"><h4>${esc(title)}</h4>
+      <div class="muauto"><button type="button" class="mact${manual ? "" : " on"}" data-muauto="${t}" title="משבץ את השחקנים החזקים ביותר בעמדות שמתאימות להם, כל יום מחדש">בחירה אוטומטית</button></div><table class="box murt"><thead><tr><th class="nosort">שחקן</th><th class="nosort" data-tip="משחקים בהרכב מתוך המשחקים שלו השבוע">הרכב</th>${CATS.map((c) => `<th class="nosort">${c.l}</th>`).join("")}<th class="nosort"></th></tr></thead><tbody>${rows}</tbody></table>
       <div class="muadd" data-muaddbox="${t}">
         <input list="muFree" placeholder="הוספת שחקן חופשי…" autocomplete="off" data-muaddin="${t}" aria-label="שחקן להוספה">
         <select data-muaddout="${t}" aria-label="במקום">${full ? "" : `<option value="">יש מקום בסגל (${active.length}/${st.roster})</option>`}${active.map((p) => `<option value="${p.id}">במקום ${esc(p.name)}</option>`).join("")}</select>
@@ -4068,9 +4091,9 @@ $("muOut").addEventListener("change", (e) => {
   const ss = e.target.closest("[data-muslot]");
   if (ss) {
     const [t, id] = ss.dataset.muslot.split("|").map(Number);
-    st.slots = st.slots || {}; st.slots[t] = st.slots[t] || {};
-    if (st.bn?.[t]) st.bn[t] = st.bn[t].filter((x) => x !== id);
-    if (ss.value) st.slots[t][id] = ss.value; else delete st.slots[t][id];
+    st.slots = st.slots || {};
+    if (!st.slots[t]) st.slots[t] = slotsOf(t, rosterOf(t).filter((p) => !ilOf(t).has(p.id)));
+    st.slots[t][id] = ss.value;
     saveSettings(); return renderMatchup();
   }
   const sel = e.target.closest("[data-mudropsel]");
@@ -4093,6 +4116,12 @@ $("muOut").addEventListener("click", (e) => {
   if (b.dataset.mudrop) { const [t, id] = pair(b.dataset.mudrop); return muMove(t, null, id, "drop"); }
   if (b.dataset.muil) { const [t, id] = pair(b.dataset.muil); return muMove(t, null, id, "il"); }
   if (b.dataset.muback) { const [t, id] = pair(b.dataset.muback); return muFromIL(t, id); }
+  if (b.dataset.muauto != null) {
+    const t = Number(b.dataset.muauto);
+    if (st.slots) delete st.slots[t];
+    if (st.bn) delete st.bn[t];
+    saveSettings(); return renderMatchup();
+  }
   if (b.dataset.mubn) {
     const [t, id] = pair(b.dataset.mubn);
     st.bn = st.bn || {};
