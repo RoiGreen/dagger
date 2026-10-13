@@ -1207,10 +1207,11 @@ table.cmpt td.lbl { min-width: 5.5em; }
         <details class="zhelp" style="flex-basis:100%">
           <summary>איך מחושב ציון Z?</summary>
           <div>
-            <span><b>1. ציון בכל קטגוריה:</b> משווים את השחקן לממוצע של <span id="zPool">104</span> השחקנים שנבחרים בליגה שלך. מעל הממוצע = פלוס (ירוק), מתחת = מינוס (אדום). ככל שהפער נדיר יותר בקטגוריה, הציון גבוה יותר</span>
+            <span><b>1. ציון בכל קטגוריה:</b> משווים את השחקן לממוצע של <span id="zPool">104</span> השחקנים הטובים בשוק. מעל הממוצע = פלוס (ירוק), מתחת = מינוס (אדום). ככל שהפער נדיר יותר בקטגוריה, הציון גבוה יותר</span>
             <span id="zExCat"></span>
-            <span><b>2. מחברים את 9 הקטגוריות ומוסיפים <span id="zShift">2.8</span>,</b> כך שהשחקנים שיישארו בלי קבוצה (מקום <span id="zRepl">105</span> ומטה) מקבלים בערך 0</span>
+            <span><b>2. מחברים את 9 הקטגוריות</b></span>
             <span id="zExSum"></span>
+            <span id="zMarket"></span>
             <span><b>כדאי לדעת:</b> חטיפות וחסימות שוות פחות, כי הן משתנות הרבה משבוע לשבוע. באחוזים נספרת גם כמות הזריקות. קטגוריה ב־Punt לא נספרת. כוכבית = מעט משחקים, אז הציון מחושב בזהירות</span>
           </div>
         </details>
@@ -1658,8 +1659,10 @@ function sampleWeight(p) {
 const priorSeason = () => { const ys = chosenSeasons().filter((y) => y !== D.preseason); return ys.length ? Math.min(...ys) - 1 : null; };
 const sdOf = (xs) => meanStd(xs)[1];
 let REPL_LEVEL = -1.5;
-// What the tables show: the score above replacement, so 0 = a player you can pick up for free (the order is the same)
-const shownVal = (total) => total - REPL_LEVEL;
+// What the tables show: the score against the best players still on the market right now (the average of the
+// top teams x roster of them = 0). Before a draft that is the plain score; as players are taken it rises. The order never changes.
+let AVAIL_LEVEL = 0;
+const shownVal = (total) => total - AVAIL_LEVEL;
 function rankAll(list, mode) {
   const size = Math.max(1, st.teams * st.roster);
   const real = list.filter((p) => !p.rookie);
@@ -1703,6 +1706,8 @@ function rankAll(list, mode) {
     if (w < 1) r.total = target + (r.total - target) * w;
     fpAdj.set(p.id, w < 1 ? fpRepl + (p.F[mode] - fpRepl) * w : p.F[mode]);
   }
+  const market = list.filter((p) => !taken.has(p.id) && !mine.has(p.id)).map((p) => z.get(p.id).total).sort((a, b) => b - a).slice(0, size);
+  AVAIL_LEVEL = taken.size || mine.size ? (market.length ? market.reduce((a, b) => a + b, 0) / market.length : 0) : 0;
   const byCat = [...list].sort((a, b) => z.get(b.id).total - z.get(a.id).total);
   const byPts = [...list].sort((a, b) => fpAdj.get(b.id) - fpAdj.get(a.id));
   const rCat = new Map(byCat.map((p, i) => [p.id, i + 1]));
@@ -1768,8 +1773,7 @@ function passes(p) {
 function fillZHelp(list, now) {
   const fx = (v) => (v < 0 ? `מינוס ${Math.abs(v).toFixed(1)}` : v.toFixed(1));
   const size = st.teams * st.roster;
-  $("zPool").textContent = size; $("zRepl").textContent = size + 1;
-  $("zShift").textContent = (-REPL_LEVEL).toFixed(1);
+  $("zPool").textContent = size;
   const byR = [...list].sort((a, b) => now.rank.get(a.id) - now.rank.get(b.id));
   const top = byR[0];
   if (!top) return;
@@ -1779,7 +1783,11 @@ function fillZHelp(list, now) {
   const avg = pool.reduce((a, p) => a + p.L.g[c.k], 0) / pool.length;
   $("zExCat").innerHTML = `לדוגמה, <bdi>${esc(top.name)}</bdi> ב־<bdi>${c.l}</bdi>: ${top.L.g[c.k].toFixed(1)} למשחק, לעומת ממוצע של ${avg.toFixed(1)}, ולכן ציון של ${fx(z.z[c.k])}`;
   const parts = CATS.filter((k) => !st.punts.has(k.k)).map((k) => `<bdi>${k.l} ${fx(z.z[k.k])}</bdi>`).join(", ");
-  $("zExSum").innerHTML = `<bdi>${esc(top.name)}</bdi>: ${parts}. ביחד ${fx(z.total)}, ועוד ${(-REPL_LEVEL).toFixed(1)} = ציון Z של <b>${fx(shownVal(z.total))}</b>`;
+  // once players are taken, the market is weaker: every score rises by the same amount (the order stays)
+  const shift = Math.abs(AVAIL_LEVEL) >= 0.05;
+  $("zExSum").innerHTML = `<bdi>${esc(top.name)}</bdi>: ${parts}. ביחד ${shift ? `${fx(z.total)}, ועוד ${fx(-AVAIL_LEVEL)} = ` : ""}ציון Z של <b>${fx(shownVal(z.total))}</b>`;
+  $("zMarket").innerHTML = shift
+    ? `<b>למה ועוד ${fx(-AVAIL_LEVEL)}:</b> השחקנים שכבר נבחרו יצאו מהשוק, אז השוק חלש יותר וכל הציונים עולים באותו מספר. הסדר בין השחקנים לא משתנה` : "";
 }
 let BODY_JOB = 0;  // a newer render stops the batches of the one before
 function render() {
@@ -2902,7 +2910,7 @@ function cmpTotals(list, avg = false) {
   o.FT_PCT = o.FTA ? o.FTM / o.FTA : list.length ? 0 : null;
   const zs = list.map(zOf);
   o.z = Object.fromEntries(CATS.map((c) => [c.k, zs.reduce((a, r) => a + (r ? r.z[c.k] : 0), 0)]));
-  o.Z = CATS.filter((c) => !st.punts.has(c.k)).reduce((a, c) => a + o.z[c.k], 0) - REPL_LEVEL * list.length;  // value above free agents
+  o.Z = CATS.filter((c) => !st.punts.has(c.k)).reduce((a, c) => a + o.z[c.k], 0) - AVAIL_LEVEL * list.length;  // against the best players on the market
   o.FPTS = list.reduce((a, p) => a + p.F[m], 0);
   // Advanced: per game minutes, availability averaged, rates weighted by minutes
   o.MIN = list.reduce((a, p) => a + p.L.g.MIN, 0);
