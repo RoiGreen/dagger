@@ -3943,7 +3943,6 @@ function renderMatchup() {
             <td class="${c.q < 0.5 ? "w" : ""}">${f(c.k, c.b)}${anyPlayed ? `<small class="sofar">עד כה ${f(c.k, c.done[1])}</small>` : ""}</td>
             <td><span class="mubar2 ${c.key}" title="${ODDS_LABEL[c.key]}"><i style="width:${Math.round(c.q * 100)}%"></i></span><b class="muq ${c.key}">${pctTxt(c.q)}</b>${c.punted ? `<small class="sofar">Punt</small>` : ""}</td></tr>`).join("")
         }</tbody></table>
-        <p class="munote">עד כה + תחזית למשחקים שנותרו, רק לשחקנים שנכנסים להרכב בכל יום (10 משבצות). הסיכוי מחושב מהתנודתיות של כל שחקן בין משחק למשחק</p>
       </section>
       <section class="cmpsec"><h3>המלצות</h3>
         <div class="muadv">
