@@ -4382,7 +4382,7 @@ function renderMine() {
 
 // ---------- persistence of picks ----------
 // remote = { save(data) } for the signed-in account: claude.ai db or Supabase
-let remote = null, writing = false, dirty = false;
+let remote = null, writing = false, dirty = false, cloudAt = null;
 const userData = () => ({ picks, taken: [...taken], mine: [...mine], fav: [...fav], settings: settingsData() });
 function savePicksLocal() {
   try {
@@ -4487,26 +4487,47 @@ async function connectSite() {
     $("signOutBtn").hidden = false;
     $("viewer").hidden = false;
     $("saveState").textContent = "טוען את הנתונים שלך…";
-    const { data, error } = await sb.from("user_state").select("picks, fav, settings").eq("user_id", user.id).maybeSingle();
+    const { data, error } = await sb.from("user_state").select("picks, fav, settings, updated_at").eq("user_id", user.id).maybeSingle();
     if (error) { $("saveState").textContent = "לא הצלחתי לטעון את הנתונים שלך. רענן את הדף."; return; }
     const before = JSON.stringify([picks, [...fav], settingsData()]);
     if (data) {
       picks = picksFrom(data); rebuildSets(); fav = new Set(data.fav || []);
-      applySettings(data.settings);
+      applySettings(data.settings); rebuildSets();
     }
+    // The version of the account data this page holds. A page left open in another tab or device holds an older one:
+    // it must not write its old draft board over a newer one, so every save first checks the version in the account.
+    cloudAt = data?.updated_at ?? null;
     savePicksLocal();
     const same = before === JSON.stringify([picks, [...fav], settingsData()]);
+    const newer = async () => {
+      const { data: cur, error: e2 } = await sb.from("user_state").select("updated_at").eq("user_id", user.id).maybeSingle();
+      if (e2) throw e2;
+      return cur && cloudAt && Date.parse(cur.updated_at) !== Date.parse(cloudAt);
+    };
+    const reload = async () => {
+      const { data: row, error: e3 } = await sb.from("user_state").select("picks, fav, settings, updated_at").eq("user_id", user.id).maybeSingle();
+      if (e3 || !row) return;
+      picks = picksFrom(row); fav = new Set(row.fav || []);
+      applySettings(row.settings); rebuildSets(); cloudAt = row.updated_at;
+      savePicksLocal(); syncControls(); compute(); render();
+      showToast("הנתונים עודכנו בחלון או במכשיר אחר, אז טענתי את הגרסה האחרונה");
+    };
     remote = {
       async save(d) {
-        const { error } = await sb.from("user_state").upsert({
+        if (await newer()) return reload();  // an older page never overwrites newer data
+        const { data: row, error } = await sb.from("user_state").upsert({
           user_id: user.id, picks: d.picks, fav: d.fav, settings: d.settings, updated_at: new Date().toISOString(),
-        });
+        }).select("updated_at").single();
         if (error) throw error;
+        cloudAt = row.updated_at;
       },
+      // back to this tab after a while: take what another tab or device saved meanwhile
+      async refresh() { if (!writing && await newer().catch(() => false)) await reload(); },
     };
     $("saveState").textContent = "הבחירות נשמרות בחשבון שלך";
     if (!same) { syncControls(); compute(); render(); }
   }
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && remote?.refresh) remote.refresh(); });
   function signedOut() {
     signedInAs = null; remote = null; siteUid = null;
     try { localStorage.removeItem(ACCOUNT_KEY); } catch (e) {}
