@@ -1707,7 +1707,7 @@ function rankAll(list, mode) {
     fpAdj.set(p.id, w < 1 ? fpRepl + (p.F[mode] - fpRepl) * w : p.F[mode]);
   }
   const market = list.filter((p) => !taken.has(p.id) && !mine.has(p.id)).map((p) => z.get(p.id).total).sort((a, b) => b - a).slice(0, size);
-  AVAIL_LEVEL = taken.size || mine.size ? (market.length ? market.reduce((a, b) => a + b, 0) / market.length : 0) : 0;
+  AVAIL_LEVEL = market.length ? market.reduce((a, b) => a + b, 0) / market.length : 0;  // ~0 before a draft
   const byCat = [...list].sort((a, b) => z.get(b.id).total - z.get(a.id).total);
   const byPts = [...list].sort((a, b) => fpAdj.get(b.id) - fpAdj.get(a.id));
   const rCat = new Map(byCat.map((p, i) => [p.id, i + 1]));
