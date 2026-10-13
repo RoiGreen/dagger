@@ -3723,7 +3723,8 @@ function bestMoves(me, opp, mineP, il, B, base) {
   const out = [];
   for (const { p: X } of pool) {
     const opts = open ? [{ drop: null, kind: null }] : [];
-    for (const Y of active) {
+    // a free roster spot: the add comes without a release (another release can still be picked in the row)
+    for (const Y of open ? [] : active) {
       const hurtLong = Y.hurt && Y.hurt.s === "OUT";
       if (hurtLong && ilFree) { opts.push({ drop: Y, kind: "il" }); continue; }
       const cheap = seasonValue(Y) <= seasonValue(X) + margin || (rank.get(Y.id) ?? 1e9) > size;
