@@ -3973,7 +3973,7 @@ function renderMatchup() {
       // a slot already taken by someone else is not offered (C and UTIL hold two)
       const full = (n) => n !== "BN" && n !== cur && (used[n] || 0) >= SLOT_CAP[n];
       const slotSel = `<select class="mslot${manual ? " set" : ""}" data-muslot="${t}|${p.id}" aria-label="עמדה בהרכב" title="איפה הוא משובץ בהרכב">
-        ${[...can, "BN"].map((n) => `<option value="${n}"${n === cur ? " selected" : ""}${full(n) ? " disabled" : ""}>${n}</option>`).join("")}</select>`;
+        ${[...can, "BN"].filter((n) => !full(n)).map((n) => `<option value="${n}"${n === cur ? " selected" : ""}>${n}</option>`).join("")}</select>`;
       const acts = onIL ? `<button type="button" class="mact" data-muback="${t}|${p.id}">חזרה מ־IL</button>`
         : `${p.hurt?.s === "OUT" && il.size < IL_SLOTS ? `<button type="button" class="mact" data-muil="${t}|${p.id}">IL</button>` : ""}${slotSel}<button type="button" class="mact" data-mudrop="${t}|${p.id}" title="שחרור">שחרר</button>`;
       return `<tr class="${onIL ? "ilrow" : ""}"><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span></span><small class="ppos">${esc(p.pos || "")}</small>${p.hurt ? injuryPill(p) : ""}</td>
