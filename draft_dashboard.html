@@ -533,6 +533,8 @@ table.mucats .sofar { display: block; font-size: .68rem; font-weight: 600; color
 table.box.murt td.macts { white-space: nowrap; text-align: end; }
 table.box.murt .mact { padding: 2px 7px; font-size: .72rem; margin-inline-start: 3px; }
 table.box.murt .mact.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+table.box.murt .mslot { width: 4.6em; padding: 2px 2px; font-size: .72rem; font-weight: 700; border-radius: 6px; margin-inline-start: 3px; }
+table.box.murt .mslot.set { border-color: var(--accent); color: var(--accent); }
 table.box tr.ilrow td { opacity: .55; }
 .muadd { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
 .muadd input { flex: 1 1 180px; } .muadd select { flex: 0 1 200px; width: auto; }
@@ -3453,18 +3455,26 @@ const LINEUP = [["PG", ["PG"]], ["SG", ["SG"]], ["G", ["PG", "SG"]], ["SF", ["SF
 const IL_SLOTS = 2;
 // The best lineup of one day: the most valuable players first, each one placed if the slots can still hold everyone
 // placed so far (moving earlier players between slots when needed). Greedy is exact here (a transversal matroid).
-function lineupFor(cands) {
+function lineupFor(cands, fixed = {}) {
   const at = new Array(LINEUP.length).fill(-1);
   const fits = (c, s) => !LINEUP[s][1] || LINEUP[s][1].some((x) => hasPos(c.p, x));
+  // players I put in a given slot go there first (if it fits him and is still free)
+  const held = new Set();
+  cands.forEach((c, ci) => {
+    const want = fixed[c.p.id];
+    if (!want || want === "BN") return;
+    const s = LINEUP.findIndex(([name], i) => name === want && at[i] < 0 && fits(c, i));
+    if (s >= 0) { at[s] = ci; held.add(s); }
+  });
   const place = (ci, seen) => {
     for (let s = 0; s < LINEUP.length; s++) {
-      if (seen[s] || !fits(cands[ci], s)) continue;
+      if (seen[s] || held.has(s) || !fits(cands[ci], s)) continue;
       seen[s] = true;
       if (at[s] < 0 || place(at[s], seen)) { at[s] = ci; return true; }
     }
     return false;
   };
-  cands.map((_, i) => i).sort((a, b) => cands[b].v - cands[a].v).forEach((ci) => place(ci, []));
+  cands.map((_, i) => i).filter((ci) => !at.includes(ci)).sort((a, b) => cands[b].v - cands[a].v).forEach((ci) => place(ci, []));
   const slot = new Map();
   at.forEach((ci, s) => { if (ci >= 0) slot.set(cands[ci].p.id, LINEUP[s][0]); });
   return slot;
@@ -3577,10 +3587,12 @@ function planWeek(roster, il, team, swap = null) {
     }
     // my own lineup: a player set "on" is placed first, one set "off" stays on the bench (my team only)
     const mineDay = { ...(team === myIdx() ? (st.lineup?.[d] || {}) : {}) };
-    for (const id of (st.bn?.[team] || [])) mineDay[id] = "off";  // set to BN: never in the lineup
+    const fixed = { ...(st.slots?.[team] || {}) };
+    for (const id of (st.bn?.[team] || [])) fixed[id] = "BN";
+    for (const [id, sl] of Object.entries(fixed)) if (sl === "BN" && !mineDay[id]) mineDay[id] = "off";  // BN: never in the lineup
     const benchLock = cands.filter((c) => mineDay[c.p.id] === "off");
     const pool = cands.filter((c) => mineDay[c.p.id] !== "off").map((c) => (mineDay[c.p.id] === "on" ? { ...c, v: 1e6 + c.v } : c));
-    const slot = lineupFor(pool);
+    const slot = lineupFor(pool, fixed);
     for (const c of benchLock) T.cell.set(`${c.p.id}|${d}`, { gm: c.gm, r: c.r, slot: null, ch: c.ch, lock: "off" });
     if (d > LOG_END) T.gamesAll += lineupFor(all).size;  // GTD / OUT count as a game here
     for (const c of pool) {
@@ -3935,9 +3947,12 @@ function renderMatchup() {
     const active = roster.filter((p) => !il.has(p.id));
     const rows = [...roster].sort((a, b) => (il.has(a.id) - il.has(b.id)) || muValue(b) - muValue(a)).map((p) => {
       const w = playerWeek(p, T), onIL = il.has(p.id);
-      const onBN = (st.bn?.[t] || []).includes(p.id);
+      const cur = (st.bn?.[t] || []).includes(p.id) ? "BN" : (st.slots?.[t]?.[p.id] || "");
+      const can = [...new Set(LINEUP.filter(([, pos]) => !pos || pos.some((x) => hasPos(p, x))).map(([n]) => n))];
+      const slotSel = `<select class="mslot${cur ? " set" : ""}" data-muslot="${t}|${p.id}" aria-label="עמדה בהרכב" title="איפה הוא משובץ בהרכב">
+        <option value="">אוטו</option>${[...can, "BN"].map((n) => `<option value="${n}"${n === cur ? " selected" : ""}>${n}</option>`).join("")}</select>`;
       const acts = onIL ? `<button type="button" class="mact" data-muback="${t}|${p.id}">חזרה מ־IL</button>`
-        : `${p.hurt?.s === "OUT" && il.size < IL_SLOTS ? `<button type="button" class="mact" data-muil="${t}|${p.id}">IL</button>` : ""}<button type="button" class="mact${onBN ? " on" : ""}" data-mubn="${t}|${p.id}" title="${onBN ? "להחזיר אותו לבחירה של ההרכב" : "על הספסל קבוע: לא נכנס לעשירייה"}">${onBN ? "מ־BN" : "BN"}</button><button type="button" class="mact" data-mudrop="${t}|${p.id}" title="שחרור">שחרר</button>`;
+        : `${p.hurt?.s === "OUT" && il.size < IL_SLOTS ? `<button type="button" class="mact" data-muil="${t}|${p.id}">IL</button>` : ""}${slotSel}<button type="button" class="mact" data-mudrop="${t}|${p.id}" title="שחרור">שחרר</button>`;
       return `<tr class="${onIL ? "ilrow" : ""}"><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span></span>${p.hurt ? injuryPill(p) : ""}</td>
         <td>${onIL ? "IL" : `${g1(w.starts)}/${w.games}`}</td>${CATS.map((c) => `<td>${onIL ? "" : cell9(w.o, c.k)}</td>`).join("")}<td class="macts">${acts}</td></tr>`;
     }).join("");
@@ -4050,6 +4065,14 @@ $("muOut").addEventListener("click", (e) => {
 }, true);
 $("muOut").addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.closest("[data-lu]")) e.target.click(); });
 $("muOut").addEventListener("change", (e) => {
+  const ss = e.target.closest("[data-muslot]");
+  if (ss) {
+    const [t, id] = ss.dataset.muslot.split("|").map(Number);
+    st.slots = st.slots || {}; st.slots[t] = st.slots[t] || {};
+    if (st.bn?.[t]) st.bn[t] = st.bn[t].filter((x) => x !== id);
+    if (ss.value) st.slots[t][id] = ss.value; else delete st.slots[t][id];
+    saveSettings(); return renderMatchup();
+  }
   const sel = e.target.closest("[data-mudropsel]");
   if (!sel) return;
   MU_DROP.set(Number(sel.dataset.mudropsel), sel.value);
