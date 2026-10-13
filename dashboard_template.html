@@ -542,6 +542,10 @@ table.box.murt .mact.on { background: var(--accent); border-color: var(--accent)
 table.box.murt .pday { font-family: var(--font-num); font-size: .68rem; font-weight: 700; color: var(--pos); margin-inline-start: 6px; }
 table.box.murt .pday.none { color: var(--muted); font-family: var(--font-body); font-weight: 600; }
 table.box.murt .pday.out { color: var(--neg); }
+/* the day's lineup stands out a little; the bench is quieter, with a line between them */
+table.box.murt tr.startrow td { background: color-mix(in srgb, var(--pos) 7%, transparent); }
+table.box.murt tr.benchrow td { opacity: .78; }
+table.box.murt tr.startrow + tr.benchrow td, table.box.murt tr.startrow + tr.ilrow td, table.box.murt tr.benchrow + tr.ilrow td { border-top: 2px solid var(--line); }
 table.box.murt .ppos { font-family: var(--font-num); font-size: .7rem; font-weight: 700; color: var(--muted); margin-inline-start: 6px; }
 .muauto .mact.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 table.box.murt .mslot { width: 4.6em; padding: 2px 2px; font-size: .72rem; font-weight: 700; border-radius: 6px; margin-inline-start: 3px; }
@@ -3983,7 +3987,8 @@ function renderMatchup() {
         ${[...can, "BN"].filter((n) => !full(n)).map((n) => `<option value="${n}"${n === cur ? " selected" : ""}>${n}</option>`).join("")}</select>`;
       const acts = onIL ? `<button type="button" class="mact" data-muback="${t}|${p.id}">חזרה מ־IL</button>`
         : `${p.hurt?.s === "OUT" && il.size < IL_SLOTS ? `<button type="button" class="mact" data-muil="${t}|${p.id}">IL</button>` : ""}${slotSel}<button type="button" class="mact" data-mudrop="${t}|${p.id}" title="שחרור">שחרר</button>`;
-      return `<tr class="${onIL ? "ilrow" : ""}"><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span></span><small class="ppos">${esc(p.pos || "")}</small>${onIL ? "" : (() => { const c = T.cell.get(`${p.id}|${d}`);
+      const role = onIL ? "ilrow" : cur === "BN" ? "benchrow" : "startrow";
+      return `<tr class="${role}"><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span></span><small class="ppos">${esc(p.pos || "")}</small>${onIL ? "" : (() => { const c = T.cell.get(`${p.id}|${d}`);
         return c?.out ? `<small class="pday out">OUT</small>` : c ? `<small class="pday">${esc(c.gm ? `${c.gm.g.h === p.team26 ? "" : "@"}${c.gm.opp}` : c.r ? `${c.r[2] ? "" : "@"}${c.r[1]}` : "")}</small>` : `<small class="pday none">אין משחק</small>`; })()}${p.hurt ? injuryPill(p) : ""}</td>
         <td>${onIL ? "IL" : `${g1(w.starts)}/${w.games}`}</td>${CATS.map((c) => `<td>${onIL ? "" : cell9(w.o, c.k)}</td>`).join("")}<td class="macts">${acts}</td></tr>`;
     }).join("");
