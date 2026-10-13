@@ -481,7 +481,9 @@ table.mucats tr.punted td { opacity: .4; }
 .mucat.lean-l { background: color-mix(in srgb, var(--neg) 12%, transparent); color: var(--neg); }
 .mucat.lose { background: color-mix(in srgb, var(--neg) 24%, transparent); color: var(--neg); }
 .munote { margin: 6px 0 0; font-size: .78rem; color: var(--muted); }
-.muwnav { display: inline-flex; align-items: center; gap: 6px; }
+.muwnav { display: inline-grid; justify-items: center; gap: 4px; }
+.muwnav .muwrow { display: inline-flex; align-items: center; gap: 6px; }
+.muwnav #muNow[hidden] { display: none; }
 .muwnav .mact { font-family: var(--font-num); font-size: .95rem; padding: 2px 10px; direction: ltr; unicode-bidi: isolate; }
 .muwnav .mact:disabled { opacity: .35; cursor: default; }
 .muwnav #muNow { font-family: var(--font-body); font-size: .78rem; }
@@ -1312,10 +1314,12 @@ table.cmpt td.lbl { min-width: 5.5em; }
           <div class="mupick"><span>היריב השבוע</span><select id="muOpp" aria-label="היריב השבוע"></select></div>
           <span class="muadds">פיק אפים השבוע: <input type="number" id="muAddsUsed" min="0" max="14" aria-label="פיק אפים שנוצלו"> מתוך <b id="muAddsMaxTxt"></b></span>
           <span class="muwnav">
-            <button type="button" class="mact" id="muPrev" aria-label="השבוע הקודם" title="השבוע הקודם"><svg viewBox="0 0 10 10" width="10" height="10" aria-hidden="true"><path d="M3 1.5 6.5 5 3 8.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
-            <span class="muweek" id="muWeek"></span>
-            <button type="button" class="mact" id="muNext" aria-label="השבוע הבא" title="השבוע הבא"><svg viewBox="0 0 10 10" width="10" height="10" aria-hidden="true"><path d="M7 1.5 3.5 5 7 8.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
             <button type="button" class="mact" id="muNow" hidden>השבוע</button>
+            <span class="muwrow">
+              <button type="button" class="mact" id="muPrev" aria-label="השבוע הקודם" title="השבוע הקודם"><svg viewBox="0 0 10 10" width="10" height="10" aria-hidden="true"><path d="M3 1.5 6.5 5 3 8.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+              <span class="muweek" id="muWeek"></span>
+              <button type="button" class="mact" id="muNext" aria-label="השבוע הבא" title="השבוע הבא"><svg viewBox="0 0 10 10" width="10" height="10" aria-hidden="true"><path d="M7 1.5 3.5 5 7 8.5" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/></svg></button>
+            </span>
           </span>
         </div>
         <div id="muOut"></div>
