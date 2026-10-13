@@ -533,7 +533,8 @@ table.mucats .sofar { display: block; font-size: .68rem; font-weight: 600; color
 table.box.murt td.macts { white-space: nowrap; text-align: end; }
 table.box.murt .mact { padding: 2px 7px; font-size: .72rem; margin-inline-start: 3px; }
 table.box.murt .mact.on { background: var(--accent); border-color: var(--accent); color: #fff; }
-.muauto { display: flex; justify-content: flex-end; margin: -2px 0 6px; }
+.muauto { display: flex; justify-content: flex-end; gap: 6px; margin: -2px 0 6px; }
+table.box.murt .ppos { font-family: var(--font-num); font-size: .7rem; font-weight: 700; color: var(--muted); margin-inline-start: 6px; }
 .muauto .mact.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 table.box.murt .mslot { width: 4.6em; padding: 2px 2px; font-size: .72rem; font-weight: 700; border-radius: 6px; margin-inline-start: 3px; }
 table.box.murt .mslot.set { border-color: var(--accent); color: var(--accent); }
@@ -3975,12 +3976,12 @@ function renderMatchup() {
         ${[...can, "BN"].map((n) => `<option value="${n}"${n === cur ? " selected" : ""}${full(n) ? " disabled" : ""}>${n}</option>`).join("")}</select>`;
       const acts = onIL ? `<button type="button" class="mact" data-muback="${t}|${p.id}">חזרה מ־IL</button>`
         : `${p.hurt?.s === "OUT" && il.size < IL_SLOTS ? `<button type="button" class="mact" data-muil="${t}|${p.id}">IL</button>` : ""}${slotSel}<button type="button" class="mact" data-mudrop="${t}|${p.id}" title="שחרור">שחרר</button>`;
-      return `<tr class="${onIL ? "ilrow" : ""}"><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span></span>${p.hurt ? injuryPill(p) : ""}</td>
+      return `<tr class="${onIL ? "ilrow" : ""}"><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span></span><small class="ppos">${esc(p.pos || "")}</small>${p.hurt ? injuryPill(p) : ""}</td>
         <td>${onIL ? "IL" : `${g1(w.starts)}/${w.games}`}</td>${CATS.map((c) => `<td>${onIL ? "" : cell9(w.o, c.k)}</td>`).join("")}<td class="macts">${acts}</td></tr>`;
     }).join("");
     const full = active.length >= st.roster;
     return `<div class="muroster"><h4>${esc(title)}</h4>
-      <div class="muauto"><button type="button" class="mact${manual ? "" : " on"}" data-muauto="${t}" title="משבץ את השחקנים החזקים ביותר בעמדות שמתאימות להם, כל יום מחדש">בחירה אוטומטית</button></div><table class="box murt"><thead><tr><th class="nosort">שחקן</th><th class="nosort" data-tip="משחקים בהרכב מתוך המשחקים שלו השבוע">הרכב</th>${CATS.map((c) => `<th class="nosort">${c.l}</th>`).join("")}<th class="nosort"></th></tr></thead><tbody>${rows}</tbody></table>
+      <div class="muauto"><button type="button" class="mact" data-muclear="${t}" title="כל השחקנים לספסל, כדי לבנות את ההרכב מהתחלה">איפוס הרכב</button><button type="button" class="mact${manual ? "" : " on"}" data-muauto="${t}" title="משבץ את השחקנים החזקים ביותר בעמדות שמתאימות להם, כל יום מחדש">בחירה אוטומטית</button></div><table class="box murt"><thead><tr><th class="nosort">שחקן</th><th class="nosort" data-tip="משחקים בהרכב מתוך המשחקים שלו השבוע">הרכב</th>${CATS.map((c) => `<th class="nosort">${c.l}</th>`).join("")}<th class="nosort"></th></tr></thead><tbody>${rows}</tbody></table>
       <div class="muadd" data-muaddbox="${t}">
         <input list="muFree" placeholder="הוספת שחקן חופשי…" autocomplete="off" data-muaddin="${t}" aria-label="שחקן להוספה">
         <select data-muaddout="${t}" aria-label="במקום">${full ? "" : `<option value="">יש מקום בסגל (${active.length}/${st.roster})</option>`}${active.map((p) => `<option value="${p.id}">במקום ${esc(p.name)}</option>`).join("")}</select>
@@ -4116,6 +4117,12 @@ $("muOut").addEventListener("click", (e) => {
   if (b.dataset.mudrop) { const [t, id] = pair(b.dataset.mudrop); return muMove(t, null, id, "drop"); }
   if (b.dataset.muil) { const [t, id] = pair(b.dataset.muil); return muMove(t, null, id, "il"); }
   if (b.dataset.muback) { const [t, id] = pair(b.dataset.muback); return muFromIL(t, id); }
+  if (b.dataset.muclear != null) {
+    const t = Number(b.dataset.muclear);
+    st.slots = st.slots || {};
+    st.slots[t] = Object.fromEntries(rosterOf(t).map((p) => [p.id, "BN"]));
+    saveSettings(); return renderMatchup();
+  }
   if (b.dataset.muauto != null) {
     const t = Number(b.dataset.muauto);
     if (st.slots) delete st.slots[t];
