@@ -4487,16 +4487,18 @@ async function connectSite() {
   async function signedIn(user) {
     if (signedInAs === user.id) return;
     signedInAs = user.id;
-    if (siteUid !== user.id) {  // another account than the cached one: start from nothing until its data arrives
-      siteUid = user.id; picks = []; rebuildSets(); fav = new Set(); render();
-    }
-    showAuth(false);
+    // This browser already holds this account's data: show it now. Otherwise the sign-in card stays up (saying it is
+    // loading) until the account's draft board arrives, so the table never flashes with every player free.
+    const cached = siteUid === user.id;
+    if (!cached) { siteUid = user.id; picks = []; rebuildSets(); fav = new Set(); $("authSubmit").disabled = true; $("authSubmit").textContent = "טוען…"; }
+    else showAuth(false);
+    const done = () => { $("authSubmit").textContent = "כניסה"; $("authSubmit").disabled = false; showAuth(false); };
     $("viewerName").textContent = `שלום, ${user.user_metadata?.username || user.email}`;
     $("signOutBtn").hidden = false;
     $("viewer").hidden = false;
     $("saveState").textContent = "טוען את הנתונים שלך…";
     const { data, error } = await sb.from("user_state").select("picks, fav, settings, updated_at").eq("user_id", user.id).maybeSingle();
-    if (error) { $("saveState").textContent = "לא הצלחתי לטעון את הנתונים שלך. רענן את הדף."; return; }
+    if (error) { done(); render(); $("saveState").textContent = "לא הצלחתי לטעון את הנתונים שלך. רענן את הדף."; return; }
     const before = JSON.stringify([picks, [...fav], settingsData()]);
     if (data) {
       picks = picksFrom(data); rebuildSets(); fav = new Set(data.fav || []);
@@ -4533,7 +4535,8 @@ async function connectSite() {
       async refresh() { if (!writing && await newer().catch(() => false)) await reload(); },
     };
     $("saveState").textContent = "הבחירות נשמרות בחשבון שלך";
-    if (!same) { syncControls(); compute(); render(); }
+    if (!same || !cached) { syncControls(); compute(); render(); }
+    if (!cached) done();
   }
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && remote?.refresh) remote.refresh(); });
   function signedOut() {
