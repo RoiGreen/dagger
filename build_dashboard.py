@@ -122,6 +122,37 @@ def team_logos() -> dict:
 FORM_DAYS = [7, 14, 30]
 
 
+TAU_CATS = ["PTS", "REB", "AST", "STL", "BLK", "FG3M", "FG_PCT", "FT_PCT", "TOV"]
+
+
+def attach_week_noise(players: list[dict]) -> None:
+    """Week-to-week noise for the weekly-noise score: for every player and season, how much his per-game average
+    jumps from one week to the next in each category (the variance of his weekly averages; FG% / FT% as impact =
+    makes - league% x attempts). p["tau"] = {"2025": [9 variances], ...}; the page averages it over the pool."""
+    files = {y: DATA / f"player_game_logs_regular{SEASON_TAG[y]}.csv" for y in AVAIL_SEASONS}
+    if CURRENT_LOGS.exists() and CURRENT_LOGS.stat().st_size > 200:
+        files[CURRENT] = CURRENT_LOGS
+    by_id = {p["id"]: p for p in players}
+    for y, f in files.items():
+        if not f.exists():
+            continue
+        d = pd.read_csv(f, usecols=["PLAYER_ID", "GAME_DATE", "MIN", "PTS", "REB", "AST", "STL", "BLK", "FG3M", "TOV",
+                                    "FGM", "FGA", "FTM", "FTA"])
+        d = d[d["MIN"] > 0].copy()
+        d["WEEK"] = (pd.to_datetime(d["GAME_DATE"].astype(str).str[:10]) - pd.to_datetime(d["GAME_DATE"].astype(str).str[:10]).min()).dt.days // 7
+        fg, ft = d["FGM"].sum() / d["FGA"].sum(), d["FTM"].sum() / d["FTA"].sum()
+        w = d.groupby(["PLAYER_ID", "WEEK"]).mean(numeric_only=True)
+        w["FG_PCT"] = w["FGM"] - fg * w["FGA"]
+        w["FT_PCT"] = w["FTM"] - ft * w["FTA"]
+        g = w.groupby(level=0)
+        var = g[TAU_CATS].var()
+        var = var[g.size() >= 4]
+        for pid, row in var.iterrows():
+            if pid in by_id:
+                by_id[pid].setdefault("tau", {})[str(y)] = [round(float(v), 4) for v in row.values]
+    print(f"Week-to-week noise for {sum(1 for p in players if 'tau' in p)} players")
+
+
 def attach_form(players: list[dict]) -> str | None:
     """Recent form: each player's averages over the last 7 / 14 / 30 days of regular-season games, counted back from
     the latest game played (the 2026-27 regular season once it starts, before that the end of 2025-26).
@@ -460,6 +491,7 @@ def main() -> None:
     attach_vs(players)
     attach_recent(players)
     form_end = attach_form(players)
+    attach_week_noise(players)
     # Embedded, because claude.ai artifacts cannot load images from other sites
     with_img = 0
     for p in players:

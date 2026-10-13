@@ -1178,20 +1178,21 @@ table.cmpt td.lbl { min-width: 5.5em; }
         <span><span class="sw" style="background:color-mix(in srgb, var(--pos) 38%, transparent)"></span>חזק בקטגוריה</span>
         <span><span class="sw" style="background:color-mix(in srgb, var(--neg) 38%, transparent)"></span>חלש בקטגוריה</span>
         <details class="zhelp" style="flex-basis:100%">
-          <summary>מה זה Z ואיך לקרוא אותו?</summary>
+          <summary>מה זה הציון ואיך לקרוא אותו?</summary>
           <div>
-            <span><b>Z מודד כמה שחקן בולט לעומת השחקן הממוצע שייבחר בליגה שלך</b> (<span id="zPool">104</span> שחקנים: קבוצות בליגה × שחקנים בסגל).</span>
-            <span>בכל קטגוריה בודקים בכמה "צעדים" השחקן מעל או מתחת לממוצע. צעד אחד = הפיזור הרגיל בקטגוריה. לכן חסימה שווה יותר מנקודה: חסימות נדירות, ומעט חסימות כבר מבדילות שחקן.</span>
+            <span><b>הציון אומר כמה השחקן יעזור לך לנצח מצ'אפ שבועי.</b> 0 = שחקן ממוצע מבין <span id="zPool">104</span> השחקנים שנבחרים בליגה שלך (קבוצות × שחקנים בסגל). פלוס = עוזר, מינוס = מוריד.</span>
+            <span><b>איך מחשבים:</b> בכל אחת מ־9 הקטגוריות בודקים בכמה השחקן טוב מהשחקן הממוצע, ומחברים. לדוגמה, שחקן שמוסר 9 אסיסטים כשהממוצע הוא 4 מקבל באסיסטים ציון גבוה.</span>
+            <span><b>למה חטיפות שוות פחות מאסיסטים:</b> השבוע של שחקן לא תמיד דומה לממוצע שלו. בחטיפות שחקן יכול לתת חטיפה אחת למשחק בשבוע אחד ושלוש בשבוע הבא, ולכן גם שחקן חזק בחטיפות לא מבטיח לך את הקטגוריה. באסיסטים המספרים יציבים יותר משבוע לשבוע, ולכן יתרון בהם שווה יותר.</span>
             <table>
-              <tr><td><b>0</b></td><td>בדיוק הממוצע של השחקנים שייבחרו</td></tr>
-              <tr><td><b>‎+1</b></td><td>טוב משמעותית, בערך בשליש העליון</td></tr>
-              <tr><td><b>‎+2</b></td><td>מצוין, מהבודדים בליגה בקטגוריה</td></tr>
-              <tr><td><b>‎−1</b></td><td>חלש משמעותית</td></tr>
+              <tr><td><b>3 ומעלה</b></td><td>יוצא דופן בקטגוריה. מעל 3 הציון ממשיך לעלות, אבל לאט, כדי שקטגוריה אחת לא תקבע הכול</td></tr>
+              <tr><td><b>2</b></td><td>מצוין, מהבודדים בליגה</td></tr>
+              <tr><td><b>1</b></td><td>טוב משמעותית</td></tr>
+              <tr><td><b>0</b></td><td>ממוצע</td></tr>
+              <tr><td><b>מינוס 1</b></td><td>חלש משמעותית</td></tr>
             </table>
-            <span><b>עמודת Z</b> היא סכום 9 הקטגוריות, בלי קטגוריות שסימנת ב־Punt. <b>צבעי התאים</b> הם ה־Z של כל קטגוריה: ירוק חוזק, אדום חולשה.</span>
-            <span>איבודים: פחות זה טוב, ולכן הציון הפוך. FG% ו־FT%: נלקחת בחשבון גם כמות הזריקות.</span>
-            <span><b>דוגמה: לוקה דונצ'יץ'</b> (2025-26, ליגה של 8 קבוצות). הוא חזק מאוד בנקודות (‎+2.8), בשלשות (‎+2.2) ובאסיסטים (‎+2.0), אבל חלש באיבודים (‎−2.5) ובאחוזים (FT% ‎−0.8, FG% ‎−0.4). הסכום יוצא כ־‎+5.2: שחקן מצוין, אבל החולשות מורידות אותו מתחת לשחקנים מאוזנים יותר. אם תסמן Punt על TOV, ה־‎−2.5 יוצא מהחישוב והוא קופץ בדירוג.</span>
-            <span>בליגת נקודות הדירוג לפי FPTS, ו־Z מוצג לעיון.</span>
+            <span><b>עמודת Z</b> היא סכום 9 הקטגוריות, בלי קטגוריות שסימנת ב־Punt. <b>צבעי התאים</b>: ירוק חוזק, אדום חולשה. באיבודים פחות זה טוב. באחוזים נלקחת בחשבון גם כמות הזריקות.</span>
+            <span><b>כוכבית ליד הציון:</b> לשחקן יש מעט משחקים, ולכן האתר זהיר. שחקן שהוכיח את עצמו בעונה הקודמת נשאר קרוב לרמה שלו אז, ושחקן בלי עבר נשאר קרוב לרמה של שחקן חופשי, עד שיצבור משחקים</span>
+            <span>בליגת נקודות הדירוג לפי FPTS, והציון מוצג לעיון.</span>
           </div>
         </details>
         <span><span class="rk">R #3</span> תחזית נתוני מחזור הרוקיז</span>
@@ -1450,6 +1451,7 @@ let picks = [];
 const myIdx = () => Math.min(Math.max(st.myPos, 1), Math.max(st.teams, 1)) - 1;
 const teamName = (i) => (st.teamNames[i] || "").trim() || `קבוצה ${i + 1}`;
 function rebuildSets() {
+  ROSTERS_CHANGED = true;
   DRAFT = draftState();
   draftTaken = new Set(picks.filter((x) => x.team !== myIdx()).map((x) => x.id));
   draftMine = new Set(picks.filter((x) => x.team === myIdx()).map((x) => x.id));
@@ -1561,9 +1563,46 @@ function meanStd(xs) {
   const v = xs.reduce((a, b) => a + (b - m) ** 2, 0) / (n - 1);
   return [m, Math.sqrt(v) || 1];
 }
-const Z_CAP = 3;
-function zScores(list, pool, mode) {
+// ---------- player value: the weekly score ----------
+// A league decided week by week rewards an edge that holds every week. For each category:
+//   score = (player's average − average of the drafted pool) ÷ √(spread between players² + 1.04 × week-to-week noise²)
+// FG% / FT% use impact = makes − pool% × attempts. The noise is how much a player's per-game average jumps from
+// one week to the next (build_dashboard.py, p.tau per season), averaged over the pool. All scores are then
+// multiplied by SCALE so the totals spread as widely as the old scores (order unchanged), and a category above 3
+// keeps only 30% of the excess (the "knee"): a standout still gets more, one category cannot take over.
+const KNEE = 3, KNEE_KEEP = 0.3;
+const knee = (z) => (Math.abs(z) <= KNEE ? z : Math.sign(z) * (KNEE + (Math.abs(z) - KNEE) * KNEE_KEEP));
+let SCALE = 1;
+const TAU_IX = Object.fromEntries(["PTS", "REB", "AST", "STL", "BLK", "FG3M", "FG_PCT", "FT_PCT", "TOV"].map((k, i) => [k, i]));
+// one player's week-to-week noise per category, over the chosen seasons (games-weighted); per 36 scales it up
+function playerNoise(p, mode) {
+  if (!p.tau) return null;
+  const ys = chosenSeasons().filter((y) => p.tau[y]);
+  const use = ys.length ? ys : Object.keys(p.tau);
+  let wsum = 0;
+  const v = new Array(9).fill(0);
+  for (const y of use) {
+    const g = p.seasons?.[y]?.gp || 1;
+    p.tau[y].forEach((x, i) => { v[i] += x * g; });
+    wsum += g;
+  }
+  const f = mode === "36" ? (36 / Math.max(p.L.g.MIN, 1)) ** 2 : 1;
+  return v.map((x) => (x / wsum) * f);
+}
+let NOISE_CACHE = { key: null, v: null };
+function poolNoise(pool, mode) {
+  const key = mode + "|" + pool.map((p) => p.id).join(",");
+  if (NOISE_CACHE.key === key) return NOISE_CACHE.v;
+  const rows = pool.map((p) => playerNoise(p, mode)).filter(Boolean);
+  const v = new Array(9).fill(0);
+  rows.forEach((r) => r.forEach((x, i) => { v[i] += x / rows.length; }));
+  NOISE_CACHE = { key, v: rows.length ? v : null };
+  return NOISE_CACHE.v;
+}
+// opts.raw: the score before SCALE and the knee; opts.old: the previous method (spread only, cut at ±3)
+function zScores(list, pool, mode, opts = {}) {
   const out = new Map(list.map((p) => [p.id, { z: {}, total: 0 }]));
+  const noise = opts.old ? null : poolNoise(pool, mode);
   for (const c of CATS) {
     let get;
     if (c.k === "FG_PCT" || c.k === "FT_PCT") {
@@ -1574,10 +1613,12 @@ function zScores(list, pool, mode) {
       get = (p) => p.L[mode][c.k];
     }
     const [mu, sd] = meanStd(pool.map(get));
+    const den = noise ? Math.sqrt(sd * sd + 1.04 * noise[TAU_IX[c.k]]) : sd;
     const sign = c.k === "TOV" ? -1 : 1;
     for (const p of list) {
-      // one category can move a player by at most 3 (a free-throw disaster cannot wipe out everything else)
-      const z = Math.max(-Z_CAP, Math.min(Z_CAP, sign * (get(p) - mu) / sd));
+      let z = sign * (get(p) - mu) / den;
+      if (opts.old) z = Math.max(-3, Math.min(3, z));
+      else if (!opts.raw) z = knee(z * SCALE);
       const r = out.get(p.id);
       r.z[c.k] = z;
       if (!st.punts.has(c.k)) r.total += z;
@@ -1587,30 +1628,55 @@ function zScores(list, pool, mode) {
 }
 // Sample weight of a player's average: 1 from a full sample (40 games; early in a season, half the games played so
 // far), then less and less with fewer games. Rookies' projections are not games, so they keep full weight.
-const Z_REPL = -1.5;  // about the level of the best players left after a draft
 function sampleWeight(p) {
   if (p.rookie || !p.gp) return 1;
   const full = chosenSeasons().every((y) => y === D.current) ? Math.max(1, 0.5 * (D.curMaxGp || 1)) : 40;
   const k = full / 5, g = Math.min(p.gp, full);
   return Math.min(1, (g / (g + k)) / (full / (full + k)));
 }
+// The season before the chosen ones: a player with 40+ games in it is "proven"
+const priorSeason = () => { const ys = chosenSeasons().filter((y) => y !== D.preseason); return ys.length ? Math.min(...ys) - 1 : null; };
+const sdOf = (xs) => meanStd(xs)[1];
+let REPL_LEVEL = -1.5;
 function rankAll(list, mode) {
   const size = Math.max(1, st.teams * st.roster);
   const real = list.filter((p) => !p.rookie);
   let pool = real, z;
-  for (let i = 0; i < 3; i++) {
-    z = zScores(list, pool, mode);
-    pool = [...real].sort((a, b) => z.get(b.id).total - z.get(a.id).total).slice(0, size);
+  SCALE = 1;
+  for (let i = 0; i < 10; i++) {
+    z = zScores(list, pool, mode, { raw: true });
+    const next = [...real].sort((a, b) => z.get(b.id).total - z.get(a.id).total).slice(0, size);
+    const same = next.length === pool.length && next.every((p) => pool.includes(p));
+    pool = next;
+    if (same) break;
   }
+  // SCALE: the new totals spread as widely as the old ones did, so the numbers stay familiar (the order is unchanged)
+  const rawT = zScores(pool, pool, mode, { raw: true }), oldT = zScores(pool, pool, mode, { old: true });
+  const sNew = sdOf(pool.map((p) => rawT.get(p.id).total)), sOld = sdOf(pool.map((p) => oldT.get(p.id).total));
+  SCALE = sNew > 0 ? sOld / sNew : 1;
   z = zScores(list, pool, mode);
-  // Few games = a less certain average: the value is pulled part of the way toward replacement level
-  // (no change from FULL_GAMES games up; about half the distance at 5 games). The player still shows, only lower.
+  // Replacement level: the average score of the 16 best players nobody has (ranks 105-120 before a draft)
+  const free = list.filter((p) => !p.rookie && !taken.has(p.id) && !mine.has(p.id)).sort((a, b) => z.get(b.id).total - z.get(a.id).total);
+  const freeBand = picks.length || taken.size || mine.size ? free.slice(0, 16)
+    : [...real].sort((a, b) => z.get(b.id).total - z.get(a.id).total).slice(size, size + 16);
+  REPL_LEVEL = freeBand.length ? freeBand.reduce((a, p) => a + z.get(p.id).total, 0) / freeBand.length : -1.5;
+  // Few games = a less certain average: the score is pulled part of the way toward a target. A proven player
+  // (40+ games the season before) is pulled toward his own score that season; anyone else toward replacement level.
+  const prior = priorSeason();
+  const proven = new Map();
+  if (prior != null) {
+    const back = list.filter((p) => !p.rookie && p.seasons?.[prior]?.gp >= 40 && sampleWeight(p) < 1)
+      .map((p) => ({ id: p.id, L: { [mode]: line(p.seasons[prior].s, mode) } }));
+    if (back.length) { const zb = zScores(back, pool, mode); back.forEach((b) => proven.set(b.id, zb.get(b.id).total)); }
+  }
   const fpRepl = pool.length ? [...pool].sort((a, b) => a.F[mode] - b.F[mode])[0].F[mode] : 0;
   const fpAdj = new Map();
   for (const p of list) {
     const w = sampleWeight(p), r = z.get(p.id);
     r.raw = r.total; r.w = w;
-    if (w < 1) r.total = Z_REPL + (r.total - Z_REPL) * w;
+    const target = proven.has(p.id) ? proven.get(p.id) : REPL_LEVEL;
+    r.target = target; r.proven = proven.has(p.id);
+    if (w < 1) r.total = target + (r.total - target) * w;
     fpAdj.set(p.id, w < 1 ? fpRepl + (p.F[mode] - fpRepl) * w : p.F[mode]);
   }
   const byCat = [...list].sort((a, b) => z.get(b.id).total - z.get(a.id).total);
@@ -1646,7 +1712,10 @@ function compute() {
   applySeasons(); computeTeams(); computeDist(); computeWeek();
   const list = players.filter((p) => p.has && p.L.g.MIN >= st.minMin);
   last = { list, now: rankAll(list, st.mode) };
+  ROSTERS_CHANGED = false;
 }
+// the replacement level comes from the free agents, so a change of rosters re-ranks before the next render
+let ROSTERS_CHANGED = false;
 
 // Which players the tables show: free agents, my team, my favorites (any of those chosen), or everyone
 function showOk(p) {
@@ -1673,6 +1742,7 @@ function passes(p) {
 
 let BODY_JOB = 0;  // a newer render stops the batches of the one before
 function render() {
+  if (ROSTERS_CHANGED && last) compute();
   const { list, now } = last;
   const m = st.mode;
   const allRows = list.map((p) => ({ p, rank: now.rank.get(p.id), z: now.z.get(p.id) }));
@@ -1724,7 +1794,7 @@ function render() {
     const cls = [st.sort === c.k ? "sorted" : "", st.sort === c.k && st.asc ? "asc" : "", c.nosort ? "nosort" : "", c.k === "act" ? "acts" : "",
                  c.cat && st.punts.has(c.k) ? "punted" : ""].join(" ");
     if (c.k === "rank" && posR) return posTh(posR);  // one position picked: show only the rank within it
-    const tip = c.k === "zTotal" ? ' title="כמה השחקן בולט לעומת השחקן הממוצע שייבחר בליגה, בסכום 9 הקטגוריות. 0 = ממוצע, ‎+1 בקטגוריה = טוב משמעותית"' : "";
+    const tip = c.k === "zTotal" ? ' title="כמה השחקן יעזור לך לנצח מצ׳אפ שבועי, בסכום 9 הקטגוריות. 0 = שחקן ממוצע מבין השחקנים שנבחרים בליגה"' : "";
     return `<th class="${cls}"${tip} ${c.nosort ? "" : `tabindex="0" data-k="${c.k}"`} scope="col">${esc(label)}</th>`;
   }).join("");
 
@@ -1741,7 +1811,7 @@ function render() {
       ${posR ? posTd(posR, p) : `<td class="rank${rank <= 3 ? " top" : ""}">${rank}</td>`}
       ${nameCell(p)}
       <td>${p.age ?? "–"}</td><td>${p.gp}</td>${availCell(p)}<td>${fmt1(p.L.g.MIN)}</td>${cats}
-      <td class="val"${z.w < 1 ? ` title="לפני תיקון המדגם: ${z.raw.toFixed(2)} (${p.gp} משחקים בלבד, הערך הוזז חלקית לכיוון הממוצע)"` : ""}>${z.total.toFixed(2)}${z.w < 0.97 ? `<i class="fewg">*</i>` : ""}</td><td class="val">${fmt1(p.F[m])}</td>
+      <td class="val"${z.w < 1 ? ` title="${p.gp} משחקים בלבד: הציון שלו העונה ${z.raw.toFixed(2)}, ונלקח בזהירות לכיוון ${z.proven ? "הרמה שלו בעונה הקודמת" : "הרמה של שחקן חופשי"} (${z.target.toFixed(2)})"` : ""}>${z.total.toFixed(2)}${z.w < 0.97 ? `<i class="fewg">*</i>` : ""}</td><td class="val">${fmt1(p.F[m])}</td>
       <td class="acts">${actions(p)}</td></tr>`;
   };
   const job = ++BODY_JOB, FIRST = 60, STEP = 80;
