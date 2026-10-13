@@ -534,6 +534,11 @@ table.box.murt td.macts { white-space: nowrap; text-align: end; }
 table.box.murt .mact { padding: 2px 7px; font-size: .72rem; margin-inline-start: 3px; }
 table.box.murt .mact.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 .muauto { display: flex; justify-content: flex-end; gap: 6px; margin: -2px 0 6px; }
+.muday { display: flex; flex-wrap: wrap; align-items: center; justify-content: center; gap: 6px; margin: 14px 0 4px; font-weight: 700; color: var(--muted); }
+.muday .mact.on { background: var(--accent); border-color: var(--accent); color: #fff; }
+table.box.murt .pday { font-family: var(--font-num); font-size: .68rem; font-weight: 700; color: var(--pos); margin-inline-start: 6px; }
+table.box.murt .pday.none { color: var(--muted); font-family: var(--font-body); font-weight: 600; }
+table.box.murt .pday.out { color: var(--neg); }
 table.box.murt .ppos { font-family: var(--font-num); font-size: .7rem; font-weight: 700; color: var(--muted); margin-inline-start: 6px; }
 .muauto .mact.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 table.box.murt .mslot { width: 4.6em; padding: 2px 2px; font-size: .72rem; font-weight: 700; border-radius: 6px; margin-inline-start: 3px; }
@@ -3459,15 +3464,13 @@ const IL_SLOTS = 2;
 // The best lineup of one day: the most valuable players first, each one placed if the slots can still hold everyone
 // placed so far (moving earlier players between slots when needed). Greedy is exact here (a transversal matroid).
 const SLOT_CAP = LINEUP.reduce((m, [n]) => ({ ...m, [n]: (m[n] || 0) + 1 }), {});
-// a team's standing lineup: what I set, or else the strongest fit of the active players (everyone else on BN)
-function slotsOf(t, active) {
-  if (st.slots?.[t]) {
-    const out = {};
-    for (const p of active) out[p.id] = st.slots[t][p.id] || "BN";
-    return out;
-  }
-  const slot = lineupFor(active.map((p) => ({ p, v: muValue(p) })));
-  return Object.fromEntries(active.map((p) => [p.id, slot.get(p.id) || "BN"]));
+// A team's lineup on one day: what I set for that day, or else the best lineup of those who play that day
+// (T = the team's week plan, so a player without a game that day is on the bench)
+let MU_DAY = null;  // the day the roster tables show
+function slotsOf(t, active, d, T) {
+  const set = st.daySlots?.[d]?.[t];
+  if (set) return Object.fromEntries(active.map((p) => [p.id, set[p.id] || "BN"]));
+  return Object.fromEntries(active.map((p) => [p.id, T.cell.get(`${p.id}|${d}`)?.slot || "BN"]));
 }
 function lineupFor(cands, fixed = {}) {
   const at = new Array(LINEUP.length).fill(-1);
@@ -3601,7 +3604,8 @@ function planWeek(roster, il, team, swap = null) {
     }
     // my own lineup: a player set "on" is placed first, one set "off" stays on the bench (my team only)
     const mineDay = { ...(team === myIdx() ? (st.lineup?.[d] || {}) : {}) };
-    const fixed = st.slots?.[team] ? Object.fromEntries(who.map((p) => [p.id, st.slots[team][p.id] || "BN"])) : {};
+    const daySet = st.daySlots?.[d]?.[team];
+    const fixed = daySet ? Object.fromEntries(who.map((p) => [p.id, daySet[p.id] || "BN"])) : {};
     for (const [id, sl] of Object.entries(fixed)) if (sl === "BN" && !mineDay[id]) mineDay[id] = "off";  // BN: never in the lineup
     const benchLock = cands.filter((c) => mineDay[c.p.id] === "off");
     const pool = cands.filter((c) => mineDay[c.p.id] !== "off").map((c) => (mineDay[c.p.id] === "on" ? { ...c, v: 1e6 + c.v } : c));
@@ -3891,6 +3895,9 @@ function renderMatchup() {
   }
   // the daily grid of who plays and who starts
   const gridSide = st.muGrid === "b" ? "b" : "a";
+  // the day the roster tables show: today when it is in this week, else the week's first day
+  { const td = etDay(new Date()), days = weekDays();
+    if (!MU_DAY || !days.includes(MU_DAY)) MU_DAY = days.includes(td) ? td : days[0]; }
   const G = gridSide === "a" ? { roster: mineP, T: A, il: ilA } : { roster: oppP, T: B, il: ilB };
   const today = etDay(new Date());
   const gridRows = [...G.roster].sort((a, b) => (G.il.has(a.id) - G.il.has(b.id)) || muValue(b) - muValue(a)).map((p) => {
@@ -3959,8 +3966,9 @@ function renderMatchup() {
   const rosterTable = (side, t, roster, T, il, title) => {
     const active = roster.filter((p) => !il.has(p.id));
     // the lineup shown: the one I set, or the strongest one (each slot filled once, the rest on the bench)
-    const manual = !!st.slots?.[t];
-    const shown = slotsOf(t, active);
+    const d = MU_DAY;
+    const manual = !!st.daySlots?.[d]?.[t];
+    const shown = slotsOf(t, active, d, T);
     const used = {};
     for (const v of Object.values(shown)) used[v] = (used[v] || 0) + 1;
     // in lineup order, like the league app: PG SG G SF PF F C C UTIL UTIL, then the bench, then IL
@@ -3976,7 +3984,8 @@ function renderMatchup() {
         ${[...can, "BN"].filter((n) => !full(n)).map((n) => `<option value="${n}"${n === cur ? " selected" : ""}>${n}</option>`).join("")}</select>`;
       const acts = onIL ? `<button type="button" class="mact" data-muback="${t}|${p.id}">חזרה מ־IL</button>`
         : `${p.hurt?.s === "OUT" && il.size < IL_SLOTS ? `<button type="button" class="mact" data-muil="${t}|${p.id}">IL</button>` : ""}${slotSel}<button type="button" class="mact" data-mudrop="${t}|${p.id}" title="שחרור">שחרר</button>`;
-      return `<tr class="${onIL ? "ilrow" : ""}"><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span></span><small class="ppos">${esc(p.pos || "")}</small>${p.hurt ? injuryPill(p) : ""}</td>
+      return `<tr class="${onIL ? "ilrow" : ""}"><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span></span><small class="ppos">${esc(p.pos || "")}</small>${onIL ? "" : (() => { const c = T.cell.get(`${p.id}|${d}`);
+        return c?.out ? `<small class="pday out">OUT</small>` : c ? `<small class="pday">${esc(c.gm ? `${c.gm.g.h === p.team26 ? "" : "@"}${c.gm.opp}` : c.r ? `${c.r[2] ? "" : "@"}${c.r[1]}` : "")}</small>` : `<small class="pday none">אין משחק</small>`; })()}${p.hurt ? injuryPill(p) : ""}</td>
         <td>${onIL ? "IL" : `${g1(w.starts)}/${w.games}`}</td>${CATS.map((c) => `<td>${onIL ? "" : cell9(w.o, c.k)}</td>`).join("")}<td class="macts">${acts}</td></tr>`;
     }).join("");
     const full = active.length >= st.roster;
@@ -4050,6 +4059,7 @@ function renderMatchup() {
     </section>
     <div class="muvs"><b>${esc(myName)}</b>${(D.logos || {}).NBA ? `<img src="${D.logos.NBA}" alt="NBA">` : ""}<b>${esc(oppName)}</b></div>
     <datalist id="muFree">${freeList.slice(0, 400).map((p) => `<option value="${esc(`${p.name} · ${p.team26}`)}"></option>`).join("")}</datalist>
+    <div class="muday"><span>ההרכב ליום</span>${weekDays().map((d) => `<button type="button" class="mact${d === MU_DAY ? " on" : ""}" data-muday="${d}">${esc(dayLabel(d))}</button>`).join("")}</div>
     <div class="mugrid murosters">${rosterTable("a", me, mineP, A, ilA, myName)}${rosterTable("b", st.muOpp, oppP, B, ilB, oppName)}</div>`;
 }
 $("muOpp").addEventListener("change", (e) => { st.muOpp = Number(e.target.value); saveSettings(); renderMatchup(); });
@@ -4058,6 +4068,10 @@ for (const [id, d] of [["muPrev", -1], ["muNext", 1], ["muNow", 0]]) {
 }
 $("muAddsMax").addEventListener("input", (e) => { const v = Number(e.target.value); if (Number.isFinite(v)) { st.weekAdds = Math.min(14, Math.max(0, v)); update(false); } });
 $("muAddsUsed").addEventListener("input", (e) => { const v = Number(e.target.value); if (Number.isFinite(v)) { st.muAdds = { week: WEEK.from, n: Math.min(14, Math.max(0, v)) }; saveSettings(); renderMatchup(); } });
+function pruneDays() {
+  const old = shiftDay(etDay(new Date()), -21);
+  for (const d of Object.keys(st.daySlots || {})) if (d < old || !Object.keys(st.daySlots[d]).length) delete st.daySlots[d];
+}
 // my lineup: cycle a cell, copy yesterday, reset a day
 function luSave() {
   st.lineup = st.lineup || {};
@@ -4092,10 +4106,14 @@ $("muOut").addEventListener("change", (e) => {
   const ss = e.target.closest("[data-muslot]");
   if (ss) {
     const [t, id] = ss.dataset.muslot.split("|").map(Number);
-    st.slots = st.slots || {};
-    if (!st.slots[t]) st.slots[t] = slotsOf(t, rosterOf(t).filter((p) => !ilOf(t).has(p.id)));
-    st.slots[t][id] = ss.value;
-    saveSettings(); return renderMatchup();
+    const d = MU_DAY, team = t;
+    st.daySlots = st.daySlots || {}; st.daySlots[d] = st.daySlots[d] || {};
+    if (!st.daySlots[d][team]) {
+      const Tt = planWeek(rosterOf(team), ilOf(team), team);
+      st.daySlots[d][team] = slotsOf(team, rosterOf(team).filter((p) => !ilOf(team).has(p.id)), d, Tt);
+    }
+    st.daySlots[d][team][id] = ss.value;
+    pruneDays(); saveSettings(); return renderMatchup();
   }
   const sel = e.target.closest("[data-mudropsel]");
   if (!sel) return;
@@ -4117,15 +4135,16 @@ $("muOut").addEventListener("click", (e) => {
   if (b.dataset.mudrop) { const [t, id] = pair(b.dataset.mudrop); return muMove(t, null, id, "drop"); }
   if (b.dataset.muil) { const [t, id] = pair(b.dataset.muil); return muMove(t, null, id, "il"); }
   if (b.dataset.muback) { const [t, id] = pair(b.dataset.muback); return muFromIL(t, id); }
+  if (b.dataset.muday) { MU_DAY = b.dataset.muday; return renderMatchup(); }
   if (b.dataset.muclear != null) {
     const t = Number(b.dataset.muclear);
-    st.slots = st.slots || {};
-    st.slots[t] = Object.fromEntries(rosterOf(t).map((p) => [p.id, "BN"]));
-    saveSettings(); return renderMatchup();
+    st.daySlots = st.daySlots || {}; st.daySlots[MU_DAY] = st.daySlots[MU_DAY] || {};
+    st.daySlots[MU_DAY][t] = Object.fromEntries(rosterOf(t).map((p) => [p.id, "BN"]));
+    pruneDays(); saveSettings(); return renderMatchup();
   }
   if (b.dataset.muauto != null) {
     const t = Number(b.dataset.muauto);
-    if (st.slots) delete st.slots[t];
+    if (st.daySlots?.[MU_DAY]) delete st.daySlots[MU_DAY][t];
     if (st.bn) delete st.bn[t];
     saveSettings(); return renderMatchup();
   }
