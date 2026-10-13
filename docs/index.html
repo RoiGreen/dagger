@@ -1207,8 +1207,8 @@ table.cmpt td.lbl { min-width: 5.5em; }
         <details class="zhelp" style="flex-basis:100%">
           <summary>מה זה ציון Z?</summary>
           <div>
-            <span><b>כמה השחקן יעזור לך לנצח מצ'אפ שבועי, לעומת שחקן שאפשר להרים בחינם.</b> 0 = ברמה של שחקן חופשי, פלוס = עדיף עליו, מינוס = עדיף שחקן חופשי</span>
-            <span><b>איך מחושב:</b> בכל קטגוריה בודקים בכמה השחקן מעל או מתחת לממוצע (ירוק או אדום בטבלה), מחברים את 9 הקטגוריות, ומוסיפים <span id="zShift">2.8</span> כדי ש־0 יהיה הרמה של שחקן חופשי</span>
+            <span><b>כמה השחקן יעזור לך לנצח מצ'אפ שבועי, לעומת השחקנים שיישארו בלי קבוצה כשכל הסגלים בליגה מלאים</b> (מקום <span id="zRepl">105</span> ומטה). 0 = ברמה שלהם, פלוס = שווה מקום בסגל, מינוס = לא שווה מקום בסגל</span>
+            <span><b>איך מחושב:</b> בכל קטגוריה בודקים בכמה השחקן מעל או מתחת לממוצע (ירוק או אדום בטבלה), מחברים את 9 הקטגוריות, ומוסיפים <span id="zShift">2.8</span> כדי ש־0 יהיה הרמה שלהם</span>
             <span id="zExSum"></span>
             <span><b>כדאי לדעת:</b> חטיפות וחסימות שוות פחות, כי הן משתנות הרבה משבוע לשבוע. באחוזים נספרת גם כמות הזריקות. קטגוריה ב־Punt לא נספרת. כוכבית = מעט משחקים, אז הציון מחושב בזהירות</span>
           </div>
@@ -1767,6 +1767,7 @@ function passes(p) {
 function fillZHelp(list, now) {
   const fx = (v) => (v < 0 ? `מינוס ${Math.abs(v).toFixed(1)}` : v.toFixed(1));
   $("zShift").textContent = (-REPL_LEVEL).toFixed(1);
+  $("zRepl").textContent = st.teams * st.roster + 1;
   const top = list.length ? list.reduce((a, b) => (now.rank.get(b.id) < now.rank.get(a.id) ? b : a)) : null;
   if (!top) return;
   const z = now.z.get(top.id);
