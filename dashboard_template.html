@@ -1534,8 +1534,7 @@ function applySettings(s) {
   // What the user built stays: league setup (format, teams, roster, Punt), draft settings, table marks
   // (favorites and draft picks are stored apart from the settings).
   for (const k of ["q", "minGp", "minMin", "catFilters", "pos", "teamSel", "maxAge", "hideTaken", "onlyMine", "show", "onlyMoved", "noHurt", "onlyFav",
-    "inj", "rookies", "roles", "weekGames", "formWin", "sort", "asc", "tab", "advSort", "advAsc", "teamSort", "teamAsc", "availSeasons", "vsOpp", "mode", "cmp", "muWeekOff", "muGrid"]) delete s[k];
-  if (s.onlyInj && !s.inj) s.inj = "only";
+    "inj", "rookies", "roles", "weekGames", "formWin", "sort", "asc", "tab", "advSort", "advAsc", "teamSort", "teamAsc", "availSeasons", "vsOpp", "mode", "cmp", "muWeekOff", "muGrid", "onlyInj", "role", "team", "minAst", "minCat", "minVal"]) delete s[k];
   if (!Array.isArray(s.roles)) s.roles = s.role ? [s.role] : [];
   if (!Array.isArray(s.teamSel)) s.teamSel = s.team ? [s.team] : [];
   s.teamSel = s.teamSel.filter((x) => x !== "-");  // the free-agent option is gone
