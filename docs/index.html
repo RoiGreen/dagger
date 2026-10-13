@@ -1209,12 +1209,13 @@ table.cmpt td.lbl { min-width: 5.5em; }
           <summary>איך מחושב ציון Z?</summary>
           <div>
             <span><b>ציון Z אומר כמה השחקן טוב לעומת השחקנים הטובים שעדיין זמינים בשוק.</b> 0 = ממוצע של <span id="zPool">104</span> הזמינים הטובים, פלוס = טוב מהם, מינוס = חלש מהם</span>
-            <span><b>שלב 1, כל קטגוריה:</b> בכמה השחקן מעל או מתחת לממוצע (ירוק או אדום בטבלה). פער נדיר בקטגוריה שווה יותר</span>
+            <span><b>שלב 1, ציון בכל קטגוריה:</b> (השחקן פחות הממוצע) ÷ הפער הרגיל בקטגוריה</span>
+            <span><b>הפער הרגיל</b> משלב שני דברים: כמה השחקנים שונים זה מזה בקטגוריה, וכמה שחקן משתנה משבוע לשבוע. לכן יתרון בקטגוריה שקופצת הרבה, כמו חטיפות, שווה פחות</span>
             <span class="zex" id="zExCat"></span>
-            <span><b>שלב 2, מחברים את 9 הקטגוריות</b></span>
+            <span><b>שלב 2, מחברים את 9 הקטגוריות</b> (בטבלה: ירוק = חזק, אדום = חלש)</span>
             <span class="zex" id="zExSum"></span>
             <span id="zMarket"></span>
-            <span><b>כדאי לדעת:</b> חטיפות וחסימות שוות פחות, כי הן משתנות הרבה משבוע לשבוע. באחוזים נספרת גם כמות הזריקות. קטגוריה ב־Punt לא נספרת. כוכבית = מעט משחקים, אז הציון מחושב בזהירות</span>
+            <span><b>כדאי לדעת:</b> באחוזים בודקים כמה סלים השחקן קולע מעל או מתחת לאחוז הממוצע, כך שגם כמות הזריקות נספרת. באיבודים, פחות זה טוב. קטגוריה ב־Punt לא נספרת. כוכבית = מעט משחקים, אז הציון מחושב בזהירות</span>
           </div>
         </details>
         <span><span class="rk">R #3</span> תחזית נתוני מחזור הרוקיז</span>
@@ -1664,6 +1665,7 @@ let REPL_LEVEL = -1.5;
 // What the tables show: the score against the best players still on the market right now (the average of the
 // top teams x roster of them = 0). Before a draft that is the plain score; as players are taken it rises. The order never changes.
 let AVAIL_LEVEL = 0;
+let LAST_POOL = [];
 const shownVal = (total) => total - AVAIL_LEVEL;
 function rankAll(list, mode) {
   const size = Math.max(1, st.teams * st.roster);
@@ -1682,6 +1684,7 @@ function rankAll(list, mode) {
   const sNew = sdOf(pool.map((p) => rawT.get(p.id).total)), sOld = sdOf(pool.map((p) => oldT.get(p.id).total));
   SCALE = sNew > 0 ? sOld / sNew : 1;
   z = zScores(list, pool, mode);
+  LAST_POOL = pool;  // for the worked example in the score explanation
   // Replacement level: the average score of the 16 best players who will still be free once every roster is full.
   // The roster spots still open are skipped, so it stays put through a draft (ranks 105-120 before it, the best
   // 16 free agents once rosters are full)
@@ -1771,23 +1774,30 @@ function passes(p) {
     catOk(p);
 }
 
-// The score explanation's example: the top player of the ranking as it is now
+// The score explanation's example: the top player of the ranking as it is now, worked out step by step
+const HEB_CAT = { PTS: "נקודות", REB: "ריבאונדים", AST: "אסיסטים", STL: "חטיפות", BLK: "חסימות", FG3M: "שלשות", FG_PCT: "אחוז מהשדה", FT_PCT: "אחוז עונשין", TOV: "איבודים" };
 function fillZHelp(list, now) {
-  const fx = (v) => (v < 0 ? `מינוס ${Math.abs(v).toFixed(1)}` : v.toFixed(1));
-  const size = st.teams * st.roster;
+  const fx = (v, d = 1) => (v < 0 ? `מינוס ${Math.abs(v).toFixed(d)}` : v.toFixed(d));
+  const mode = st.mode, size = st.teams * st.roster;
   $("zPool").textContent = size;
   const byR = [...list].sort((a, b) => now.rank.get(a.id) - now.rank.get(b.id));
-  const top = byR[0];
+  const top = byR[0], pool = LAST_POOL.length ? LAST_POOL : byR.slice(0, size);
   if (!top) return;
-  const z = now.z.get(top.id), pool = byR.slice(0, size), nm = `<bdi>${esc(top.name)}</bdi>`;
-  // his strongest counting category, with his average next to the league's
+  const z = now.z.get(top.id), nm = `<bdi>${esc(top.name)}</bdi>`;
+  // his strongest counting category, every step of it
   const c = CATS.filter((k) => !k.k.endsWith("_PCT") && k.k !== "TOV" && !st.punts.has(k.k)).sort((a, b) => z.z[b.k] - z.z[a.k])[0];
-  const avg = pool.reduce((a, p) => a + p.L.g[c.k], 0) / pool.length;
-  $("zExCat").innerHTML = `לדוגמה, ${nm} ב־<bdi>${c.l}</bdi>: ${top.L.g[c.k].toFixed(1)} למשחק לעומת ממוצע של ${avg.toFixed(1)}, ולכן ${fx(z.z[c.k])}`;
-  const parts = CATS.filter((k) => !st.punts.has(k.k)).map((k) => `<bdi>${k.l} ${fx(z.z[k.k])}</bdi>`).join(", ");
+  const [mu, sd] = meanStd(pool.map((p) => p.L[mode][c.k]));
+  const wk = Math.sqrt(poolNoise(pool, mode)[TAU_IX[c.k]]), den = Math.sqrt(sd * sd + 1.04 * wk * wk);
+  const x = top.L[mode][c.k], raw = (x - mu) / den, scaled = raw * SCALE, name = HEB_CAT[c.k];
+  $("zExCat").innerHTML = `<b>לדוגמה, ${nm} ב${name}:</b><br>
+    • הפער מהממוצע: ${x.toFixed(1)} פחות ${mu.toFixed(1)} = ${fx(x - mu)}<br>
+    • הפער הרגיל: השחקנים שונים זה מזה ב־${sd.toFixed(1)} ${name} בממוצע, ושחקן משתנה משבוע לשבוע ב־${wk.toFixed(1)}. ביחד ${den.toFixed(2)} (שורש של ${sd.toFixed(1)} בריבוע ועוד ${wk.toFixed(1)} בריבוע)<br>
+    • ${fx(x - mu)} ÷ ${den.toFixed(2)} = ${fx(raw, 2)}, ואחרי התאמה לסולם (כפול ${SCALE.toFixed(1)}) = ${fx(scaled, 2)}<br>
+    ${scaled > 3 ? `• מעל 3 נספר רק 30% מהעודף, אז הציון ב${name} הוא <b>${fx(z.z[c.k])}</b>` : `• הציון ב${name} הוא <b>${fx(z.z[c.k])}</b>`}`;
+  const parts = CATS.filter((k) => !st.punts.has(k.k)).map((k) => `${HEB_CAT[k.k]} ${fx(z.z[k.k])}`).join(", ");
   // once players are taken, the market is weaker: every score rises by the same amount (the order stays)
   const shift = Math.abs(AVAIL_LEVEL) >= 0.05;
-  $("zExSum").innerHTML = `${nm}: ${parts}. ביחד <b>${fx(z.total)}</b>`;
+  $("zExSum").innerHTML = `${nm}: ${parts}. ביחד <b>${fx(z.total)}</b>${shift ? "" : ` = ציון Z`}`;
   $("zMarket").innerHTML = shift
     ? `<b>שלב 3, השוק נחלש:</b> השחקנים שכבר נבחרו יצאו מהשוק, אז כל הציונים עולים ב־${fx(-AVAIL_LEVEL)}. הסדר בין השחקנים לא משתנה<br><span class="zex">${nm}: ${fx(z.total)} ועוד ${fx(-AVAIL_LEVEL)} = ציון Z של <b>${fx(shownVal(z.total))}</b></span>` : "";
 }
