@@ -658,6 +658,11 @@ table.dboard tfoot td { font-weight: 700; font-family: var(--font-num); border-t
   padding: 22px; display: grid; gap: 14px; box-shadow: 0 10px 30px rgba(0,0,0,.12); }
 .auth-card h2 { margin: 0; font-family: var(--font-display); font-weight: 400; font-size: 1.5rem; }
 .auth-card h2 .yr { font-family: var(--font-num); font-weight: 700; color: var(--accent); }
+.auth-card h2.authbrand { display: grid; grid-template-columns: 52px 1fr 52px; align-items: center; gap: 8px; }
+.authbrand .ab-ball { width: 52px; height: 52px; }
+.authbrand .ab-text { display: grid; justify-items: center; line-height: 1.05; }
+.authbrand .ab-name { font-family: var(--font-display); font-size: 2.1rem; font-weight: 700; letter-spacing: .02em; }
+.authbrand .ab-sub { font-family: var(--font-num); font-size: 1.05rem; font-weight: 700; letter-spacing: .14em; text-transform: uppercase; color: var(--accent); }
 .auth-card input { font: inherit; color: var(--ink); background: var(--surface); border: 1px solid var(--line); border-radius: 8px; padding: 9px 10px; width: 100%; }
 .auth-card .primary { font: inherit; font-weight: 700; border: 0; border-radius: 8px; padding: 10px; cursor: pointer;
   background: var(--accent); color: var(--accent-ink); }
@@ -988,7 +993,8 @@ table.cmpt td.lbl { min-width: 5.5em; }
 </script>
 <div class="auth" id="auth" hidden>
   <form class="auth-card" id="authForm" novalidate>
-    <h2 class="authbrand">Dagger <span class="yr">פנטזי NBA 2026-27</span></h2>
+    <h2 class="authbrand"><svg class="ab-ball" viewBox="0 0 48 48" aria-hidden="true"><circle cx="24" cy="24" r="21" fill="var(--accent)"/><g fill="none" stroke="#1a1208" stroke-width="2.2"><circle cx="24" cy="24" r="21"/><path d="M24 3v42M3 24h42M9.2 9.2c7.6 7 7.6 22.6 0 29.6M38.8 9.2c-7.6 7-7.6 22.6 0 29.6"/></g></svg>
+      <span class="ab-text"><span class="ab-name" dir="ltr">Dagger</span><span class="ab-sub" dir="ltr">Fantasy NBA</span></span><span class="ab-pad" aria-hidden="true"></span></h2>
     <div class="seg" role="group" aria-label="כניסה או הרשמה" id="authTabs">
       <button type="button" data-auth="in" aria-pressed="true">כניסה</button>
       <button type="button" data-auth="up" aria-pressed="false">הרשמה</button>
