@@ -1205,10 +1205,11 @@ table.cmpt td.lbl { min-width: 5.5em; }
         <span><span class="sw" style="background:color-mix(in srgb, var(--pos) 38%, transparent)"></span>חזק בקטגוריה</span>
         <span><span class="sw" style="background:color-mix(in srgb, var(--neg) 38%, transparent)"></span>חלש בקטגוריה</span>
         <details class="zhelp" style="flex-basis:100%">
-          <summary>מה זה ציון Z?</summary>
+          <summary>איך מחושב ציון Z?</summary>
           <div>
-            <span><b>כמה השחקן יעזור לך לנצח מצ'אפ שבועי, לעומת השחקנים שיישארו בלי קבוצה כשכל הסגלים בליגה מלאים</b> (מקום <span id="zRepl">105</span> ומטה). 0 = ברמה שלהם, פלוס = שווה מקום בסגל, מינוס = לא שווה מקום בסגל</span>
-            <span><b>איך מחושב:</b> בכל קטגוריה בודקים בכמה השחקן מעל או מתחת לממוצע (ירוק או אדום בטבלה), מחברים את 9 הקטגוריות, ומוסיפים <span id="zShift">2.8</span> כדי ש־0 יהיה הרמה שלהם</span>
+            <span><b>1. ציון בכל קטגוריה:</b> משווים את השחקן לממוצע של <span id="zPool">104</span> השחקנים שנבחרים בליגה שלך. מעל הממוצע = פלוס (ירוק), מתחת = מינוס (אדום). ככל שהפער נדיר יותר בקטגוריה, הציון גבוה יותר</span>
+            <span id="zExCat"></span>
+            <span><b>2. מחברים את 9 הקטגוריות ומוסיפים <span id="zShift">2.8</span>,</b> כך שהשחקנים שיישארו בלי קבוצה (מקום <span id="zRepl">105</span> ומטה) מקבלים בערך 0</span>
             <span id="zExSum"></span>
             <span><b>כדאי לדעת:</b> חטיפות וחסימות שוות פחות, כי הן משתנות הרבה משבוע לשבוע. באחוזים נספרת גם כמות הזריקות. קטגוריה ב־Punt לא נספרת. כוכבית = מעט משחקים, אז הציון מחושב בזהירות</span>
           </div>
@@ -1766,13 +1767,19 @@ function passes(p) {
 // The score explanation's example: the top player of the ranking as it is now
 function fillZHelp(list, now) {
   const fx = (v) => (v < 0 ? `מינוס ${Math.abs(v).toFixed(1)}` : v.toFixed(1));
+  const size = st.teams * st.roster;
+  $("zPool").textContent = size; $("zRepl").textContent = size + 1;
   $("zShift").textContent = (-REPL_LEVEL).toFixed(1);
-  $("zRepl").textContent = st.teams * st.roster + 1;
-  const top = list.length ? list.reduce((a, b) => (now.rank.get(b.id) < now.rank.get(a.id) ? b : a)) : null;
+  const byR = [...list].sort((a, b) => now.rank.get(a.id) - now.rank.get(b.id));
+  const top = byR[0];
   if (!top) return;
-  const z = now.z.get(top.id);
-  const best = CATS.filter((k) => !st.punts.has(k.k)).sort((a, b) => z.z[b.k] - z.z[a.k]).slice(0, 2);
-  $("zExSum").innerHTML = `<b>לדוגמה, <bdi>${esc(top.name)}</bdi>:</b> הקטגוריות שלו מסתכמות ב־${fx(z.total)} (הכי הרבה ${best.map((k) => `<bdi>${k.l} ${fx(z.z[k.k])}</bdi>`).join(" ו־")}), ועוד ${(-REPL_LEVEL).toFixed(1)} = ציון Z של ${fx(shownVal(z.total))}`;
+  const z = now.z.get(top.id), pool = byR.slice(0, size);
+  // his strongest counting category, with his average next to the league's
+  const c = CATS.filter((k) => !k.k.endsWith("_PCT") && k.k !== "TOV" && !st.punts.has(k.k)).sort((a, b) => z.z[b.k] - z.z[a.k])[0];
+  const avg = pool.reduce((a, p) => a + p.L.g[c.k], 0) / pool.length;
+  $("zExCat").innerHTML = `לדוגמה, <bdi>${esc(top.name)}</bdi> ב־<bdi>${c.l}</bdi>: ${top.L.g[c.k].toFixed(1)} למשחק, לעומת ממוצע של ${avg.toFixed(1)}, ולכן ציון של ${fx(z.z[c.k])}`;
+  const parts = CATS.filter((k) => !st.punts.has(k.k)).map((k) => `<bdi>${k.l} ${fx(z.z[k.k])}</bdi>`).join(", ");
+  $("zExSum").innerHTML = `<bdi>${esc(top.name)}</bdi>: ${parts}. ביחד ${fx(z.total)}, ועוד ${(-REPL_LEVEL).toFixed(1)} = ציון Z של <b>${fx(shownVal(z.total))}</b>`;
 }
 let BODY_JOB = 0;  // a newer render stops the batches of the one before
 function render() {
