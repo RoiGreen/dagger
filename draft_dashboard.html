@@ -1205,38 +1205,12 @@ table.cmpt td.lbl { min-width: 5.5em; }
         <span><span class="sw" style="background:color-mix(in srgb, var(--pos) 38%, transparent)"></span>חזק בקטגוריה</span>
         <span><span class="sw" style="background:color-mix(in srgb, var(--neg) 38%, transparent)"></span>חלש בקטגוריה</span>
         <details class="zhelp" style="flex-basis:100%">
-          <summary>מה זה ציון Z ואיך לקרוא אותו?</summary>
+          <summary>מה זה ציון Z?</summary>
           <div>
-            <span><b>ציון Z עונה על שאלה אחת: כמה השחקן יעזור לך לנצח מצ'אפ שבועי, לעומת שחקן שאפשר להרים בחינם</b></span>
-            <table>
-              <tr><td><b>0</b></td><td>ברמה של השחקנים החופשיים הטובים</td></tr>
-              <tr><td><b>פלוס</b></td><td>עוזר לך יותר מהם. ככל שהמספר גבוה יותר, השחקן שווה יותר</td></tr>
-              <tr><td><b>מינוס</b></td><td>עדיף לך שחקן חופשי</td></tr>
-            </table>
-            <span><b>דוגמה מהדירוג עכשיו:</b></span>
-            <table id="zExRows"></table>
-            <span><b>איך מחשבים, בשני שלבים</b></span>
-            <span><b>שלב 1: ציון בכל קטגוריה.</b> משווים את השחקן לשחקן הממוצע מבין <span id="zPool">104</span> השחקנים שנבחרים בליגה שלך:<br>
-              ציון בקטגוריה = (השחקן פחות הממוצע) ÷ הפער הרגיל בין שחקנים בקטגוריה<br>
-              <span id="zExCat"></span><br>
-              המכנה, "הפער הרגיל", שם את כל הקטגוריות על אותו סולם: 3 אסיסטים מעל הממוצע ו־3 חטיפות מעל הממוצע לא שווים אותו דבר, כי בחטיפות זה הרבה יותר נדיר</span>
-            <span><b>שלב 2: מחברים את 9 הקטגוריות, ומוסיפים את הפער בין השחקן הממוצע לשחקן החופשי.</b> היום הפער הוא <span id="zShift">2.8</span><br>
-              <span id="zExSum"></span></span>
-            <span><b>איך לקרוא ציון בקטגוריה</b> (הצבעים בטבלה: ירוק חוזק, אדום חולשה)</span>
-            <table>
-              <tr><td><b>0</b></td><td>ממוצע בקטגוריה</td></tr>
-              <tr><td><b>1</b></td><td>טוב משמעותית</td></tr>
-              <tr><td><b>2</b></td><td>מהטובים בליגה</td></tr>
-              <tr><td><b>3 ומעלה</b></td><td>יוצא דופן</td></tr>
-            </table>
-            <span><b>כדאי לדעת</b></span>
-            <span>• <b>חטיפות וחסימות שוות פחות:</b> הן משתנות הרבה משבוע לשבוע, אז גם שחקן חזק בהן לא מבטיח לך את הקטגוריה</span>
-            <span>• <b>אחוזים מתחשבים בכמות הזריקות:</b> 60% מ־15 זריקות למשחק שווה הרבה יותר מ־60% מ־3 זריקות</span>
-            <span>• <b>באיבודים, פחות זה טוב</b></span>
-            <span>• <b>מעל 3 בקטגוריה, הציון ממשיך לעלות לאט:</b> כדי שקטגוריה אחת לא תקבע הכול</span>
-            <span>• <b>קטגוריה שסימנת ב־Punt לא נספרת</b></span>
-            <span>• <b>כוכבית ליד הציון:</b> לשחקן יש מעט משחקים, אז האתר זהיר. הוא מקרב את הציון לרמה שהשחקן הראה בעונה הקודמת, ואם אין לו עונה קודמת, לרמה של שחקן חופשי</span>
-            <span>• <b>בליגת נקודות:</b> הדירוג לפי FPTS, וציון Z מוצג לעיון בלבד</span>
+            <span><b>כמה השחקן יעזור לך לנצח מצ'אפ שבועי, לעומת שחקן שאפשר להרים בחינם.</b> 0 = ברמה של שחקן חופשי, פלוס = עדיף עליו, מינוס = עדיף שחקן חופשי</span>
+            <span><b>איך מחושב:</b> בכל קטגוריה בודקים בכמה השחקן מעל או מתחת לממוצע (ירוק או אדום בטבלה), מחברים את 9 הקטגוריות, ומוסיפים <span id="zShift">2.8</span> כדי ש־0 יהיה הרמה של שחקן חופשי</span>
+            <span id="zExSum"></span>
+            <span><b>כדאי לדעת:</b> חטיפות וחסימות שוות פחות, כי הן משתנות הרבה משבוע לשבוע. באחוזים נספרת גם כמות הזריקות. קטגוריה ב־Punt לא נספרת. כוכבית = מעט משחקים, אז הציון מחושב בזהירות</span>
           </div>
         </details>
         <span><span class="rk">R #3</span> תחזית נתוני מחזור הרוקיז</span>
@@ -1789,23 +1763,15 @@ function passes(p) {
     catOk(p);
 }
 
-// The score explanation's examples, from the ranking as it is now
+// The score explanation's example: the top player of the ranking as it is now
 function fillZHelp(list, now) {
   const fx = (v) => (v < 0 ? `מינוס ${Math.abs(v).toFixed(1)}` : v.toFixed(1));
   $("zShift").textContent = (-REPL_LEVEL).toFixed(1);
-  const byR = [...list].sort((a, b) => now.rank.get(a.id) - now.rank.get(b.id));
-  const size = st.teams * st.roster;
-  if (!byR.length) return;
-  const ex = [[1, "הכי שווה בליגה"], [30, `שחקן טוב, בחירה בסיבוב ${Math.ceil(30 / Math.max(1, st.teams))}`],
-    [size, `השחקן האחרון שנבחר בליגה של ${st.teams} קבוצות ו־${st.roster} שחקנים`], [size + 46, "עדיף להרים שחקן חופשי"]]
-    .filter(([r]) => r <= byR.length);
-  $("zExRows").innerHTML = ex.map(([r, t]) => { const p = byR[r - 1]; return `<tr><td>${r}</td><td><bdi>${esc(p.name)}</bdi></td><td><b>${fx(shownVal(now.z.get(p.id).total))}</b></td><td>${t}</td></tr>`; }).join("");
-  // the top player's strongest counting category, worked out
-  const top = byR[0], z = now.z.get(top.id), pool = byR.slice(0, size);
-  const c = CATS.filter((k) => !k.k.endsWith("_PCT") && k.k !== "TOV" && !st.punts.has(k.k)).sort((a, b) => z.z[b.k] - z.z[a.k])[0];
-  const avg = pool.reduce((a, p) => a + p.L.g[c.k], 0) / pool.length, x = top.L.g[c.k], zc = z.z[c.k];
-  $("zExCat").textContent = zc > 0.3 ? `לדוגמה, ${top.name} ב־${c.l}: (${x.toFixed(1)} פחות ${avg.toFixed(1)}) ÷ ${((x - avg) / zc).toFixed(1)} = בערך ${zc.toFixed(1)}` : "";
-  $("zExSum").textContent = `${top.name}: סכום הקטגוריות ${fx(z.total)} ועוד ${(-REPL_LEVEL).toFixed(1)} = ציון של ${fx(shownVal(z.total))}`;
+  const top = list.length ? list.reduce((a, b) => (now.rank.get(b.id) < now.rank.get(a.id) ? b : a)) : null;
+  if (!top) return;
+  const z = now.z.get(top.id);
+  const best = CATS.filter((k) => !st.punts.has(k.k)).sort((a, b) => z.z[b.k] - z.z[a.k]).slice(0, 2);
+  $("zExSum").innerHTML = `<b>לדוגמה, <bdi>${esc(top.name)}</bdi>:</b> הקטגוריות שלו מסתכמות ב־${fx(z.total)} (הכי הרבה ${best.map((k) => `<bdi>${k.l} ${fx(z.z[k.k])}</bdi>`).join(" ו־")}), ועוד ${(-REPL_LEVEL).toFixed(1)} = ציון Z של ${fx(shownVal(z.total))}`;
 }
 let BODY_JOB = 0;  // a newer render stops the batches of the one before
 function render() {
@@ -4589,7 +4555,6 @@ function syncControls() {
   syncCatFilters();
   setField("maxAge", st.maxAge);
   setField("vsOpp", st.vsOpp || "");
-  $("zPool").textContent = st.teams * st.roster;
   $("vsNote").hidden = !st.vsOpp;
   if (st.vsOpp) $("vsNote").innerHTML = `מוצגים ממוצעי ${D.vsGames} המשחקים האחרונים של כל שחקן מול <b>${esc(TEAM_NAMES[st.vsOpp] || st.vsOpp)}</b> בעונה הסדירה (${D.seasons.includes(D.current) ? "2025-26 ו־2026-27" : "2025-26"}). GP = מספר המשחקים מולה. <button type="button" id="vsClear">חזרה לנתוני העונות</button>`;
   for (const b of document.querySelectorAll("[data-teamsel]")) b.setAttribute("aria-pressed", st.teamSel.includes(b.dataset.teamsel));
