@@ -4474,7 +4474,15 @@ async function connectSite() {
     $("forgotBtn").hidden = m !== "in";
     msg("");
   }
-  const showAuth = (show) => { $("auth").hidden = !show; };
+  // The form opens empty: the browser may not fill a saved email / password by itself (read-only fields are skipped);
+  // on the first tap the field unlocks and the browser offers the saved accounts to pick from
+  const authFields = ["authUser", "authEmail", "authPass"];
+  const unlock = (e) => e.target.removeAttribute("readonly");
+  for (const id of authFields) { $(id).addEventListener("pointerdown", unlock); $(id).addEventListener("focus", unlock); }
+  const showAuth = (show) => {
+    if (show) for (const id of authFields) { $(id).value = ""; $(id).setAttribute("readonly", ""); }
+    $("auth").hidden = !show;
+  };
 
   async function signedIn(user) {
     if (signedInAs === user.id) return;
