@@ -524,12 +524,15 @@ table.mucats .sofar { display: block; font-size: .68rem; font-weight: 600; color
 .mupicks .mdays { font-family: var(--font-body); font-size: .78rem; color: var(--muted); white-space: nowrap; letter-spacing: .08em; }
 .mupicks .mfit { display: grid; line-height: 1.05; }
 .mupicks .mfit small { font-size: .72rem; color: var(--pos); }
+.mupicks .mfit small.neg { color: var(--neg); }
+.cmpsec.over { border: 2px solid color-mix(in srgb, var(--neg) 55%, transparent); }
 .mgo, .mact { border: 1px solid var(--line); background: var(--surface-2); color: var(--ink); border-radius: 8px; padding: 3px 10px; font: inherit; font-size: .78rem; font-weight: 700; cursor: pointer; }
 .mgo { background: var(--accent); border-color: var(--accent); color: #fff; }
 .mact:hover, .mgo:hover { filter: brightness(1.08); }
 .mgo:disabled { opacity: .45; cursor: default; filter: none; }
 table.box.murt td.macts { white-space: nowrap; text-align: end; }
 table.box.murt .mact { padding: 2px 7px; font-size: .72rem; margin-inline-start: 3px; }
+table.box.murt .mact.on { background: var(--accent); border-color: var(--accent); color: #fff; }
 table.box tr.ilrow td { opacity: .55; }
 .muadd { display: flex; gap: 6px; margin-top: 8px; flex-wrap: wrap; }
 .muadd input { flex: 1 1 180px; } .muadd select { flex: 0 1 200px; width: auto; }
@@ -555,6 +558,12 @@ table.box.daygrid td.dg.out { color: var(--neg); }
 table.box.daygrid .iltag { font-size: .66rem; font-weight: 800; color: var(--neg); margin-inline-start: 6px; }
 .dgwhy { margin: 8px 0 0; padding-inline-start: 18px; font-size: .82rem; color: var(--muted); display: grid; gap: 3px; }
 .dgwhy b { color: var(--ink); }
+table.box.daygrid td.dg.clk { cursor: pointer; }
+table.box.daygrid td.dg.clk:hover { outline: 2px solid var(--accent); outline-offset: -2px; }
+table.box.daygrid td.dg.locked { box-shadow: inset 0 0 0 2px color-mix(in srgb, var(--accent) 70%, transparent); }
+table.box.daygrid .luday { display: inline-flex; gap: 2px; margin-inline-start: 4px; vertical-align: middle; }
+.lubtn { border: 1px solid var(--line); background: var(--surface); color: var(--muted); border-radius: 6px; font: inherit; font-size: .72rem; padding: 0 5px; cursor: pointer; line-height: 1.4; }
+.lubtn:hover { color: var(--accent); border-color: var(--accent); }
 table.box.daygrid tr.dgfoot td { font-family: var(--font-num); font-weight: 800; }
 table.box.daygrid tr.dgfoot .over { color: var(--neg); }
 .muadv { display: grid; gap: 10px; }
@@ -3566,11 +3575,17 @@ function planWeek(roster, il, team, swap = null) {
         cands.push({ p, v: ch < 1 ? (v > 0 ? v * 0.6 : v - 0.5) : v, gm, ch });  // a doubtful player ranks lower
       }
     }
-    const slot = lineupFor(cands);
+    // my own lineup: a player set "on" is placed first, one set "off" stays on the bench (my team only)
+    const mineDay = { ...(team === myIdx() ? (st.lineup?.[d] || {}) : {}) };
+    for (const id of (st.bn?.[team] || [])) mineDay[id] = "off";  // set to BN: never in the lineup
+    const benchLock = cands.filter((c) => mineDay[c.p.id] === "off");
+    const pool = cands.filter((c) => mineDay[c.p.id] !== "off").map((c) => (mineDay[c.p.id] === "on" ? { ...c, v: 1e6 + c.v } : c));
+    const slot = lineupFor(pool);
+    for (const c of benchLock) T.cell.set(`${c.p.id}|${d}`, { gm: c.gm, r: c.r, slot: null, ch: c.ch, lock: "off" });
     if (d > LOG_END) T.gamesAll += lineupFor(all).size;  // GTD / OUT count as a game here
-    for (const c of cands) {
+    for (const c of pool) {
       const on = slot.get(c.p.id);
-      T.cell.set(`${c.p.id}|${d}`, { gm: c.gm, r: c.r, slot: on, ch: c.ch });
+      T.cell.set(`${c.p.id}|${d}`, { gm: c.gm, r: c.r, slot: on, ch: c.ch, lock: mineDay[c.p.id] || null });
       if (!on) continue;
       if (c.r) {
         const L = rowLine(c.r);
@@ -3720,7 +3735,7 @@ function liveNote(p) {
 function muFromIL(team, id) {
   st.il[team] = (st.il[team] || []).filter((x) => x !== id);
   const over = rosterOf(team).filter((p) => !ilOf(team).has(p.id)).length - st.roster;
-  if (over > 0) showToast(`בסגל יש עכשיו ${over} שחקנים מעבר למקום. שחרר שחקן כדי להחזיר את הסגל לגודלו.`);
+  if (over > 0) showToast(`הסגל מלא ב־${over}. במצ'אפ מופיעה המלצה את מי לשחרר.`);
   saveSettings(); render();
 }
 
@@ -3827,6 +3842,28 @@ function renderMatchup() {
       <button type="button" class="mgo" data-mumove="${x.X.id}|${x.drop?.id ?? ""}|${x.kind ?? ""}">בצע</button></li>`;
   };
 
+  // Roster over the limit (a player back from IL): each possible release, by the win chance without him
+  const activeMine = mineP.filter((p) => !ilA.has(p.id));
+  const overBy = activeMine.length - st.roster;
+  let dropRows = "";
+  if (overBy > 0) {
+    const opts = activeMine.map((p) => {
+      const A2 = planWeek(mineP.filter((x) => x.id !== p.id), ilA, me);
+      return { p, r: muOdds(A2, B) };
+    }).sort((a, b) => b.r.win - a.r.win || seasonValue(a.p) - seasonValue(b.p)).slice(0, 5);
+    dropRows = opts.map((x, i) => {
+      const moved = x.r.cats.map((c, j) => ({ l: c.l, d: c.q - odds.cats[j].q, punt: st.punts.has(c.k) })).filter((u) => !u.punt && Math.abs(u.d) >= 0.005);
+      const downs = moved.filter((u) => u.d < 0).sort((a, b) => a.d - b.d).slice(0, 3);
+      const ups = moved.filter((u) => u.d > 0).sort((a, b) => b.d - a.d).slice(0, 3);
+      const d = x.r.win - odds.win;
+      return `<li><span class="rk">${i + 1}</span>${x.p.img ? `<img class="mimg" src="${x.p.img}" alt="" loading="lazy" decoding="async">` : `<span class="mimg"></span>`}
+        <span class="mwho"><span class="mline"><span class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</span>${teamLogo(x.p.team26)}${x.p.hurt ? injuryPill(x.p) : ""}</span><small class="mdrop">משחרר אותו</small></span>
+        <span class="mtags"><span class="trow">${ups.map((u) => `<i class="gain"><bdi>${u.l}</bdi> +${Math.round(u.d * 100)}%</i>`).join("")}</span>
+          ${downs.length ? `<span class="trow">${downs.map((u) => `<i class="loss"><bdi>${u.l}</bdi> −${Math.round(-u.d * 100)}%</i>`).join("")}</span>` : ""}</span>
+        <b class="mfit">${pctTxt(x.r.win)}<small class="${d < 0 ? "neg" : ""}">${d >= 0 ? "+" : "−"}${Math.abs(Math.round(d * 100))}%</small></b>
+        <button type="button" class="mgo" data-mudrop="${me}|${x.p.id}">שחרר</button></li>`;
+    }).join("");
+  }
   // the daily grid of who plays and who starts
   const gridSide = st.muGrid === "b" ? "b" : "a";
   const G = gridSide === "a" ? { roster: mineP, T: A, il: ilA } : { roster: oppP, T: B, il: ilB };
@@ -3839,9 +3876,13 @@ function renderMatchup() {
       const opp = c.gm ? `${c.gm.g.h === p.team26 ? "" : "@"}${c.gm.opp}` : c.r ? `${c.r[2] ? "" : "@"}${c.r[1]}` : "";
       const cls = c.out ? "out" : c.slot ? (c.r ? "on done" : c.ch < 1 ? "on gtd" : "on") : "bn";
       const emptyNow = G.T.days.find((x) => x.d === d)?.empty || [];
-      const tip = c.out ? "פצוע" : c.slot ? `בהרכב: ${c.slot}`
-        : `על הספסל: המשבצות שמתאימות לו (${p.pos || "UTIL"}) תפוסות${emptyNow.length ? `, ופנויה רק ${emptyNow.join(", ")}` : ""}`;
-      return `<td class="dg ${cls}" title="${tip}"><span>${esc(opp)}</span>${c.slot ? `<small>${c.slot}</small>` : c.out ? "<small>OUT</small>" : "<small>BN</small>"}</td>`;
+      const lockTxt = c.lock === "on" ? " · הכנסת אותו להרכב" : c.lock === "off" ? " · השארת אותו בספסל" : "";
+      const tip = (c.out ? "פצוע" : c.slot ? `בהרכב: ${c.slot}`
+        : c.lock === "off" ? "על הספסל"
+        : `על הספסל: המשבצות שמתאימות לו (${p.pos || "UTIL"}) תפוסות${emptyNow.length ? `, ופנויה רק ${emptyNow.join(", ")}` : ""}`) + lockTxt
+        + (gridSide === "a" && !c.out ? " · לחיצה: בהרכב / ספסל / אוטומטי" : "");
+      const click = gridSide === "a" && !c.out ? ` data-lu="${p.id}|${d}" tabindex="0"` : "";
+      return `<td class="dg ${cls}${c.lock ? " locked" : ""}${click ? " clk" : ""}" title="${tip}"${click}><span>${esc(opp)}</span>${c.slot ? `<small>${c.slot}${c.lock ? " 🔒" : ""}</small>` : c.out ? "<small>OUT</small>" : `<small>BN${c.lock ? " 🔒" : ""}</small>`}</td>`;
     }).join("");
     return `<tr${G.il.has(p.id) ? ` class="ilrow"` : ""}><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span></span>${G.il.has(p.id) ? `<small class="iltag">IL</small>` : ""}</td>${cells}</tr>`;
   }).join("");
@@ -3894,8 +3935,9 @@ function renderMatchup() {
     const active = roster.filter((p) => !il.has(p.id));
     const rows = [...roster].sort((a, b) => (il.has(a.id) - il.has(b.id)) || muValue(b) - muValue(a)).map((p) => {
       const w = playerWeek(p, T), onIL = il.has(p.id);
+      const onBN = (st.bn?.[t] || []).includes(p.id);
       const acts = onIL ? `<button type="button" class="mact" data-muback="${t}|${p.id}">חזרה מ־IL</button>`
-        : `${p.hurt?.s === "OUT" && il.size < IL_SLOTS ? `<button type="button" class="mact" data-muil="${t}|${p.id}">IL</button>` : ""}<button type="button" class="mact" data-mudrop="${t}|${p.id}" title="שחרור">שחרר</button>`;
+        : `${p.hurt?.s === "OUT" && il.size < IL_SLOTS ? `<button type="button" class="mact" data-muil="${t}|${p.id}">IL</button>` : ""}<button type="button" class="mact${onBN ? " on" : ""}" data-mubn="${t}|${p.id}" title="${onBN ? "להחזיר אותו לבחירה של ההרכב" : "על הספסל קבוע: לא נכנס לעשירייה"}">${onBN ? "מ־BN" : "BN"}</button><button type="button" class="mact" data-mudrop="${t}|${p.id}" title="שחרור">שחרר</button>`;
       return `<tr class="${onIL ? "ilrow" : ""}"><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span></span>${p.hurt ? injuryPill(p) : ""}</td>
         <td>${onIL ? "IL" : `${g1(w.starts)}/${w.games}`}</td>${CATS.map((c) => `<td>${onIL ? "" : cell9(w.o, c.k)}</td>`).join("")}<td class="macts">${acts}</td></tr>`;
     }).join("");
@@ -3954,14 +3996,17 @@ function renderMatchup() {
         <div class="muinj"><div><h4>${esc(myName)}</h4><ul>${hurtRows(mineP, A, ilA) || `<li class="none">אין חסרים</li>`}</ul></div><div><h4>${esc(oppName)}</h4><ul>${hurtRows(oppP, B, ilB) || `<li class="none">אין חסרים</li>`}</ul></div></div>
       </section>
     </div>
+    ${overBy > 0 ? `<section class="cmpsec over"><h3 class="ctr">הסגל מלא ב־${overBy}: צריך לשחרר</h3>
+      <div class="mupickhead"><span>סיכוי לנצח במצ'אפ הקרוב</span></div><ol class="mupicks">${dropRows}</ol></section>` : ""}
     <section class="cmpsec"><h3 class="ctr">פיק אפ מומלץ לשבוע הזה</h3>
-      ${left === 0 ? `<p class="munote">ניצלת את כל ${maxAdds} הפיק אפים של השבוע</p>`
+      ${overBy > 0 ? `<p class="munote">קודם לשחרר שחקן מהסגל (למעלה)</p>`
+        : left === 0 ? `<p class="munote">ניצלת את כל ${maxAdds} הפיק אפים של השבוע</p>`
         : moves.length ? `<div class="mupickhead"><span>סיכוי לנצח במצ'אפ הקרוב</span></div><ol class="mupicks">${moves.map(moveRow).join("")}</ol>`
         : `<p class="munote">אין פיק אפ שמשפר את הסיכוי לנצח השבוע</p>`}
     </section>
     <section class="cmpsec"><div class="dghead"><h3>הרכב יומי</h3>
       <div class="seg" role="group"><button type="button" data-mugrid="a" aria-pressed="${gridSide === "a"}">${esc(myName)}</button><button type="button" data-mugrid="b" aria-pressed="${gridSide === "b"}">${esc(oppName)}</button></div></div>
-      <div class="tbl-wrap short"><table class="box daygrid"><thead><tr><th class="nosort">שחקן</th>${weekDays().map((d) => `<th class="nosort${d === today ? " today" : ""}">${esc(dayLabel(d))}</th>`).join("")}</tr></thead><tbody>${gridRows}</tbody><tfoot>${gridFoot}</tfoot></table></div>
+      <div class="tbl-wrap short"><table class="box daygrid"><thead><tr><th class="nosort">שחקן</th>${weekDays().map((d, i) => `<th class="nosort${d === today ? " today" : ""}">${esc(dayLabel(d))}${gridSide === "a" ? `<span class="luday">${i ? `<button type="button" class="lubtn" data-lucopy="${d}" title="העתק את ההרכב של אתמול">⤶</button>` : ""}${st.lineup?.[d] && Object.keys(st.lineup[d]).length ? `<button type="button" class="lubtn" data-lureset="${d}" title="אפס להמלצה">↺</button>` : ""}</span>` : ""}</th>`).join("")}</tr></thead><tbody>${gridRows}</tbody><tfoot>${gridFoot}</tfoot></table></div>
       ${lineupWhy()}
     </section>
     <div class="muvs"><b>${esc(myName)}</b>${(D.logos || {}).NBA ? `<img src="${D.logos.NBA}" alt="NBA">` : ""}<b>${esc(oppName)}</b></div>
@@ -3974,6 +4019,36 @@ for (const [id, d] of [["muPrev", -1], ["muNext", 1], ["muNow", 0]]) {
 }
 $("muAddsMax").addEventListener("input", (e) => { const v = Number(e.target.value); if (Number.isFinite(v)) { st.weekAdds = Math.min(14, Math.max(0, v)); update(false); } });
 $("muAddsUsed").addEventListener("input", (e) => { const v = Number(e.target.value); if (Number.isFinite(v)) { st.muAdds = { week: WEEK.from, n: Math.min(14, Math.max(0, v)) }; saveSettings(); renderMatchup(); } });
+// my lineup: cycle a cell, copy yesterday, reset a day
+function luSave() {
+  st.lineup = st.lineup || {};
+  const old = shiftDay(etDay(new Date()), -21);  // choices older than three weeks are no longer needed
+  for (const d of Object.keys(st.lineup)) if (!Object.keys(st.lineup[d]).length || d < old) delete st.lineup[d];
+  saveSettings(); renderMatchup();
+}
+$("muOut").addEventListener("click", (e) => {
+  const cell = e.target.closest("[data-lu]"), cp = e.target.closest("[data-lucopy]"), rs = e.target.closest("[data-lureset]");
+  if (!cell && !cp && !rs) return;
+  e.stopPropagation();
+  st.lineup = st.lineup || {};
+  if (cell) {
+    const [pid, d] = cell.dataset.lu.split("|"), day = (st.lineup[d] = st.lineup[d] || {});
+    const next = { undefined: "on", on: "off", off: undefined }[day[pid]];
+    if (next) day[pid] = next; else delete day[pid];
+  } else if (cp) {
+    const d = cp.dataset.lucopy, days = weekDays(), prev = days[days.indexOf(d) - 1];
+    const me = myIdx(), T = planWeek(myRoster(), ilOf(me), me);
+    const day = {};
+    for (const p of myRoster()) {
+      const was = T.cell.get(`${p.id}|${prev}`), now = T.cell.get(`${p.id}|${d}`);
+      if (!now || now.out) continue;
+      if (was && !was.out) day[p.id] = was.slot ? "on" : "off";
+    }
+    st.lineup[d] = day;
+  } else delete st.lineup[rs.dataset.lureset];
+  luSave();
+}, true);
+$("muOut").addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.closest("[data-lu]")) e.target.click(); });
 $("muOut").addEventListener("change", (e) => {
   const sel = e.target.closest("[data-mudropsel]");
   if (!sel) return;
@@ -3995,6 +4070,13 @@ $("muOut").addEventListener("click", (e) => {
   if (b.dataset.mudrop) { const [t, id] = pair(b.dataset.mudrop); return muMove(t, null, id, "drop"); }
   if (b.dataset.muil) { const [t, id] = pair(b.dataset.muil); return muMove(t, null, id, "il"); }
   if (b.dataset.muback) { const [t, id] = pair(b.dataset.muback); return muFromIL(t, id); }
+  if (b.dataset.mubn) {
+    const [t, id] = pair(b.dataset.mubn);
+    st.bn = st.bn || {};
+    const cur = st.bn[t] || [];
+    st.bn[t] = cur.includes(id) ? cur.filter((x) => x !== id) : [...cur, id];
+    saveSettings(); return renderMatchup();
+  }
   if (b.dataset.muadd != null) {
     const t = Number(b.dataset.muadd), box = b.closest(".muadd");
     const id = MU.freeLookup.get(box.querySelector("input").value);
