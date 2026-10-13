@@ -486,6 +486,7 @@ table.mucats tr.punted td { opacity: .4; }
 .muwnav .mact:disabled { opacity: .35; cursor: default; }
 .muwnav #muNow { font-family: var(--font-body); font-size: .78rem; }
 .ctrnote { text-align: center; margin-top: -2px; }
+.munote.nopick { text-align: center; font-size: 1rem; margin-top: 2px; }
 .muadds { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; font-weight: 700; color: var(--muted); }
 .muadds input { width: 3.4em; padding: 4px 6px; text-align: center; }
 .muscore .mmid { display: grid; justify-items: center; gap: 8px; min-width: 360px; }
@@ -4100,7 +4101,7 @@ function renderMatchup() {
       ${overBy > 0 ? `<p class="munote">קודם לשחרר שחקן מהסגל (למעלה)</p>`
         : left === 0 ? `<p class="munote">ניצלת את כל ${maxAdds} הפיק אפים של השבוע</p>`
         : moves.length ? `<div class="mupickhead"><span>סיכוי לנצח במצ'אפ הקרוב</span></div><ol class="mupicks">${moves.map(moveRow).join("")}</ol>`
-        : `<p class="munote">אין פיק אפ שמשפר את הסיכוי לנצח השבוע</p>`}
+        : `<p class="munote nopick">אין פיק אפ שמשפר את הסיכוי לנצח השבוע</p>`}
     </section>
     <section class="cmpsec"><div class="dghead"><h3>הרכב יומי</h3>
       <div class="seg" role="group"><button type="button" data-mugrid="a" aria-pressed="${gridSide === "a"}">${esc(myName)}</button><button type="button" data-mugrid="b" aria-pressed="${gridSide === "b"}">${esc(oppName)}</button></div></div>
