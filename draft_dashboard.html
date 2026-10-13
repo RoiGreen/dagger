@@ -3923,26 +3923,21 @@ function renderMatchup() {
     return `<tr${G.il.has(p.id) ? ` class="ilrow"` : ""}><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span></span>${G.il.has(p.id) ? `<small class="iltag">IL</small>` : ""}</td>${cells}</tr>`;
   }).join("");
   // Why this lineup: what the choice leans on, and who sits on busy days
+  // Under the grid: only the busy days (more players than slots) and why the extra ones sit out
   function lineupWhy() {
     if (gridSide !== "a") return "";
     const lines = [];
-    if (st.fmt === "pts") lines.push("נבחרים מי שצפויים לתת הכי הרבה FPTS באותו יום, כולל חוזק ההגנה והקצב של היריבה");
-    else {
-      const open = base.cats.filter((c) => !st.punts.has(c.k) && c.q > 0.2 && c.q < 0.8).sort((a, b) => Math.abs(a.q - 0.5) - Math.abs(b.q - 0.5));
-      const done = base.cats.filter((c) => !st.punts.has(c.k) && (c.q >= 0.8 || c.q <= 0.2));
-      if (open.length) lines.push(`עדיפות לשחקנים שתורמים ב־${open.slice(0, 4).map((c) => `<b><bdi>${c.l}</bdi></b>`).join(", ")}: הקטגוריות הצמודות, שבהן כל משחק יכול להכריע`);
-      if (done.length) lines.push(`פחות משקל ל־${done.map((c) => `<bdi>${c.l}</bdi> (${c.q >= 0.8 ? "יתרון בטוח" : "פיגור גדול"})`).join(", ")}, שכמעט הוכרעו`);
-      if (st.punts.size) lines.push(`${[...st.punts].map((k) => CATS.find((c) => c.k === k)?.l).filter(Boolean).join(", ")} לא נספרות (Punt)`);
-      lines.push("בכל משחק נלקחים בחשבון גם חוזק ההגנה והקצב של היריבה, ושחקן GTD מקבל עדיפות נמוכה יותר");
-    }
     for (const day of A.days) {
-      if (day.past) continue;
-      const benched = mineP.filter((p) => { const c = A.cell.get(`${p.id}|${day.d}`); return c && !c.out && !c.slot; });
+      if (day.past || day.playing <= LINEUP.length) continue;
+      const benched = mineP.filter((p) => { const c = A.cell.get(`${p.id}|${day.d}`); return c && !c.out && !c.slot && !c.lock; });
       if (!benched.length) continue;
       const names = benched.map((p) => `<span class="pn" data-pcard="${p.id}">${esc(p.name)}</span>`).join(", ");
-      lines.push(`${esc(dayLabel(day.d))}: ${names} על הספסל — ${day.empty.length ? `המשבצות שמתאימות ${benched.length > 1 ? "להם" : "לו"} תפוסות (פנויה רק ${day.empty.join(", ")})` : `ל־${LINEUP.length} שנכנסו יש ערך גבוה יותר במצ'אפ הזה`}`);
+      const why = day.empty.length
+        ? `המשבצות שמתאימות ${benched.length > 1 ? "להם" : "לו"} תפוסות, ופנויה רק ${day.empty.join(", ")}`
+        : `${day.playing} שחקנים משחקים ויש ${LINEUP.length} מקומות, ו${benched.length > 1 ? "הם" : "הוא"} התורם${benched.length > 1 ? "ים" : ""} הכי פחות לקטגוריות הפתוחות במצ'אפ הזה`;
+      lines.push(`${esc(dayLabel(day.d))}: ${names} על הספסל. ${why}`);
     }
-    return `<ul class="dgwhy">${lines.map((l) => `<li>${l}</li>`).join("")}</ul>`;
+    return lines.length ? `<ul class="dgwhy">${lines.map((l) => `<li>${l}</li>`).join("")}</ul>` : "";
   }
   const gridFoot = `<tr class="dgfoot"><td>בהרכב</td>${G.T.days.map((x) => `<td${x.playing > x.started ? ` title="${x.playing} שחקנים משחקים, ${x.started} נכנסים להרכב${x.empty.length ? `. פנויה ${x.empty.join(", ")}, ואין מי שמתאים לה` : ""}"` : ""}>${x.playing > LINEUP.length ? `<b class="over">${x.playing}</b>` : x.started}/${LINEUP.length}</td>`).join("")}</tr>`;
 
