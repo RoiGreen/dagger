@@ -1205,21 +1205,21 @@ table.cmpt td.lbl { min-width: 5.5em; }
         <span><span class="sw" style="background:color-mix(in srgb, var(--pos) 38%, transparent)"></span>חזק בקטגוריה</span>
         <span><span class="sw" style="background:color-mix(in srgb, var(--neg) 38%, transparent)"></span>חלש בקטגוריה</span>
         <details class="zhelp" style="flex-basis:100%">
-          <summary>מה זה הציון ואיך לקרוא אותו?</summary>
+          <summary>מה זה הערך ואיך לקרוא אותו?</summary>
           <div>
-            <span><b>הציון אומר כמה השחקן יעזור לך לנצח מצ'אפ שבועי.</b> 0 = שחקן ממוצע מבין <span id="zPool">104</span> השחקנים שנבחרים בליגה שלך (קבוצות × שחקנים בסגל). פלוס = עוזר, מינוס = מוריד.</span>
-            <span><b>איך מחשבים:</b> בכל אחת מ־9 הקטגוריות בודקים בכמה השחקן טוב מהשחקן הממוצע, ומחברים. לדוגמה, שחקן שמוסר 9 אסיסטים כשהממוצע הוא 4 מקבל באסיסטים ציון גבוה.</span>
+            <span><b>הערך אומר כמה השחקן יעזור לך לנצח מצ'אפ שבועי, לעומת שחקן שאפשר להרים בחינם.</b> 0 = ברמה של השחקנים החופשיים הטובים. פלוס = עוזר יותר מהם, מינוס = עדיף להחליף אותו בשחקן חופשי</span>
+            <span><b>איך מחשבים:</b> בכל אחת מ־9 הקטגוריות בודקים בכמה השחקן טוב מהשחקן הממוצע מבין <span id="zPool">104</span> השחקנים שנבחרים בליגה שלך, ומחברים. לסכום מוסיפים את הפער בין השחקן הממוצע לשחקן החופשי, היום <span id="zShift">2.8</span>. לדוגמה, סכום קטגוריות של מינוס 1 נותן ערך של <span id="zEx">1.8</span></span>
             <span><b>למה חטיפות שוות פחות מאסיסטים:</b> השבוע של שחקן לא תמיד דומה לממוצע שלו. בחטיפות שחקן יכול לתת חטיפה אחת למשחק בשבוע אחד ושלוש בשבוע הבא, ולכן גם שחקן חזק בחטיפות לא מבטיח לך את הקטגוריה. באסיסטים המספרים יציבים יותר משבוע לשבוע, ולכן יתרון בהם שווה יותר.</span>
             <table>
               <tr><td><b>3 ומעלה</b></td><td>יוצא דופן בקטגוריה. מעל 3 הציון ממשיך לעלות, אבל לאט, כדי שקטגוריה אחת לא תקבע הכול</td></tr>
               <tr><td><b>2</b></td><td>מצוין, מהבודדים בליגה</td></tr>
               <tr><td><b>1</b></td><td>טוב משמעותית</td></tr>
-              <tr><td><b>0</b></td><td>ממוצע</td></tr>
+              <tr><td><b>0</b></td><td>ממוצע בקטגוריה</td></tr>
               <tr><td><b>מינוס 1</b></td><td>חלש משמעותית</td></tr>
             </table>
-            <span><b>עמודת Z</b> היא סכום 9 הקטגוריות, בלי קטגוריות שסימנת ב־Punt. <b>צבעי התאים</b>: ירוק חוזק, אדום חולשה. באיבודים פחות זה טוב. באחוזים נלקחת בחשבון גם כמות הזריקות.</span>
-            <span><b>כוכבית ליד הציון:</b> לשחקן יש מעט משחקים, ולכן האתר זהיר. שחקן שהוכיח את עצמו בעונה הקודמת נשאר קרוב לרמה שלו אז, ושחקן בלי עבר נשאר קרוב לרמה של שחקן חופשי, עד שיצבור משחקים</span>
-            <span>בליגת נקודות הדירוג לפי FPTS, והציון מוצג לעיון.</span>
+            <span><b>הטבלה למעלה</b> היא הציון בכל קטגוריה לעומת השחקן הממוצע, וממנו נקבעים <b>צבעי התאים</b>: ירוק חוזק, אדום חולשה. באיבודים פחות זה טוב. באחוזים נלקחת בחשבון גם כמות הזריקות. קטגוריות שסימנת ב־Punt לא נספרות בערך</span>
+            <span><b>כוכבית ליד הערך:</b> לשחקן יש מעט משחקים, ולכן האתר זהיר. שחקן שהוכיח את עצמו בעונה הקודמת נשאר קרוב לרמה שלו אז, ושחקן בלי עבר נשאר קרוב לרמה של שחקן חופשי, עד שיצבור משחקים</span>
+            <span>בליגת נקודות הדירוג לפי FPTS, והערך מוצג לעיון</span>
           </div>
         </details>
         <span><span class="rk">R #3</span> תחזית נתוני מחזור הרוקיז</span>
@@ -1666,6 +1666,8 @@ function sampleWeight(p) {
 const priorSeason = () => { const ys = chosenSeasons().filter((y) => y !== D.preseason); return ys.length ? Math.min(...ys) - 1 : null; };
 const sdOf = (xs) => meanStd(xs)[1];
 let REPL_LEVEL = -1.5;
+// What the tables show: the score above replacement, so 0 = a player you can pick up for free (the order is the same)
+const shownVal = (total) => total - REPL_LEVEL;
 function rankAll(list, mode) {
   const size = Math.max(1, st.teams * st.roster);
   const real = list.filter((p) => !p.rookie);
@@ -1731,7 +1733,7 @@ const COLS = [
   { k: "avail", l: "זמינות", asc: false },
   { k: "MIN", l: "MIN", asc: false },
   ...CATS.map((c) => ({ k: c.k, l: c.l, asc: c.k === "TOV", cat: true })),
-  { k: "zTotal", l: "Z", asc: false },
+  { k: "zTotal", l: "ערך", asc: false },
   { k: "fp", l: "FPTS", asc: false },
   { k: "act", l: "", nosort: true },
 ];
@@ -1774,6 +1776,7 @@ let BODY_JOB = 0;  // a newer render stops the batches of the one before
 function render() {
   if (ROSTERS_CHANGED && last) compute();
   const { list, now } = last;
+  $("zShift").textContent = (-REPL_LEVEL).toFixed(1); $("zEx").textContent = (-1 - REPL_LEVEL).toFixed(1);
   const m = st.mode;
   const allRows = list.map((p) => ({ p, rank: now.rank.get(p.id), z: now.z.get(p.id) }));
   let rows = allRows.filter(({ p }) => passes(p));
@@ -1841,7 +1844,7 @@ function render() {
       ${posR ? posTd(posR, p) : `<td class="rank${rank <= 3 ? " top" : ""}">${rank}</td>`}
       ${nameCell(p)}
       <td>${p.age ?? "–"}</td><td>${p.gp}</td>${availCell(p)}<td>${fmt1(p.L.g.MIN)}</td>${cats}
-      <td class="val"${z.w < 1 ? ` title="${p.gp} משחקים בלבד: הציון שלו העונה ${z.raw.toFixed(2)}, ונלקח בזהירות לכיוון ${z.proven ? "הרמה שלו בעונה הקודמת" : "הרמה של שחקן חופשי"} (${z.target.toFixed(2)})"` : ""}>${z.total.toFixed(2)}${z.w < 0.97 ? `<i class="fewg">*</i>` : ""}</td><td class="val">${fmt1(p.F[m])}</td>
+      <td class="val"${z.w < 1 ? ` title="${p.gp} משחקים בלבד: הציון שלו העונה ${shownVal(z.raw).toFixed(2)}, ונלקח בזהירות לכיוון ${z.proven ? "הרמה שלו בעונה הקודמת" : "הרמה של שחקן חופשי"} (${shownVal(z.target).toFixed(2)})"` : ""}>${shownVal(z.total).toFixed(2)}${z.w < 0.97 ? `<i class="fewg">*</i>` : ""}</td><td class="val">${fmt1(p.F[m])}</td>
       <td class="acts">${actions(p)}</td></tr>`;
   };
   const job = ++BODY_JOB, FIRST = 60, STEP = 80;
@@ -2890,7 +2893,7 @@ function cmpTotals(list, avg = false) {
   o.FT_PCT = o.FTA ? o.FTM / o.FTA : list.length ? 0 : null;
   const zs = list.map(zOf);
   o.z = Object.fromEntries(CATS.map((c) => [c.k, zs.reduce((a, r) => a + (r ? r.z[c.k] : 0), 0)]));
-  o.Z = CATS.filter((c) => !st.punts.has(c.k)).reduce((a, c) => a + o.z[c.k], 0);
+  o.Z = CATS.filter((c) => !st.punts.has(c.k)).reduce((a, c) => a + o.z[c.k], 0) - REPL_LEVEL * list.length;  // value above free agents
   o.FPTS = list.reduce((a, p) => a + p.F[m], 0);
   // Advanced: per game minutes, availability averaged, rates weighted by minutes
   o.MIN = list.reduce((a, p) => a + p.L.g.MIN, 0);
@@ -3092,7 +3095,7 @@ function renderCmpSide(side) {
     dl.innerHTML = `<div class="dh"><b>השינוי בסגל</b>` +
       `<button type="button" data-cmpswreset="${side}">ביטול כל השינויים</button></div><div class="dv">` +
       CATS.map((k) => item(k.l, B1[k.k] - B0[k.k], k.k.endsWith("_PCT") ? fmt3 : fmt1, k.k === "TOV", st.punts.has(k.k))).join("") +
-      item("Z", B1.Z - B0.Z, (v) => v.toFixed(2)) + item("FPTS", B1.FPTS - B0.FPTS, fmt1) + `</div>`;
+      item("ערך", B1.Z - B0.Z, (v) => v.toFixed(2)) + item("FPTS", B1.FPTS - B0.FPTS, fmt1) + `</div>`;
   }
   if (cmpSwapping && cmpSwapping.side === side) {
     const pool = cmpFreeForTeams();
@@ -3150,8 +3153,8 @@ function cmpFace(L, side, name, leads) {
       <div class="fn" data-pcard="${p.id}">${esc(p.name)}</div>
       <div class="fm"><span class="num">${esc(p.pos || "–")}</span> · <span class="num">${esc(p.team26 || "FA")}</span>${r ? ` · <span class="num">#${r}</span>` : ""}</div>
       <div class="fs">${st.fmt === "pts"
-        ? `<span><small>FPTS</small><b class="num">${fmt1(p.F[st.mode])}</b></span><span><small>Z</small><b class="num">${z ? z.total.toFixed(2) : "–"}</b></span>`
-        : `<span><small>Z</small><b class="num">${z ? z.total.toFixed(2) : "–"}</b></span><span><small>FPTS</small><b class="num">${fmt1(p.F[st.mode])}</b></span>`}<span><small>GP</small><b class="num">${p.gp ?? "–"}</b></span></div>
+        ? `<span><small>FPTS</small><b class="num">${fmt1(p.F[st.mode])}</b></span><span><small>ערך</small><b class="num">${z ? shownVal(z.total).toFixed(2) : "–"}</b></span>`
+        : `<span><small>ערך</small><b class="num">${z ? shownVal(z.total).toFixed(2) : "–"}</b></span><span><small>FPTS</small><b class="num">${fmt1(p.F[st.mode])}</b></span>`}<span><small>GP</small><b class="num">${p.gp ?? "–"}</b></span></div>
     </div>`;
   }
   const shown = L.slice(0, 7);
@@ -3191,7 +3194,7 @@ function renderCmp() {
 
   const catRows = CATS.map((k) => ({ k: k.k, l: k.l, cat: true, punted: st.punts.has(k.k), fmt: k.k.endsWith("_PCT") ? fmt3 : fmt1 }));
   const gen = cmpTable([...catRows,
-    { k: "Z", l: "Z", tot: true, fmt: (v) => v.toFixed(2), tip: "סכום ה־Z של הקטגוריות (בלי Punt)" },
+    { k: "Z", l: "ערך", tot: true, fmt: (v) => v.toFixed(2), tip: "כמה טוב יותר משחקן שאפשר להרים בחינם (בלי Punt)" },
     { k: "FPTS", l: "FPTS", tot: true, fmt: fmt1 }], A, B, nA, nB);
   const advRows = CMP_ADV.map((r) => ({ ...r, fmt: r.k === "AVAIL" ? (v) => Math.round(v * 100) + "%" : r.k === "ASTTOV" ? (v) => v.toFixed(2) : fmt1 }));
   // Winner mark: the player's photo when each side is one player, otherwise the side's colour
@@ -3202,7 +3205,7 @@ function renderCmp() {
       : `<i class="wdot w${side}" title="${esc(side === "a" ? nA : nB)}"></i>`;
   };
   gen.html = cmpTable([...catRows,
-    { k: "Z", l: "Z", tot: true, fmt: (v) => v.toFixed(2), tip: "סכום ה־Z של הקטגוריות (בלי Punt)" },
+    { k: "Z", l: "ערך", tot: true, fmt: (v) => v.toFixed(2), tip: "כמה טוב יותר משחקן שאפשר להרים בחינם (בלי Punt)" },
     { k: "FPTS", l: "FPTS", tot: true, fmt: fmt1 }], A, B, nA, nB, mark).html;
   const adv = cmpTable(advRows, A, B, nA, nB, mark);
   const lead = (x, y) => x > y ? nA : y > x ? nB : "שוויון";
