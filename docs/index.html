@@ -485,6 +485,7 @@ table.mucats tr.punted td { opacity: .4; }
 .muwnav .mact { font-family: var(--font-num); font-size: .95rem; padding: 2px 10px; direction: ltr; unicode-bidi: isolate; }
 .muwnav .mact:disabled { opacity: .35; cursor: default; }
 .muwnav #muNow { font-family: var(--font-body); font-size: .78rem; }
+.ctrnote { text-align: center; margin-top: -2px; }
 .muadds { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; font-weight: 700; color: var(--muted); }
 .muadds input { width: 3.4em; padding: 4px 6px; text-align: center; }
 .muscore .mmid { display: grid; justify-items: center; gap: 8px; min-width: 360px; }
@@ -4051,6 +4052,7 @@ function renderMatchup() {
     ${overBy > 0 ? `<section class="cmpsec over"><h3 class="ctr">הסגל מלא ב־${overBy}: צריך לשחרר</h3>
       <div class="mupickhead"><span>סיכוי לנצח במצ'אפ הקרוב</span></div><ol class="mupicks">${dropRows}</ol></section>` : ""}
     <section class="cmpsec"><h3 class="ctr">פיק אפ מומלץ לשבוע הזה</h3>
+      <p class="munote ctrnote">בסגל שלך ${activeMine.length} שחקנים פעילים מתוך ${st.roster}${ilA.size ? `, ועוד ${ilA.size} ב־IL` : ""}${activeMine.length < st.roster ? ": אפשר להוסיף בלי לשחרר" : ""}</p>
       ${overBy > 0 ? `<p class="munote">קודם לשחרר שחקן מהסגל (למעלה)</p>`
         : left === 0 ? `<p class="munote">ניצלת את כל ${maxAdds} הפיק אפים של השבוע</p>`
         : moves.length ? `<div class="mupickhead"><span>סיכוי לנצח במצ'אפ הקרוב</span></div><ol class="mupicks">${moves.map(moveRow).join("")}</ol>`
