@@ -486,7 +486,10 @@ table.mucats tr.punted td { opacity: .4; }
 .muwnav .mact:disabled { opacity: .35; cursor: default; }
 .muwnav #muNow { font-family: var(--font-body); font-size: .78rem; }
 .ctrnote { text-align: center; margin-top: -2px; }
-.munote.nopick { text-align: center; font-size: 1rem; margin-top: 2px; }
+.munote.nopick { justify-self: center; text-align: center; font-size: 1rem; margin: 2px 0 4px; padding: 8px 18px; border-radius: 999px; background: var(--sunk); border: 1px solid var(--line); color: var(--muted); }
+#muOut > section.cmpsec { margin-top: 14px; }
+.mudaygrid .dghead { display: grid; grid-template-columns: 1fr auto 1fr; align-items: center; }
+.mudaygrid .dghead .seg { justify-self: center; }
 .muadds { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; font-weight: 700; color: var(--muted); }
 .muadds input { width: 3.4em; padding: 4px 6px; text-align: center; }
 .muscore .mmid { display: grid; justify-items: center; gap: 8px; min-width: 360px; }
@@ -4103,7 +4106,7 @@ function renderMatchup() {
         : moves.length ? `<div class="mupickhead"><span>סיכוי לנצח במצ'אפ הקרוב</span></div><ol class="mupicks">${moves.map(moveRow).join("")}</ol>`
         : `<p class="munote nopick">אין פיק אפ שמשפר את הסיכוי לנצח השבוע</p>`}
     </section>
-    <section class="cmpsec"><div class="dghead"><h3>הרכב יומי</h3>
+    <section class="cmpsec mudaygrid"><div class="dghead"><h3>הרכב יומי</h3>
       <div class="seg" role="group"><button type="button" data-mugrid="a" aria-pressed="${gridSide === "a"}">${esc(myName)}</button><button type="button" data-mugrid="b" aria-pressed="${gridSide === "b"}">${esc(oppName)}</button></div></div>
       <div class="tbl-wrap short"><table class="box daygrid"><thead><tr><th class="nosort">שחקן</th>${weekDays().map((d, i) => `<th class="nosort${d === today ? " today" : ""}">${esc(dayLabel(d))}${gridSide === "a" ? `<span class="luday">${i ? `<button type="button" class="lubtn" data-lucopy="${d}" title="העתק את ההרכב של אתמול">⤶</button>` : ""}${st.lineup?.[d] && Object.keys(st.lineup[d]).length ? `<button type="button" class="lubtn" data-lureset="${d}" title="אפס להמלצה">↺</button>` : ""}</span>` : ""}</th>`).join("")}</tr></thead><tbody>${gridRows}</tbody><tfoot>${gridFoot}</tfoot></table></div>
       ${lineupWhy()}
