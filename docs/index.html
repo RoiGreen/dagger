@@ -1683,10 +1683,12 @@ function rankAll(list, mode) {
   const sNew = sdOf(pool.map((p) => rawT.get(p.id).total)), sOld = sdOf(pool.map((p) => oldT.get(p.id).total));
   SCALE = sNew > 0 ? sOld / sNew : 1;
   z = zScores(list, pool, mode);
-  // Replacement level: the average score of the 16 best players nobody has (ranks 105-120 before a draft)
+  // Replacement level: the average score of the 16 best players who will still be free once every roster is full.
+  // The roster spots still open are skipped, so it stays put through a draft (ranks 105-120 before it, the best
+  // 16 free agents once rosters are full)
   const free = list.filter((p) => !p.rookie && !taken.has(p.id) && !mine.has(p.id)).sort((a, b) => z.get(b.id).total - z.get(a.id).total);
-  const freeBand = picks.length || taken.size || mine.size ? free.slice(0, 16)
-    : [...real].sort((a, b) => z.get(b.id).total - z.get(a.id).total).slice(size, size + 16);
+  const open = Math.max(0, size - list.filter((p) => taken.has(p.id) || mine.has(p.id)).length);
+  const freeBand = free.slice(open, open + 16).length ? free.slice(open, open + 16) : free.slice(-16);
   REPL_LEVEL = freeBand.length ? freeBand.reduce((a, p) => a + z.get(p.id).total, 0) / freeBand.length : -1.5;
   // Few games = a less certain average: the score is pulled part of the way toward a target. A proven player
   // (40+ games the season before) is pulled toward his own score that season; anyone else toward replacement level.
