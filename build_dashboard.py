@@ -67,6 +67,28 @@ HEADSHOTS = DATA / "headshots_hd"  # 120x120 WebP headshots from headshots.py
 # Head-to-head: the last N regular-season games against each opponent, 2025-26 and 2026-27
 VS_GAMES = 4
 GAME_LOG_FILES = [DATA / "player_game_logs_regular.csv", CURRENT_LOGS]
+# the NBA's per-game advanced lines for the same games (USG%, pace, offensive rating, possessions)
+ADV_GAME_FILES = [DATA / "player_game_logs_advanced_regular.csv", HERE / "nba_2026_27" / "game_logs_advanced_regular.csv"]
+
+
+def adv_games() -> pd.DataFrame:
+    frames = [pd.read_csv(f, dtype={"GAME_ID": str}) for f in ADV_GAME_FILES if f.exists() and f.stat().st_size > 100]
+    if not frames:
+        return pd.DataFrame(columns=["PLAYER_ID", "GAME_ID", "MIN", "POSS"] + ADV)
+    g = pd.concat(frames, ignore_index=True)
+    g["GAME_ID"] = g["GAME_ID"].str.zfill(10)
+    return g[g["MIN"] > 0]
+
+
+def adv_over(rows: pd.DataFrame, keys: list[str]) -> dict:
+    """USG% / pace / offensive rating over a set of games, per key: usage and rating weighted by possessions,
+    pace by minutes (matches the NBA's season table within ~0.1)."""
+    if rows.empty:
+        return {}
+    r = rows.assign(u=rows["USG_PCT"] * rows["POSS"], p=rows["PACE"] * rows["MIN"], o=rows["OFF_RATING"] * rows["POSS"])
+    t = r.groupby(keys)[["u", "p", "o", "POSS", "MIN"]].sum()
+    t = t[(t["POSS"] > 0) & (t["MIN"] > 0)]
+    return {k: [round(float(x.u / x.POSS), 3), round(float(x.p / x.MIN), 3), round(float(x.o / x.POSS), 3)] for k, x in t.iterrows()}
 SEASON_FILES = HERE / "nba_2025_26" / "rookies"
 
 
@@ -163,13 +185,19 @@ def attach_form(players: list[dict]) -> str | None:
     logs["GAME_DATE"] = pd.to_datetime(logs["GAME_DATE"].astype(str).str[:10])
     end = logs["GAME_DATE"].max()
     by_id = {p["id"]: p for p in players}
+    ag = adv_games()
+    logs["GAME_ID"] = logs["GAME_ID"].astype(str).str.zfill(10)
     for days in FORM_DAYS:
         win = logs[logs["GAME_DATE"] > end - pd.Timedelta(days=days)]
         g = win.groupby("PLAYER_ID")
         means, counts = g[STATS].mean(), g.size()
+        adv = adv_over(ag.merge(win[["PLAYER_ID", "GAME_ID"]], on=["PLAYER_ID", "GAME_ID"]), ["PLAYER_ID"])
         for pid, row in means.iterrows():
             if pid in by_id:
-                by_id[pid].setdefault("form", {})[str(days)] = [int(counts[pid]), [round(float(row[c]), 2) for c in STATS]]
+                f = [int(counts[pid]), [round(float(row[c]), 2) for c in STATS]]
+                if pid in adv:
+                    f.append(adv[pid])
+                by_id[pid].setdefault("form", {})[str(days)] = f
     print(f"Recent form up to {end:%Y-%m-%d}: {sum(1 for p in players if 'form' in p)} players")
     return f"{end:%Y-%m-%d}"
 
@@ -352,13 +380,15 @@ def log_lines(path: Path, skip: set[int] = frozenset()) -> dict[int, dict]:
         return {}
     logs = pd.read_csv(path)
     logs = logs[(logs["MIN"] > 0) & ~logs["PLAYER_ID"].isin(skip)].sort_values("GAME_DATE")
+    # the NBA's advanced numbers for the same games (saved next to the logs by daily_update.py)
+    adv_path = path.with_name(path.name.replace("game_logs_", "advanced_"))
+    adv = pd.read_csv(adv_path).set_index("PLAYER_ID") if adv_path.exists() and adv_path.stat().st_size > 100 else None
     out = {}
     for pid, g in logs.groupby("PLAYER_ID"):
-        out[int(pid)] = {
-            "name": g["PLAYER_NAME"].iloc[-1],
-            "line": {"gp": len(g), "t": g["TEAM_ABBREVIATION"].iloc[-1],
-                     "s": [round(float(g[c].mean()), 2) for c in STATS]},
-        }
+        line = {"gp": len(g), "t": g["TEAM_ABBREVIATION"].iloc[-1], "s": [round(float(g[c].mean()), 2) for c in STATS]}
+        if adv is not None and pid in adv.index and adv.loc[[pid], ADV].notna().all(axis=None):
+            line["adv"] = [round(float(adv.at[pid, c]), 3) for c in ADV]
+        out[int(pid)] = {"name": g["PLAYER_NAME"].iloc[-1], "line": line}
     return out
 
 
@@ -370,7 +400,7 @@ def name_key(name: str) -> str:
 
 def attach_vs(players: list[dict]) -> None:
     """Each player's average over his last VS_GAMES games against every opponent he has faced."""
-    frames = [pd.read_csv(f, usecols=["PLAYER_ID", "GAME_DATE", "MATCHUP"] + STATS)
+    frames = [pd.read_csv(f, usecols=["PLAYER_ID", "GAME_ID", "GAME_DATE", "MATCHUP"] + STATS, dtype={"GAME_ID": str})
               for f in GAME_LOG_FILES if f.exists() and f.stat().st_size > 100]
     logs = pd.concat(frames, ignore_index=True)
     logs = logs[logs["MIN"] > 0]
@@ -382,6 +412,11 @@ def attach_vs(players: list[dict]) -> None:
     by_player: dict[int, dict] = {}
     for r in agg.itertuples(index=False):
         by_player.setdefault(int(r.PLAYER_ID), {})[r.OPP] = [int(r.n)] + [round(float(getattr(r, c)), 1) for c in STATS]
+    last = last.assign(GAME_ID=last["GAME_ID"].str.zfill(10))
+    adv = adv_over(adv_games().merge(last[["PLAYER_ID", "GAME_ID", "OPP"]], on=["PLAYER_ID", "GAME_ID"]), ["PLAYER_ID", "OPP"])
+    for (pid, opp), a in adv.items():
+        if pid in by_player and opp in by_player[pid]:
+            by_player[pid][opp] = by_player[pid][opp] + a  # [games, STATS..., USG, PACE, ORTG]
     for p in players:
         if p["id"] in by_player:
             p["vs"] = by_player[p["id"]]
@@ -524,6 +559,12 @@ def main() -> None:
         team_seasons[str(y)] = [{"t": abbr.get(r["TEAM_ID"]), "name": r["TEAM_NAME"],
                                  **{c: round(float(r[c]), 2) for c in TEAM_ADV}}
                                 for _, r in team_adv.iterrows()]
+    # 2026-27 so far (preseason / regular season), from daily_update.py; teams from abroad in the preseason are left out
+    for y, tag in [(PRESEASON, "preseason"), (CURRENT, "regular")]:
+        f = HERE / "nba_2026_27" / f"teams_advanced_{tag}.csv"
+        if f.exists() and f.stat().st_size > 100:
+            team_seasons[str(y)] = [{"t": abbr[r["TEAM_ID"]], "name": r["TEAM_NAME"], **{c: round(float(r[c]), 2) for c in TEAM_ADV}}
+                                    for _, r in pd.read_csv(f).iterrows() if r["TEAM_ID"] in abbr.index]
 
     html = TEMPLATE.read_text(encoding="utf-8")
     avail = availability(roster)

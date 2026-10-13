@@ -1399,7 +1399,8 @@ function applySeasons() {
     p.noWin = false;
     if (p.rookie && !ys.some((y) => p.seasons?.[y]?.gp >= seasonMinGames(y))) {
       p.s = p.proj; p.gp = p.projGp; p.gpTotal = p.projGp; p.adv = null; p.team25 = null; p.srcSeason = null;
-      setLines(p); p.has = true; continue;
+      // a games minimum applies to his projected games too (my team and favorites stay)
+      setLines(p); p.has = !st.minGp || p.projGp >= st.minGp || mine.has(p.id) || fav.has(p.id); continue;
     }
     // A season counts only when he reached the games minimum in it (the minimum is per season)
     // The preseason is ~5 games a team, so one game is enough there
@@ -1413,8 +1414,9 @@ function applySeasons() {
     p.has = chosen.length > 0 && !short;
     let lines = p.has ? chosen : Object.keys(p.seasons).map(Number).sort().map((y) => ({ y, ...p.seasons[y] }));
     // Missed the chosen season(s) through injury (the "24-25" badge): he still shows, with his latest earlier
-    // full regular season, so a rostered star does not vanish from the tables
-    if (!p.has && p.team26) {
+    // full regular season, so a rostered star does not vanish from the tables. With a games minimum set, the
+    // minimum decides, except for my team and favorites (they stay, as in the recent-form view)
+    if (!p.has && p.team26 && (!st.minGp || mine.has(p.id) || fav.has(p.id))) {
       const real = Object.keys(p.seasons).map(Number).filter((y) => y !== D.preseason && p.seasons[y].gp > 0).sort();
       const inChosen = real.filter((y) => ys.includes(y));
       const back = real.filter((y) => y < Math.min(...ys)), fwd = real.filter((y) => y > Math.max(...ys));
@@ -1440,7 +1442,7 @@ function applySeasons() {
     for (const p of players) {
       const f = p.form?.[st.formWin];
       if (!f || f[0] < FORM_MIN[st.formWin]) { if (!(p.has && (mine.has(p.id) || fav.has(p.id)))) p.has = false; else p.noWin = true; continue; }
-      p.s = f[1]; p.gp = f[0]; p.gpTotal = f[0]; p.adv = null;
+      p.s = f[1]; p.gp = f[0]; p.gpTotal = f[0]; p.adv = f[2] || null;
       p.has = true;
       setLines(p);
     }
@@ -1450,7 +1452,7 @@ function applySeasons() {
     for (const p of players) {
       const v = p.vs?.[st.vsOpp];
       if (!v) { if (!(p.has && (mine.has(p.id) || fav.has(p.id)))) p.has = false; else p.noWin = true; continue; }
-      p.s = v.slice(1); p.gp = v[0]; p.gpTotal = v[0]; p.adv = null;
+      p.s = v.slice(1, 1 + S.length); p.gp = v[0]; p.gpTotal = v[0]; p.adv = v.length > 1 + S.length ? v.slice(1 + S.length) : null;
       p.has = true;
       setLines(p);
     }
