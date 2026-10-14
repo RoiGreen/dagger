@@ -4879,9 +4879,7 @@ function syncControls() {
   $("snake").checked = st.snake;
   for (const b of document.querySelectorAll("[data-tab]")) b.setAttribute("aria-selected", b.dataset.tab === st.tab);
   // my team sits at the top of the draft room while it is open (it can be folded there), and in the side bar elsewhere
-  let folded = false;
-  folded = true;  // folded unless opened (the choice is kept in this browser)
-  try { folded = localStorage.getItem("dagger-minefold") !== "0"; } catch (e) {}
+  const folded = MINE_FOLDED;  // folded on every visit, until opened
   $("minePanel").classList.toggle("folded", folded);
   $("mineFold").textContent = folded ? `▸ הצג (${mine.size} שחקנים)` : "▾ צמצום";
   $("mineFold").setAttribute("aria-expanded", String(!folded));
@@ -4928,9 +4926,10 @@ const teams = [...new Set(players.map((p) => p.team26).filter(Boolean))].sort();
 $("vsOpp").innerHTML += [...teams].sort((a, b) => (TEAM_NAMES[a] || a).localeCompare(TEAM_NAMES[b] || b))
   .map((t) => `<option value="${t}">${esc(TEAM_NAMES[t] || t)}</option>`).join("");
 $("vsOpp").addEventListener("change", (e) => { st.vsOpp = e.target.value; update(); });
+let MINE_FOLDED = true;
 $("mineFold").addEventListener("click", () => {
   const f = !$("minePanel").classList.contains("folded");
-  try { localStorage.setItem("dagger-minefold", f ? "1" : "0"); } catch (e) {}
+  MINE_FOLDED = f;
   $("minePanel").classList.toggle("folded", f);
   $("mineFold").textContent = f ? `▸ הצג (${mine.size} שחקנים)` : "▾ צמצום";
   $("mineFold").setAttribute("aria-expanded", String(!f));
