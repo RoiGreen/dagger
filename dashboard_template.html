@@ -98,6 +98,8 @@ button:focus-visible, input:focus-visible, select:focus-visible, th:focus-visibl
 .dmine #minePanel { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.3fr); gap: 8px 24px; align-items: start; margin-bottom: 12px; }
 .dmine #minePanel h2 { grid-column: 1 / -1; margin: 0; }
 .dmine #minePanel #resetBtn { display: none; }
+.minefold { display: none; } .dmine .minefold { display: inline-block; margin-inline-start: 10px; font-size: .8rem; }
+.dmine #minePanel.folded #mineList, .dmine #minePanel.folded #mineBars { display: none; }
 @media (max-width: 900px) { .dmine #minePanel { grid-template-columns: minmax(0, 1fr); } }
 .catbar { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 6px; font-family: var(--font-num); font-size: .92rem; font-variant-numeric: tabular-nums; }
 .catbar .track { position: relative; height: 10px; background: var(--sunk); border-radius: 3px; overflow: hidden; }
@@ -1199,7 +1201,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
 
       <span id="mineHome" hidden></span>
       <section class="panel" id="minePanel" aria-labelledby="hMine">
-        <h2 id="hMine">הקבוצה שלי</h2>
+        <h2 id="hMine">הקבוצה שלי <button type="button" class="foldbtn minefold" id="mineFold" aria-expanded="true">▾ צמצום</button></h2>
         <ul class="roster-list" id="mineList"></ul>
         <div class="catbars" id="mineBars"></div>
         <button class="danger" id="resetBtn">איפוס הדראפט</button>
@@ -4854,7 +4856,12 @@ function syncControls() {
     : st.teamSel.length <= 4 ? st.teamSel.map((t) => t === "-" ? "FA" : t).join(", ") : `${st.teamSel.length} קבוצות נבחרו`;
   $("snake").checked = st.snake;
   for (const b of document.querySelectorAll("[data-tab]")) b.setAttribute("aria-selected", b.dataset.tab === st.tab);
-  // my team sits at the top of the draft room while it is open, and in the side bar elsewhere
+  // my team sits at the top of the draft room while it is open (it can be folded there), and in the side bar elsewhere
+  let folded = false;
+  try { folded = localStorage.getItem("dagger-minefold") === "1"; } catch (e) {}
+  $("minePanel").classList.toggle("folded", folded);
+  $("mineFold").textContent = folded ? `▸ הצג (${mine.size} שחקנים)` : "▾ צמצום";
+  $("mineFold").setAttribute("aria-expanded", String(!folded));
   const mp = $("minePanel"), home = st.tab === "draft" ? $("draftMineSlot") : $("mineHome");
   if (st.tab === "draft" ? mp.parentNode !== home : mp.previousElementSibling !== home) st.tab === "draft" ? home.append(mp) : home.after(mp);
   // The page title follows the open tab
@@ -4898,6 +4905,13 @@ const teams = [...new Set(players.map((p) => p.team26).filter(Boolean))].sort();
 $("vsOpp").innerHTML += [...teams].sort((a, b) => (TEAM_NAMES[a] || a).localeCompare(TEAM_NAMES[b] || b))
   .map((t) => `<option value="${t}">${esc(TEAM_NAMES[t] || t)}</option>`).join("");
 $("vsOpp").addEventListener("change", (e) => { st.vsOpp = e.target.value; update(); });
+$("mineFold").addEventListener("click", () => {
+  const f = !$("minePanel").classList.contains("folded");
+  try { localStorage.setItem("dagger-minefold", f ? "1" : "0"); } catch (e) {}
+  $("minePanel").classList.toggle("folded", f);
+  $("mineFold").textContent = f ? `▸ הצג (${mine.size} שחקנים)` : "▾ צמצום";
+  $("mineFold").setAttribute("aria-expanded", String(!f));
+});
 $("formWinTop").addEventListener("change", (e) => { st.formWin = e.target.value; update(); });
 document.addEventListener("change", (e) => {
   const sel = e.target.closest("[data-cardform]");
