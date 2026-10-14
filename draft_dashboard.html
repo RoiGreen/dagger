@@ -2872,7 +2872,7 @@ function renderDraft() {
 
 // ---------- comparison tab: two sides, each one player or several ----------
 const CMP_MODES = {
-  players: { a: "שחקן א", b: "שחקן ב", max: 1 },
+  players: { a: "שחקן א", b: "שחקן ב", max: 15 },
   teams: { a: "קבוצה א", b: "קבוצה ב", team: true },
   trade: { a: "אני נותן", b: "אני מקבל", max: 15 },
   pickup: { a: "מוריד", b: "מוסיף", max: 15, pickup: true },
@@ -3244,11 +3244,12 @@ function renderCmp() {
     out.innerHTML = "";
     return;
   }
-  const teamish = M.team || M.pickup;
+  // several players on a side (teams, pickups, or a group in "player vs player"): total or per-player average
+  const teamish = M.team || M.pickup || (c.mode === "players" && (LA.length > 1 || LB.length > 1));
   const avg = teamish && c.agg === "avg";
   const A = cmpTotals(LA, avg), B = cmpTotals(LB, avg);
   const name = (side, L) => M.pickup ? `${teamName(c.pt)} ${side === "a" ? "לפני" : "אחרי"}`
-    : M.team ? teamName(side === "a" ? c.ta : c.tb) : L.length === 1 ? L[0].name : M[side];
+    : M.team ? teamName(side === "a" ? c.ta : c.tb) : L.length === 1 ? L[0].name : c.mode === "players" ? `${L[0].name} ועוד ${L.length - 1}` : M[side];
   const nA = name("a", LA), nB = name("b", LB);
   const per = st.mode === "g" ? "למשחק" : "ל־36 דקות";
   const several = LA.length > 1 || LB.length > 1;
@@ -3459,7 +3460,7 @@ $("viewCmp").addEventListener("input", (e) => {
   if (tp && CMP_TP[tp.dataset.cmptp].has(tp.value)) {
     // A name picked from the list (or typed in full) joins the side
     const side = tp.dataset.cmptp, id = CMP_TP[side].get(tp.value);
-    if (!st.cmp[side].includes(id)) st.cmp[side] = [...st.cmp[side], id].slice(-CMP_MODES[st.cmp.mode].max);  // one player each in "player vs player"
+    if (!st.cmp[side].includes(id)) st.cmp[side] = [...st.cmp[side], id].slice(-CMP_MODES[st.cmp.mode].max);
     tp.value = ""; tp.blur();
     saveSettings(); return renderCmp();
   }
