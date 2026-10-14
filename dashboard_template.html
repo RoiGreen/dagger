@@ -412,6 +412,7 @@ table.cmpt th.ha { color: color-mix(in srgb, var(--sa) 78%, var(--ink)); } table
 table.cmpt td.win { font-weight: 700; }
 table.cmpt td.win.wa { background: color-mix(in srgb, var(--sa) 18%, transparent); }
 table.cmpt td.win.wb { background: color-mix(in srgb, var(--sb) 18%, transparent); }
+table.cmpt td.dif { direction: ltr; unicode-bidi: isolate; }
 table.cmpt td.dif.da { color: color-mix(in srgb, var(--sa) 78%, var(--ink)); font-weight: 700; } table.cmpt td.dif.db { color: color-mix(in srgb, var(--sb) 78%, var(--ink)); font-weight: 700; }
 table.cmpt tr.punted td { opacity: .4; text-decoration: line-through; }
 table.cmpt tr.tot td { border-top: 2px solid var(--line); font-weight: 700; }
@@ -3204,7 +3205,8 @@ function cmpTable(rows, A, B, nameA, nameB, mark = () => "") {
     const lowBetter = r.k === "TOV";
     const win = va == null || vb == null || Math.abs(va - vb) < 1e-9 ? "" : (va > vb) !== lowBetter ? "a" : "b";
     if (r.cat && !r.punted) { if (win === "a") wa++; else if (win === "b") wb++; }
-    const diff = va == null || vb == null ? "–" : r.fmt(Math.abs(va - vb));
+    // signed as the second side minus the first: after minus before, what I get minus what I give
+    const diff = va == null || vb == null ? "–" : `${vb > va ? "+" : "−"}${r.fmt(Math.abs(va - vb))}`;
     const cls = (side) => win === side ? ` class="win w${side}"` : "";
     return `<tr class="${r.punted ? "punted" : ""}${r.tot ? " tot" : ""}"><td class="lbl" title="${esc(r.tip || "")}"><span class="lbw"><span class="lt">${r.l}</span>${win && !r.punted ? mark(win) : ""}</span></td>` +
       `<td${cls("a")}>${va == null ? "–" : r.fmt(va)}</td><td${cls("b")}>${vb == null ? "–" : r.fmt(vb)}</td>` +
