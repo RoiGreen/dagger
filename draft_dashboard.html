@@ -327,6 +327,11 @@ table.dboard .dimg { width: 24px; height: 24px; border-radius: 50%; object-fit: 
 table.dboard td .pk { color: var(--accent); font-family: var(--font-num); font-weight: 700; font-variant-numeric: tabular-nums; }
 table.dboard td .dn { font-weight: 700; }
 .autobar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
+.dadvice { margin-top: 10px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line)); border-radius: 10px; background: color-mix(in srgb, var(--accent) 6%, var(--surface)); display: grid; gap: 8px; font-size: .9rem; }
+.dadvice .dadv-prof, .dadvice .dadv-picks { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; }
+.dadvice i { font-style: normal; font-weight: 700; } .dadvice i.ok { color: var(--pos); } .dadvice i.done { color: var(--muted); } .dadvice i.no { color: var(--neg); }
+.dadvice .dadv-picks span { display: inline-flex; flex-direction: column; } .dadvice .dadv-picks span.top .pn { color: var(--accent); }
+.dadvice .pn { font-weight: 800; cursor: pointer; } .dadvice small { color: var(--muted); font-size: .76rem; }
 .autobar .lbl { font-size: .85rem; color: var(--muted); }
 .autobar button, .pickedit button { font: inherit; font-size: .85rem; font-weight: 600; padding: 6px 12px; border-radius: 8px;
   border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
@@ -1282,6 +1287,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
               <button type="button" data-auto="redo" title="הקבוצה שלך נשארת כמו שהיא; כל בחירה של קבוצה אחרת מוחלפת בשחקן הזמין הכי טוב באותו מקום בדראפט">בחירה מחדש לשאר הקבוצות</button>
             </div>
           </div>
+          <div class="dadvice" id="draftAdvice" hidden></div>
         </div>
         <details class="dsetup tradebox" id="tradeBox">
           <summary>טרייד בין קבוצות</summary>
@@ -1630,10 +1636,8 @@ function meanStd(xs) {
 //   score = (player's average − average of the drafted pool) ÷ √(spread between players² + 1.04 × week-to-week noise²)
 // FG% / FT% use impact = makes − pool% × attempts. The noise is how much a player's per-game average jumps from
 // one week to the next (build_dashboard.py, p.tau per season), averaged over the pool. All scores are then
-// multiplied by SCALE so the totals spread as widely as the old scores (order unchanged), and a category above 3
-// keeps only 30% of the excess (the "knee"): a standout still gets more, one category cannot take over.
-const KNEE = 3, KNEE_KEEP = 0.3;
-const knee = (z) => (Math.abs(z) <= KNEE ? z : Math.sign(z) * (KNEE + (Math.abs(z) - KNEE) * KNEE_KEEP));
+// multiplied by SCALE so the totals spread as widely as the old scores (order unchanged). No cap on a category:
+// a cap at 3 made no difference in 9 seasons of simulated drafts, and every extra block still counts in a matchup.
 let SCALE = 1;
 const TAU_IX = Object.fromEntries(["PTS", "REB", "AST", "STL", "BLK", "FG3M", "FG_PCT", "FT_PCT", "TOV"].map((k, i) => [k, i]));
 // one player's week-to-week noise per category, over the chosen seasons (games-weighted); per 36 scales it up
@@ -1661,7 +1665,7 @@ function poolNoise(pool, mode) {
   NOISE_CACHE = { key, v: rows.length ? v : null };
   return NOISE_CACHE.v;
 }
-// opts.raw: the score before SCALE and the knee; opts.old: the previous method (spread only, cut at ±3)
+// opts.raw: the score before SCALE; opts.old: the previous method (spread only, cut at ±3)
 function zScores(list, pool, mode, opts = {}) {
   const out = new Map(list.map((p) => [p.id, { z: {}, total: 0 }]));
   const noise = opts.old ? null : poolNoise(pool, mode);
@@ -1680,7 +1684,7 @@ function zScores(list, pool, mode, opts = {}) {
     for (const p of list) {
       let z = sign * (get(p) - mu) / den;
       if (opts.old) z = Math.max(-3, Math.min(3, z));
-      else if (!opts.raw) z = knee(z * SCALE);
+      else if (!opts.raw) z = z * SCALE;
       const r = out.get(p.id);
       r.z[c.k] = z;
       if (!st.punts.has(c.k)) r.total += z;
@@ -1830,8 +1834,7 @@ function fillZHelp(list, now) {
   $("zExCat").innerHTML = `<b>לדוגמה, ${nm} ב${name}:</b><br>
     • הפער מהממוצע: ${x.toFixed(1)} פחות ${mu.toFixed(1)} = ${fx(x - mu)}<br>
     • הפער הרגיל: השחקנים שונים זה מזה ב־${sd.toFixed(1)} ${name} בממוצע, ושחקן משתנה משבוע לשבוע ב־${wk.toFixed(1)}. ביחד ${den.toFixed(2)} (שורש של ${sd.toFixed(1)} בריבוע ועוד ${wk.toFixed(1)} בריבוע)<br>
-    • ${fx(x - mu)} ÷ ${den.toFixed(2)} = ${fx(raw, 2)}, ואחרי התאמה לסולם (כפול ${SCALE.toFixed(1)}) = ${fx(scaled, 2)}<br>
-    ${scaled > 3 ? `• מעל 3 נספר רק 30% מהעודף, אז הציון ב${name} הוא <b>${fx(z.z[c.k])}</b>` : `• הציון ב${name} הוא <b>${fx(z.z[c.k])}</b>`}`;
+    • ${fx(x - mu)} ÷ ${den.toFixed(2)} = ${fx(raw, 2)}, ואחרי התאמה לסולם (כפול ${SCALE.toFixed(1)}): הציון ב${name} הוא <b>${fx(z.z[c.k])}</b>`;
   const parts = CATS.filter((k) => !st.punts.has(k.k)).map((k) => `${HEB_CAT[k.k]} ${fx(z.z[k.k])}`).join(", ");
   // once players are taken, the market is weaker: every score rises by the same amount (the order stays)
   const shift = Math.abs(AVAIL_LEVEL) >= 0.05;
@@ -2889,6 +2892,50 @@ function renderDraft() {
     byTeam.map((t, i) => `<td class="${i === me ? "me" : ""}">${t.reduce((a, x) => a + value(x.id), 0).toFixed(1)}</td>`).join("");
   $("undoBtn").disabled = !picks.length;
   renderPickEdit(byTeam);
+  renderDraftAdvice();
+}
+
+// ---------- draft advice: the profile my picks are building, and the available players that fit it ----------
+// Each category is a weekly contest: my roster's total score in it against an average team. The chance to win it is
+// Φ(total ÷ SPREAD). A player is worth the categories he adds per week: Σ Φ((total + his score) ÷ SPREAD) − Φ(total ÷ SPREAD).
+// So a category nearly won or nearly lost gains little from more of it, and a close one gains the most.
+const ncdf = (x) => {
+  const t = 1 / (1 + 0.2316419 * Math.abs(x)), d = 0.3989423 * Math.exp(-x * x / 2);
+  const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
+  return x > 0 ? 1 - p : p;
+};
+const ADV_SPREAD = 5;  // how far a team's weekly total in one category swings against an average team, in score units
+function renderDraftAdvice() {
+  const box = $("draftAdvice"), me = myIdx();
+  const mineIds = picks.filter((x) => x.team === me).map((x) => x.id);
+  if (st.fmt !== "cat" || !mineIds.length || mineIds.length >= st.roster) { box.hidden = true; return; }
+  const zAll = last.now.z, cats = CATS.filter((c) => !st.punts.has(c.k));
+  const S = Object.fromEntries(cats.map((c) => [c.k, mineIds.reduce((a, id) => a + (zAll.get(id)?.z[c.k] ?? 0), 0)]));
+  const P = Object.fromEntries(cats.map((c) => [c.k, ncdf(S[c.k] / ADV_SPREAD)]));
+  const heb = (k) => HEB_CAT[k];
+  // enough of it: very likely won already; give up: very likely lost (only once a few picks are in)
+  const enough = cats.filter((c) => P[c.k] >= 0.85);
+  const drop = mineIds.length >= 4 ? cats.filter((c) => P[c.k] <= 0.2) : [];
+  const done = new Set([...enough, ...drop].map((c) => c.k));
+  // the profile to build: my strongest categories that are not settled yet, up to 5 to win in all (with the settled ones)
+  const build = cats.filter((c) => !done.has(c.k)).sort((a, b) => S[b.k] - S[a.k]).slice(0, Math.max(2, 5 - enough.length));
+  const taken = new Set(picks.map((x) => x.id));
+  const pool = players.filter((p) => p.L && (p.team26 || p.rookie) && !taken.has(p.id) && zAll.has(p.id))
+    .sort((a, b) => draftVal(b) - draftVal(a)).slice(0, 90);
+  const gainOf = (p) => {
+    const z = zAll.get(p.id).z;
+    const per = cats.map((c) => ({ k: c.k, g: ncdf((S[c.k] + z[c.k]) / ADV_SPREAD) - P[c.k] }));
+    return { p, g: per.reduce((a, x) => a + x.g, 0), help: per.filter((x) => x.g > 0.01).sort((a, b) => b.g - a.g).slice(0, 3) };
+  };
+  const best = pool.map(gainOf).sort((a, b) => b.g - a.g).slice(0, 3);
+  const list = (cs) => cs.map((c) => heb(c.k)).join(", ");
+  box.hidden = false;
+  box.innerHTML = `<div class="dadv-prof"><b>הפרופיל שלך:</b>
+      ${build.length ? `<span>לחזק: <i class="ok">${list(build)}</i></span>` : ""}
+      ${enough.length ? `<span>מספיק: <i class="done">${list(enough)}</i></span>` : ""}
+      ${drop.length ? `<span>לוותר: <i class="no">${list(drop)}</i></span>` : ""}</div>
+    <div class="dadv-picks"><b>מומלץ לבחירה הבאה:</b>${best.map((x, i) => `<span class="${i ? "" : "top"}"><bdi class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</bdi>
+      <small>+${x.g.toFixed(2)} קטגוריות בשבוע${x.help.length ? ` · ${x.help.map((h) => heb(h.k)).join(", ")}` : ""}</small></span>`).join("")}</div>`;
 }
 
 // ---------- comparison tab: two sides, each one player or several ----------
