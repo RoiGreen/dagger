@@ -795,6 +795,13 @@ table.box { direction: ltr; }
 .pform select { width: auto; min-width: 160px; background-color: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.28); font-weight: 700; }
 .pform select option { color: #10182b; }
 .pfav { justify-self: stretch; margin-bottom: 12px; padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.1); color: #fff; font: inherit; font-weight: 700; font-size: .85rem; cursor: pointer; }
+.stats { padding: 18px; display: grid; gap: 14px; }
+.stats h3 { margin: 0; }
+.stattiles { display: flex; gap: 12px; flex-wrap: wrap; }
+.stattiles div { flex: 1 1 120px; display: grid; justify-items: center; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--sunk); }
+.stattiles b { font-family: var(--font-num); font-size: 1.8rem; }
+.stattiles small { color: var(--muted); font-weight: 600; }
+.stats td.pn small { display: block; color: var(--muted); font-size: .75rem; }
 .pfav:hover { background: rgba(255,255,255,.2); }
 .pfav.on { background: #ffc23d; border-color: #ffc23d; color: #1a1208; }
 .pform small { font-size: .72rem; color: rgba(255,255,255,.8); }
@@ -1030,7 +1037,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
         <h1><span id="pageTitle">נתונים כלליים</span> <span class="yr" id="pageYear" hidden>2026-27</span></h1>
       </div>
       <div class="who">
-        <span class="viewer" id="viewer" hidden><img id="viewerAvatar" alt="" hidden><span id="viewerName"></span><button class="signout" id="signOutBtn" type="button" hidden>התנתקות</button></span>
+        <span class="viewer" id="viewer" hidden><img id="viewerAvatar" alt="" hidden><span id="viewerName"></span><button class="signout" id="statsBtn" type="button" hidden>סטטיסטיקות</button><button class="signout" id="signOutBtn" type="button" hidden>התנתקות</button></span>
         <span class="save-state" id="saveState">הבחירות נשמרות בדפדפן הזה</span>
         <span class="save-state" id="injStamp" hidden></span>
         <button class="iconbtn" id="themeBtn" type="button" aria-label="מצב בהיר או כהה" title="מצב בהיר או כהה"></button>
@@ -4589,10 +4596,42 @@ async function connectSite() {
     $("saveState").textContent = "הבחירות נשמרות בחשבון שלך";
     if (!same || !cached) { syncControls(); compute(); render(); }
     if (!cached) done();
+    logVisit(user.id);
+    // the statistics button: only the site owner's account gets rows back (checked on the server)
+    sb.rpc("admin_stats").then(({ data: rows, error: e4 }) => { $("statsBtn").hidden = !!e4 || !rows?.length; });
   }
+  // one row per user per day (Israel time): the owner's statistics count the days each user came in
+  const ilDay = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
+  let visitDay = null;
+  async function logVisit(uid) {
+    const day = ilDay();
+    if (visitDay === day) return;
+    visitDay = day;
+    try {
+      const { error: e1 } = await sb.from("visits").insert({ user_id: uid, day });
+      if (e1) await sb.from("visits").update({ last_at: new Date().toISOString() }).eq("user_id", uid).eq("day", day);
+    } catch (e) {}
+  }
+  document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && signedInAs) logVisit(signedInAs); });
+  $("statsBtn").addEventListener("click", async () => {
+    const { data: rows, error: e5 } = await sb.rpc("admin_stats");
+    if (e5 || !rows) return showToast("לא הצלחתי לטעון את הסטטיסטיקות");
+    const day = (t) => t ? new Date(t).toLocaleString("he-IL", { timeZone: "Asia/Jerusalem", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" }) : "–";
+    const today = ilDay(), inDay = (t) => t && new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(t)) === today;
+    const nToday = rows.filter((r) => inDay(r.last_visit)).length, nWeek = rows.filter((r) => r.days_7 > 0).length;
+    $("gameCard").innerHTML = `<button type="button" class="gclose" data-gclose="1" aria-label="סגירה">✕</button>
+      <div class="stats"><h3>סטטיסטיקות כניסה</h3>
+        <div class="stattiles"><div><b>${rows.length}</b><small>משתמשים רשומים</small></div><div><b>${nToday}</b><small>נכנסו היום</small></div><div><b>${nWeek}</b><small>נכנסו השבוע</small></div></div>
+        <div class="tbl-wrap"><table class="box"><thead><tr><th class="nosort">משתמש</th><th class="nosort">נרשם</th><th class="nosort">כניסה אחרונה</th><th class="nosort">ימים ב־7 ימים</th><th class="nosort">ימים ב־30 יום</th><th class="nosort">סה״כ ימים</th></tr></thead><tbody>
+        ${rows.map((r) => `<tr><td class="pn"><b>${esc(r.username || "–")}</b><small dir="ltr">${esc(r.email || "")}</small></td><td>${day(r.registered)}</td><td>${day(r.last_visit || r.last_sign_in)}</td><td>${r.days_7}</td><td>${r.days_30}</td><td>${r.days_total}</td></tr>`).join("")}
+        </tbody></table></div>
+        <p class="hint">הכניסות נספרות מיום ההתקנה, 14.10.26: כל יום שמשתמש נכנס בו נספר פעם אחת. לפני כן מוצגת הכניסה האחרונה לחשבון</p></div>`;
+    $("gameModal").hidden = false;
+  });
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && remote?.refresh) remote.refresh(); });
   function signedOut() {
     signedInAs = null; remote = null; siteUid = null;
+    $("statsBtn").hidden = true; visitDay = null;
     try { localStorage.removeItem(ACCOUNT_KEY); } catch (e) {}
     picks = []; rebuildSets(); fav = new Set();
     $("viewer").hidden = true; $("signOutBtn").hidden = true;
