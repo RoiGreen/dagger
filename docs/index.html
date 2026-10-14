@@ -105,10 +105,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, th:focus-visibl
 .catbar .track { position: relative; height: 10px; background: var(--sunk); border-radius: 3px; overflow: hidden; }
 .catbar .track::after { content: ""; position: absolute; inset-block: 0; inset-inline-start: 50%; width: 1px; background: var(--muted); opacity: .5; }
 .catbar .fill { position: absolute; inset-block: 0; border-radius: 2px; }
-.catbar .fill.ghost { opacity: .35; }
-.catbar.withprev { grid-template-columns: 44px 1fr 92px; }
-.catbar .dz { font-style: normal; font-weight: 800; margin-inline-start: 4px; } .catbar .dz.up { color: var(--pos); } .catbar .dz.dn { color: var(--neg); }
-.mprev { margin: 0 0 4px; font-size: .85rem; color: var(--muted); } .mprev b { color: var(--accent); }
+.catbar .tick { position: absolute; inset-block: -2px; width: 2px; margin-inline-start: -1px; background: var(--ink); opacity: .7; }
+.catbar.withprev { grid-template-columns: 44px 1fr 96px; }
+.catbar .dz { font-weight: 800; } .catbar .dz.up { color: var(--pos); } .catbar .dz.dn { color: var(--neg); }
+.roster-list li.prevrow { color: var(--accent); font-weight: 700; border-top: 1px dashed var(--line); padding-top: 4px; }
 .catbar .v { text-align: start; direction: ltr; }
 .catbar.punted { opacity: .4; }
 .empty { color: var(--muted); font-size: .88rem; margin: 0; }
@@ -4518,14 +4518,15 @@ function renderMine() {
     return;
   }
   const zAll = last.now.z;
-  $("mineList").innerHTML = mp.map((p) => `<li><span><span class="pickno">${DRAFT.labels.get(p.id) || ""}</span> ${esc(p.name)}</span><span class="meta">${esc(p.pos || "–")} · ${esc(p.team26 || "FA")}</span></li>`).join("");
+  // a player typed in the draft room's pick box (not picked yet): what he would add, per category
+  const pv = PICK_PREVIEW && !mine.has(PICK_PREVIEW) && st.fmt === "cat" ? PLAYER_BY_ID.get(PICK_PREVIEW) : null;
+  $("mineList").innerHTML = mp.map((p) => `<li><span><span class="pickno">${DRAFT.labels.get(p.id) || ""}</span> ${esc(p.name)}</span><span class="meta">${esc(p.pos || "–")} · ${esc(p.team26 || "FA")}</span></li>`).join("")
+    + (pv ? `<li class="prevrow"><span>+ ${esc(pv.name)}</span><span class="meta">${esc(pv.pos || "–")} · ${esc(pv.team26 || "FA")}</span></li>` : "");
   if (st.fmt === "pts") {
     const total = mp.reduce((a, p) => a + p.F[m], 0);
     $("mineBars").innerHTML = `<p class="hint">סה״כ נקודות פנטזי למשחק: <b style="font-family:var(--font-num);color:var(--ink)">${fmt1(total)}</b></p>`;
     return;
   }
-  // a player typed in the draft room's pick box (not picked yet): what he would add, per category
-  const pv = PICK_PREVIEW && !mine.has(PICK_PREVIEW) ? PLAYER_BY_ID.get(PICK_PREVIEW) : null;
   const pz = pv ? zAll.get(pv.id) : null;
   const sums = CATS.map((c) => {
     const v = mp.reduce((a, p) => a + (zAll.get(p.id)?.z[c.k] ?? 0), 0), d = pz ? pz.z[c.k] : 0;
@@ -4538,10 +4539,12 @@ function renderMine() {
     return `<span class="fill${cls}" style="${side};width:${w}%;background:var(${v >= 0 ? "--pos" : "--neg"})"></span>`;
   };
   const sg = (x) => `${x >= 0 ? "+" : "−"}${Math.abs(x).toFixed(1)}`;
-  $("mineBars").innerHTML = (pv ? `<p class="mprev">עם <b>${esc(pv.name)}</b>: בצבע בהיר הקבוצה אחרי שתבחר בו, ובצבע מה שהוא מוסיף</p>` : "") + sums.map(({ c, v, d }) => {
+  // with a previewed player: the bar shows the team after picking him, a thin mark where it stands now, "now → after"
+  const tick = (v) => `<span class="tick" style="inset-inline-start:calc(50% - ${(v / maxAbs) * 50}%)"></span>`;
+  $("mineBars").innerHTML = sums.map(({ c, v, d }) => {
     return `<div class="catbar${st.punts.has(c.k) ? " punted" : ""}${pv ? " withprev" : ""}"><span><bdi>${c.l}</bdi></span>
-      <span class="track">${pv ? fill(v + d, " ghost") : ""}${fill(v, "")}</span>
-      <span class="v">${sg(v)}${pv ? ` <i class="dz ${d >= 0 ? "up" : "dn"}">${sg(d)}</i>` : ""}</span></div>`;
+      <span class="track">${fill(v + d, "")}${pv ? tick(v) : ""}</span>
+      <span class="v">${pv ? `${sg(v)} → <b class="dz ${d >= 0 ? "up" : "dn"}">${sg(v + d)}</b>` : sg(v)}</span></div>`;
   }).join("");
 }
 
