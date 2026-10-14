@@ -95,6 +95,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, th:focus-visibl
 .roster-list li { display: flex; justify-content: space-between; gap: 8px; font-size: .9rem; }
 .roster-list .meta { color: var(--muted); font-family: var(--font-num); }
 .catbars { display: grid; gap: 4px; }
+.dmine #minePanel { display: grid; grid-template-columns: minmax(220px, 1fr) minmax(260px, 1.3fr); gap: 8px 24px; align-items: start; margin-bottom: 12px; }
+.dmine #minePanel h2 { grid-column: 1 / -1; margin: 0; }
+.dmine #minePanel #resetBtn { display: none; }
+@media (max-width: 900px) { .dmine #minePanel { grid-template-columns: minmax(0, 1fr); } }
 .catbar { display: grid; grid-template-columns: 44px 1fr 44px; align-items: center; gap: 6px; font-family: var(--font-num); font-size: .92rem; font-variant-numeric: tabular-nums; }
 .catbar .track { position: relative; height: 10px; background: var(--sunk); border-radius: 3px; overflow: hidden; }
 .catbar .track::after { content: ""; position: absolute; inset-block: 0; inset-inline-start: 50%; width: 1px; background: var(--muted); opacity: .5; }
@@ -330,8 +334,18 @@ table.dboard td .dn { font-weight: 700; }
 .dadvice { margin-top: 10px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line)); border-radius: 10px; background: color-mix(in srgb, var(--accent) 6%, var(--surface)); display: grid; gap: 8px; font-size: .9rem; }
 .dadvice .dadv-prof, .dadvice .dadv-picks { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; }
 .dadvice i { font-style: normal; font-weight: 700; } .dadvice i.ok { color: var(--pos); } .dadvice i.done { color: var(--muted); } .dadvice i.no { color: var(--neg); }
-.dadvice .dadv-picks span { display: inline-flex; flex-direction: column; } .dadvice .dadv-picks span.top .pn { color: var(--accent); }
-.dadvice .pn { font-weight: 800; cursor: pointer; } .dadvice small { color: var(--muted); font-size: .76rem; }
+.dadvice .dadv-h { font-size: .95rem; }
+.dadvice .dadv-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
+.dadvice .dadv-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 8px; }
+.dadvice .dadv-card.top { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.dadvice .dadv-name { display: flex; align-items: center; flex-wrap: wrap; gap: 6px 8px; }
+.dadvice .dadv-name .rk { font-family: var(--font-num); font-weight: 800; color: var(--accent); }
+.dadvice .pn { font-weight: 800; font-size: 1rem; cursor: pointer; } .dadvice .dadv-card.top .pn { color: var(--accent); }
+.dadvice small { color: var(--muted); font-size: .76rem; }
+.dadvice .dadv-stats { display: flex; flex-wrap: wrap; gap: 6px 14px; }
+.dadvice .dadv-stats span { display: grid; justify-items: center; min-width: 52px; }
+.dadvice .dadv-stats b { font-family: var(--font-num); font-weight: 500; font-size: 1rem; direction: ltr; unicode-bidi: isolate; }
+.dadvice .dadv-stats b.lead { font-weight: 800; color: var(--pos); }
 .autobar .lbl { font-size: .85rem; color: var(--muted); }
 .autobar button, .pickedit button { font: inherit; font-size: .85rem; font-weight: 600; padding: 6px 12px; border-radius: 8px;
   border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
@@ -1183,7 +1197,8 @@ table.cmpt td.lbl { min-width: 5.5em; }
         <div class="field"><label for="maxAge">גיל מקסימלי</label><input type="number" id="maxAge" min="19" max="42" value="42"></div>
       </section>
 
-      <section class="panel" aria-labelledby="hMine">
+      <span id="mineHome" hidden></span>
+      <section class="panel" id="minePanel" aria-labelledby="hMine">
         <h2 id="hMine">הקבוצה שלי</h2>
         <ul class="roster-list" id="mineList"></ul>
         <div class="catbars" id="mineBars"></div>
@@ -1263,6 +1278,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
       </section>
 
       <section class="view" id="viewDraft" role="tabpanel" aria-labelledby="tabDraft" hidden>
+        <div class="dmine" id="draftMineSlot"></div>
         <button type="button" class="linkbtn dsetlink" id="openLeague">הגדרות הליגה: קבוצות, סדר בחירה ושמות</button>
         <div class="dconsole">
           <div class="clock" id="clock"></div>
@@ -2922,7 +2938,7 @@ function renderDraftAdvice() {
   const heb = (k) => HEB_CAT[k];
   // enough of it: very likely won already; give up: very likely lost (only once a few picks are in)
   const enough = cats.filter((c) => P[c.k] >= 0.85);
-  const drop = mineIds.length >= 4 ? cats.filter((c) => P[c.k] <= 0.2) : [];
+  const drop = mineIds.length >= 3 ? cats.filter((c) => P[c.k] <= 0.2) : [];  // from round 3: earlier is too soon
   const done = new Set([...enough, ...drop].map((c) => c.k));
   // the profile to build: my strongest categories that are not settled yet, up to 5 to win in all (with the settled ones)
   const build = cats.filter((c) => !done.has(c.k)).sort((a, b) => S[b.k] - S[a.k]).slice(0, Math.max(2, 5 - enough.length));
@@ -2940,13 +2956,25 @@ function renderDraftAdvice() {
   };
   const best = pool.map(gainOf).sort((a, b) => b.g - a.g).slice(0, 3);
   const list = (cs) => cs.map((c) => heb(c.k)).join(", ");
+  // the numbers shown under each recommended player: the categories to build, the best of the three in bold
+  const showCats = build.length ? build : cats.slice(0, 5);
+  const val = (p, k) => p.L.g[k];
+  const statTxt = (p, k) => (k.endsWith("_PCT") ? fmt3(val(p, k)) : fmt1(val(p, k)));
+  const bestIn = Object.fromEntries(showCats.map((c) => {
+    const lowWins = c.k === "TOV";
+    const top = best.reduce((a, x) => (!a || (lowWins ? val(x.p, c.k) < val(a.p, c.k) : val(x.p, c.k) > val(a.p, c.k)) ? x : a), null);
+    return [c.k, top?.p.id];
+  }));
   box.hidden = false;
   box.innerHTML = `<div class="dadv-prof"><b title="לעומת הממוצע של שאר הקבוצות בליגה שלך עד עכשיו">הפרופיל שלך מול הליגה:</b>
       ${build.length ? `<span>לחזק: <i class="ok">${list(build)}</i></span>` : ""}
       ${enough.length ? `<span>מספיק: <i class="done">${list(enough)}</i></span>` : ""}
       ${drop.length ? `<span>לוותר: <i class="no">${list(drop)}</i></span>` : ""}</div>
-    <div class="dadv-picks"><b title="השחקנים שהכי מעלים את מספר הקטגוריות שתנצח בשבוע מול הליגה, לפי הסדר">מומלץ לבחירה הבאה:</b>${best.map((x, i) => `<span class="${i ? "" : "top"}"><bdi class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</bdi>
-      <small>${x.help.length ? `מחזק: ${x.help.map((h) => heb(h.k)).join(", ")}` : "שחקן מאוזן"}</small></span>`).join("")}</div>`;
+    <b class="dadv-h" title="השחקנים שהכי מעלים את מספר הקטגוריות שתנצח בשבוע מול הליגה, לפי הסדר">מומלץ לבחירה הבאה</b>
+    <div class="dadv-cards">${best.map((x, i) => `<div class="dadv-card${i ? "" : " top"}">
+      <div class="dadv-name"><span class="rk">${i + 1}</span><bdi class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</bdi>${x.p.hurt?.s === "OUT" ? injuryPill(x.p) : ""}<small>${esc(x.p.pos || "")} · ${esc(x.p.team26 || "FA")}</small></div>
+      <div class="dadv-stats">${showCats.map((c) => `<span><small>${heb(c.k)}</small><b class="${bestIn[c.k] === x.p.id ? "lead" : ""}">${statTxt(x.p, c.k)}</b></span>`).join("")}</div>
+    </div>`).join("")}</div>`;
 }
 
 // ---------- comparison tab: two sides, each one player or several ----------
@@ -4826,6 +4854,9 @@ function syncControls() {
     : st.teamSel.length <= 4 ? st.teamSel.map((t) => t === "-" ? "FA" : t).join(", ") : `${st.teamSel.length} קבוצות נבחרו`;
   $("snake").checked = st.snake;
   for (const b of document.querySelectorAll("[data-tab]")) b.setAttribute("aria-selected", b.dataset.tab === st.tab);
+  // my team sits at the top of the draft room while it is open, and in the side bar elsewhere
+  const mp = $("minePanel"), home = st.tab === "draft" ? $("draftMineSlot") : $("mineHome");
+  if (st.tab === "draft" ? mp.parentNode !== home : mp.previousElementSibling !== home) st.tab === "draft" ? home.append(mp) : home.after(mp);
   // The page title follows the open tab
   try { sessionStorage.setItem(TAB_KEY, st.tab); } catch (e) {}
   // website visit stats: which tabs people open (an event per tab change, not a page view)
