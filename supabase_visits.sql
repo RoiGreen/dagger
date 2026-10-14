@@ -100,7 +100,8 @@ language sql security definer set search_path = public as $$
          coalesce(sum(v.sessions) filter (where v.day > (select d from today) - 7), 0)::int,
          coalesce(sum(v.sessions) filter (where v.day > (select d from today) - 30), 0)::int,
          coalesce(sum(v.sessions), 0)::int,
-         max(v.entry_at)
+         -- the latest day's entry start; a day with no counted entry yet: the day's first visit
+         (array_agg(coalesce(v.entry_at, v.first_at) order by v.day desc))[1]
   from auth.users u
   left join public.visits v on v.user_id = u.id
   left join per_user pu on pu.user_id = u.id
