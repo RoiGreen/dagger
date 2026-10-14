@@ -68,7 +68,8 @@ HEADSHOTS = DATA / "headshots_hd"  # 120x120 WebP headshots from headshots.py
 VS_GAMES = 4
 GAME_LOG_FILES = [DATA / "player_game_logs_regular.csv", CURRENT_LOGS]
 # the NBA's per-game advanced lines for the same games (USG%, pace, offensive rating, possessions)
-ADV_GAME_FILES = [DATA / "player_game_logs_advanced_regular.csv", HERE / "nba_2026_27" / "game_logs_advanced_regular.csv"]
+ADV_GAME_FILES = [DATA / "player_game_logs_advanced_regular.csv", HERE / "nba_2026_27" / "game_logs_advanced_regular.csv",
+                  HERE / "nba_2026_27" / "game_logs_advanced_preseason.csv"]
 
 
 def adv_games() -> pd.DataFrame:
@@ -181,6 +182,13 @@ def attach_form(players: list[dict]) -> str | None:
     p["form"] = {"7": [games, [STATS averages]], ...}. Returns the last game date."""
     cur = pd.read_csv(CURRENT_LOGS) if CURRENT_LOGS.exists() and CURRENT_LOGS.stat().st_size > 200 else pd.DataFrame()
     logs = cur if not cur.empty else pd.read_csv(DATA / "player_game_logs_regular.csv")
+    return form_windows(players, logs, "form")
+
+
+def form_windows(players: list[dict], logs: pd.DataFrame, key: str) -> str | None:
+    """p[key] = {"7": [games, [STATS averages], (USG, PACE, ORTG)], ...}, counted back from the last game in logs."""
+    if logs.empty:
+        return None
     logs = logs[logs["MIN"] > 0].copy()
     logs["GAME_DATE"] = pd.to_datetime(logs["GAME_DATE"].astype(str).str[:10])
     end = logs["GAME_DATE"].max()
@@ -197,8 +205,8 @@ def attach_form(players: list[dict]) -> str | None:
                 f = [int(counts[pid]), [round(float(row[c]), 2) for c in STATS]]
                 if pid in adv:
                     f.append(adv[pid])
-                by_id[pid].setdefault("form", {})[str(days)] = f
-    print(f"Recent form up to {end:%Y-%m-%d}: {sum(1 for p in players if 'form' in p)} players")
+                by_id[pid].setdefault(key, {})[str(days)] = f
+    print(f"Recent form ({key}) up to {end:%Y-%m-%d}: {sum(1 for p in players if key in p)} players")
     return f"{end:%Y-%m-%d}"
 
 
@@ -526,6 +534,9 @@ def main() -> None:
     attach_vs(players)
     attach_recent(players)
     form_end = attach_form(players)
+    # the 2026-27 preseason has its own windows: they apply when the preseason is the latest season chosen
+    pre_logs = pd.read_csv(PRESEASON_LOGS) if PRESEASON_LOGS.exists() and PRESEASON_LOGS.stat().st_size > 200 else pd.DataFrame()
+    form_end_pre = form_windows(players, pre_logs, "formPre")
     attach_week_noise(players)
     # Embedded, because claude.ai artifacts cannot load images from other sites
     with_img = 0
@@ -584,7 +595,7 @@ def main() -> None:
     payload = json.dumps({"stats": STATS, "seasons": seasons, "preseason": PRESEASON, "current": CURRENT,
                           "curMaxGp": cur_max_gp, "players": players,
                           "teamSeasons": team_seasons, "injUpdated": inj_updated, "vsGames": VS_GAMES, "sched": sched,
-                          "dist": team_distribution(), "box": box_scores(), "logos": team_logos(), "formEnd": form_end},
+                          "dist": team_distribution(), "box": box_scores(), "logos": team_logos(), "formEnd": form_end, "formEndPre": form_end_pre},
                          ensure_ascii=False, separators=(",", ":"))
     OUT.write_text(html.replace("/*__DATA__*/null", payload), encoding="utf-8")
     # The website loads the photos as separate files (cached, fetched when shown), so the page itself is small

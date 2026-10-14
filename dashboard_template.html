@@ -1409,6 +1409,9 @@ function seasonRange() {
 
 // Combine the chosen seasons into one line per player: per-game stats weighted by games,
 // advanced stats weighted by minutes, and the team of his latest chosen season
+// Recent-form windows come from the latest season chosen: the 2026-27 preseason when it is chosen (and the 2026-27
+// regular season is not), else the regular season (2026-27 once it starts, before that the end of 2025-26)
+const formFromPre = () => { const ys = chosenSeasons(); return ys.includes(D.preseason) && !ys.includes(D.current) && !!D.formEndPre; };
 function applySeasons() {
   const ys = chosenSeasons();
   for (const p of players) {
@@ -1455,8 +1458,9 @@ function applySeasons() {
   }
   // Recent form: the last 7 / 14 / 30 days replace the season numbers; he must have played about half his team's games
   if (st.formWin && !st.vsOpp) {
+    const pre = formFromPre();
     for (const p of players) {
-      const f = p.form?.[st.formWin];
+      const f = (pre ? p.formPre : p.form)?.[st.formWin];
       if (!f || f[0] < FORM_MIN[st.formWin]) { if (!(p.has && (mine.has(p.id) || fav.has(p.id)))) p.has = false; else p.noWin = true; continue; }
       p.s = f[1]; p.gp = f[0]; p.gpTotal = f[0]; p.adv = f[2] || null;
       p.has = true;
@@ -4655,9 +4659,10 @@ function syncControls() {
   // which games the recent-form window covers, on hover
   let formTip = "";
   if (st.formWin && D.formEnd) {
-    const end = new Date(D.formEnd + "T12:00:00Z"), start = new Date(end - (Number(st.formWin) - 1) * 864e5);
+    const pre = formFromPre(), endD = pre ? D.formEndPre : D.formEnd;
+    const end = new Date(endD + "T12:00:00Z"), start = new Date(end - (Number(st.formWin) - 1) * 864e5);
     const d = (x) => x.toLocaleDateString("he-IL", { day: "numeric", month: "numeric", year: "2-digit", timeZone: "UTC" });
-    formTip = `משחקי העונה הסדירה מ־${d(start)} עד ${d(end)}`;
+    formTip = `משחקי ${pre ? "הפרה־סיזן" : "העונה הסדירה"} מ־${d(start)} עד ${d(end)}`;
   }
   $("formWinTop").title = formTip;
   $("minMin").value = st.minMin; $("minMinOut").textContent = st.minMin;
