@@ -339,7 +339,7 @@ table.dboard td .dn { font-weight: 700; }
 .autobar { display: flex; flex-wrap: wrap; gap: 8px; align-items: center; }
 .dadvice { margin-top: 10px; padding: 10px 12px; border: 1px solid color-mix(in srgb, var(--accent) 35%, var(--line)); border-radius: 10px; background: color-mix(in srgb, var(--accent) 6%, var(--surface)); display: grid; gap: 8px; font-size: .9rem; }
 .dadvice .dadv-prof, .dadvice .dadv-picks { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; }
-.dadvice i { font-style: normal; font-weight: 700; } .dadvice i.ok { color: var(--pos); } .dadvice i.done { color: var(--muted); } .dadvice i.no { color: var(--neg); }
+.dadvice i { font-style: normal; font-weight: 700; } .dadvice i.ok { color: var(--pos); } .dadvice i.done { color: var(--muted); } .dadvice i.no { color: var(--neg); } .dadvice i.mid { color: #d97706; }
 .dadvice .dadv-h { font-size: .95rem; }
 .dadvice .dadv-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
 .dadvice .dadv-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 8px; }
@@ -2950,6 +2950,9 @@ function renderDraftAdvice() {
   // the profile to build: my strongest categories that are not settled yet, up to 5 to win in all (with the settled ones)
   const build = cats.filter((c) => !done.has(c.k)).sort((a, b) => S[b.k] - S[a.k]).slice(0, Math.max(2, 5 - enough.length));
   const buildSet = new Set(build.map((c) => c.k));
+  // close ones: about 50-50 against the league, where one pick can tip the week
+  const close = cats.filter((c) => !done.has(c.k) && !buildSet.has(c.k) && P[c.k] >= 0.35 && P[c.k] <= 0.65);
+  const closeSet = new Set(close.map((c) => c.k));
   const taken = new Set(picks.map((x) => x.id));
   const pool = players.filter((p) => p.L && (p.team26 || p.rookie) && !taken.has(p.id) && zAll.has(p.id))
     .sort((a, b) => draftVal(b) - draftVal(a)).slice(0, 90);
@@ -2957,14 +2960,14 @@ function renderDraftAdvice() {
     const z = zAll.get(p.id).z;
     // one more player on my side means one more on theirs too: he is measured against the league's average pick
     // the profile leads: its categories count double, the ones given up count little
-    const wOf = (k) => (buildSet.has(k) ? 2 : drop.some((c) => c.k === k) ? 0.25 : 1);
+    const wOf = (k) => (buildSet.has(k) ? 2 : closeSet.has(k) ? 1.5 : drop.some((c) => c.k === k) ? 0.25 : 1);
     const gc = cats.map((c) => ({ k: c.k, g: (ncdf((S[c.k] + z[c.k] - per[c.k]) / ADV_SPREAD) - P[c.k]) * wOf(c.k) }));
     return { p, g: gc.reduce((a, x) => a + x.g, 0), help: gc.filter((x) => x.g > 0.01).sort((a, b) => b.g - a.g).slice(0, 3) };
   };
   const best = pool.map(gainOf).sort((a, b) => b.g - a.g).slice(0, 3);
   const list = (cs) => cs.map((c) => heb(c.k)).join(", ");
   // the numbers shown under each recommended player: the categories to build, the best of the three in bold
-  const showCats = build.length ? build : cats.slice(0, 5);
+  const showCats = [...build, ...close].length ? [...build, ...close] : cats.slice(0, 5);
   const val = (p, k) => p.L.g[k];
   const statTxt = (p, k) => (k.endsWith("_PCT") ? fmt3(val(p, k)) : fmt1(val(p, k)));
   const bestIn = Object.fromEntries(showCats.map((c) => {
@@ -2975,6 +2978,7 @@ function renderDraftAdvice() {
   box.hidden = false;
   box.innerHTML = `<div class="dadv-prof"><b title="לעומת הממוצע של שאר הקבוצות בליגה שלך עד עכשיו">הפרופיל שלך מול הליגה:</b>
       ${build.length ? `<span>לחזק: <i class="ok">${list(build)}</i></span>` : ""}
+      ${close.length ? `<span title="בערך 50-50 מול הליגה: בחירה אחת יכולה להכריע">צמודות: <i class="mid">${list(close)}</i></span>` : ""}
       ${enough.length ? `<span>מספיק: <i class="done">${list(enough)}</i></span>` : ""}
       ${drop.length ? `<span>לוותר: <i class="no">${list(drop)}</i></span>` : ""}</div>
     <b class="dadv-h" title="השחקנים שהכי מעלים את מספר הקטגוריות שתנצח בשבוע מול הליגה, לפי הסדר">מומלץ לבחירה הבאה</b>
@@ -4876,7 +4880,8 @@ function syncControls() {
   for (const b of document.querySelectorAll("[data-tab]")) b.setAttribute("aria-selected", b.dataset.tab === st.tab);
   // my team sits at the top of the draft room while it is open (it can be folded there), and in the side bar elsewhere
   let folded = false;
-  try { folded = localStorage.getItem("dagger-minefold") === "1"; } catch (e) {}
+  folded = true;  // folded unless opened (the choice is kept in this browser)
+  try { folded = localStorage.getItem("dagger-minefold") !== "0"; } catch (e) {}
   $("minePanel").classList.toggle("folded", folded);
   $("mineFold").textContent = folded ? `▸ הצג (${mine.size} שחקנים)` : "▾ צמצום";
   $("mineFold").setAttribute("aria-expanded", String(!folded));
