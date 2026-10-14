@@ -2896,8 +2896,8 @@ function renderDraft() {
 }
 
 // ---------- draft advice: the profile my picks are building, and the available players that fit it ----------
-// Each category is a weekly contest: my roster's total score in it against an average team. The chance to win it is
-// Φ(total ÷ SPREAD). A player is worth the categories he adds per week: Σ Φ((total + his score) ÷ SPREAD) − Φ(total ÷ SPREAD).
+// Each category is a weekly contest: my roster's total score in it against the average of the other teams in my league
+// (their picks so far, per player, times as many players as I have). The chance to win it is Φ((total − league) ÷ SPREAD). A player is worth the categories he adds per week: Σ Φ((total + his score) ÷ SPREAD) − Φ(total ÷ SPREAD).
 // So a category nearly won or nearly lost gains little from more of it, and a close one gains the most.
 const ncdf = (x) => {
   const t = 1 / (1 + 0.2316419 * Math.abs(x)), d = 0.3989423 * Math.exp(-x * x / 2);
@@ -2910,7 +2910,14 @@ function renderDraftAdvice() {
   const mineIds = picks.filter((x) => x.team === me).map((x) => x.id);
   if (st.fmt !== "cat" || !mineIds.length || mineIds.length >= st.roster) { box.hidden = true; return; }
   const zAll = last.now.z, cats = CATS.filter((c) => !st.punts.has(c.k));
-  const S = Object.fromEntries(cats.map((c) => [c.k, mineIds.reduce((a, id) => a + (zAll.get(id)?.z[c.k] ?? 0), 0)]));
+  // the other teams of my league so far: their average per player, scaled to my number of players (0 before they pick)
+  const others = Array.from({ length: Math.max(st.teams, 1) }, (_, t) => t).filter((t) => t !== me)
+    .map((t) => picks.filter((x) => x.team === t).map((x) => x.id)).filter((ids) => ids.length);
+  const per = Object.fromEntries(cats.map((c) => [c.k, others.length
+    ? others.reduce((a, ids) => a + ids.reduce((b, id) => b + (zAll.get(id)?.z[c.k] ?? 0), 0) / ids.length, 0) / others.length : 0]));
+  const L = Object.fromEntries(cats.map((c) => [c.k, per[c.k] * mineIds.length]));
+  // my lead over the league in each category, and the chance it wins the week
+  const S = Object.fromEntries(cats.map((c) => [c.k, mineIds.reduce((a, id) => a + (zAll.get(id)?.z[c.k] ?? 0), 0) - L[c.k]]));
   const P = Object.fromEntries(cats.map((c) => [c.k, ncdf(S[c.k] / ADV_SPREAD)]));
   const heb = (k) => HEB_CAT[k];
   // enough of it: very likely won already; give up: very likely lost (only once a few picks are in)
@@ -2919,23 +2926,27 @@ function renderDraftAdvice() {
   const done = new Set([...enough, ...drop].map((c) => c.k));
   // the profile to build: my strongest categories that are not settled yet, up to 5 to win in all (with the settled ones)
   const build = cats.filter((c) => !done.has(c.k)).sort((a, b) => S[b.k] - S[a.k]).slice(0, Math.max(2, 5 - enough.length));
+  const buildSet = new Set(build.map((c) => c.k));
   const taken = new Set(picks.map((x) => x.id));
   const pool = players.filter((p) => p.L && (p.team26 || p.rookie) && !taken.has(p.id) && zAll.has(p.id))
     .sort((a, b) => draftVal(b) - draftVal(a)).slice(0, 90);
   const gainOf = (p) => {
     const z = zAll.get(p.id).z;
-    const per = cats.map((c) => ({ k: c.k, g: ncdf((S[c.k] + z[c.k]) / ADV_SPREAD) - P[c.k] }));
-    return { p, g: per.reduce((a, x) => a + x.g, 0), help: per.filter((x) => x.g > 0.01).sort((a, b) => b.g - a.g).slice(0, 3) };
+    // one more player on my side means one more on theirs too: he is measured against the league's average pick
+    // the profile leads: its categories count double, the ones given up count little
+    const wOf = (k) => (buildSet.has(k) ? 2 : drop.some((c) => c.k === k) ? 0.25 : 1);
+    const gc = cats.map((c) => ({ k: c.k, g: (ncdf((S[c.k] + z[c.k] - per[c.k]) / ADV_SPREAD) - P[c.k]) * wOf(c.k) }));
+    return { p, g: gc.reduce((a, x) => a + x.g, 0), help: gc.filter((x) => x.g > 0.01).sort((a, b) => b.g - a.g).slice(0, 3) };
   };
   const best = pool.map(gainOf).sort((a, b) => b.g - a.g).slice(0, 3);
   const list = (cs) => cs.map((c) => heb(c.k)).join(", ");
   box.hidden = false;
-  box.innerHTML = `<div class="dadv-prof"><b>הפרופיל שלך:</b>
+  box.innerHTML = `<div class="dadv-prof"><b title="לעומת הממוצע של שאר הקבוצות בליגה שלך עד עכשיו">הפרופיל שלך מול הליגה:</b>
       ${build.length ? `<span>לחזק: <i class="ok">${list(build)}</i></span>` : ""}
       ${enough.length ? `<span>מספיק: <i class="done">${list(enough)}</i></span>` : ""}
       ${drop.length ? `<span>לוותר: <i class="no">${list(drop)}</i></span>` : ""}</div>
-    <div class="dadv-picks"><b>מומלץ לבחירה הבאה:</b>${best.map((x, i) => `<span class="${i ? "" : "top"}"><bdi class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</bdi>
-      <small>+${x.g.toFixed(2)} קטגוריות בשבוע${x.help.length ? ` · ${x.help.map((h) => heb(h.k)).join(", ")}` : ""}</small></span>`).join("")}</div>`;
+    <div class="dadv-picks"><b title="השחקנים שהכי מעלים את מספר הקטגוריות שתנצח בשבוע מול הליגה, לפי הסדר">מומלץ לבחירה הבאה:</b>${best.map((x, i) => `<span class="${i ? "" : "top"}"><bdi class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</bdi>
+      <small>${x.help.length ? `מחזק: ${x.help.map((h) => heb(h.k)).join(", ")}` : "שחקן מאוזן"}</small></span>`).join("")}</div>`;
 }
 
 // ---------- comparison tab: two sides, each one player or several ----------
