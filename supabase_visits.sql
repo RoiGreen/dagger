@@ -11,6 +11,8 @@ create table if not exists public.visits (
 
 -- Active minutes per day: added one at a time by add_minute() while the site is open, visible and in use
 alter table public.visits add column if not exists minutes int not null default 0;
+-- Entries per day: opening the site, or coming back to it after 30 minutes away (add_session())
+alter table public.visits add column if not exists sessions int not null default 0;
 
 -- Row level security: a user can only add or touch their own day; nobody can read the table directly
 alter table public.visits enable row level security;
@@ -35,6 +37,17 @@ $$;
 revoke all on function public.touch_visit() from public, anon;
 grant execute on function public.touch_visit() to authenticated;
 
+-- One entry for the signed-in user, on today's row (Israel time)
+create or replace function public.add_session()
+returns void
+language sql security definer set search_path = public as $$
+  insert into public.visits (user_id, day, sessions)
+  values (auth.uid(), (now() at time zone 'Asia/Jerusalem')::date, 1)
+  on conflict (user_id, day) do update set sessions = public.visits.sessions + 1, last_at = now();
+$$;
+revoke all on function public.add_session() from public, anon;
+grant execute on function public.add_session() to authenticated;
+
 -- One active minute for the signed-in user, on today's row (Israel time); the server picks the user and the day
 create or replace function public.add_minute()
 returns void
@@ -48,13 +61,13 @@ grant execute on function public.add_minute() to authenticated;
 
 -- The statistics, for the site owner only (any other account gets no rows).
 -- streak: days in a row up to today (or up to yesterday, when today has no visit yet); best_streak: the longest run.
--- min_*: active minutes today / in the last 7 days / in total.
+-- min_*: active minutes today / in the last 7 days / in total. sess_*: entries (not unique: two entries count two).
 drop function if exists public.admin_stats();
 create or replace function public.admin_stats()
 returns table (
   user_id uuid, username text, email text, registered timestamptz, last_sign_in timestamptz,
   last_visit timestamptz, days_7 int, days_30 int, days_total int, streak int, best_streak int,
-  min_today int, min_7 int, min_total int
+  min_today int, min_7 int, min_total int, sess_today int, sess_7 int, sess_30 int, sess_total int
 )
 language sql security definer set search_path = public as $$
   with today as (select (now() at time zone 'Asia/Jerusalem')::date as d),
@@ -80,7 +93,11 @@ language sql security definer set search_path = public as $$
          coalesce(max(pu.best), 0)::int,
          coalesce(sum(v.minutes) filter (where v.day = (select d from today)), 0)::int,
          coalesce(sum(v.minutes) filter (where v.day > (select d from today) - 7), 0)::int,
-         coalesce(sum(v.minutes), 0)::int
+         coalesce(sum(v.minutes), 0)::int,
+         coalesce(sum(v.sessions) filter (where v.day = (select d from today)), 0)::int,
+         coalesce(sum(v.sessions) filter (where v.day > (select d from today) - 7), 0)::int,
+         coalesce(sum(v.sessions) filter (where v.day > (select d from today) - 30), 0)::int,
+         coalesce(sum(v.sessions), 0)::int
   from auth.users u
   left join public.visits v on v.user_id = u.id
   left join per_user pu on pu.user_id = u.id
