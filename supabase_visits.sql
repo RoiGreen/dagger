@@ -15,6 +15,10 @@ alter table public.visits add column if not exists minutes int not null default 
 alter table public.visits add column if not exists sessions int not null default 0;
 -- When the day's latest entry began (last_at is the latest moment the user was active)
 alter table public.visits add column if not exists entry_at timestamptz;
+-- Visits: a visit runs from the moment the user is on the site until 3 minutes pass with no activity
+-- (activity = opening the site, coming back to it, or an active minute). visit_start = when the latest one began.
+alter table public.visits add column if not exists visit_count int not null default 0;
+alter table public.visits add column if not exists visit_start timestamptz;
 
 -- Row level security: a user can only add or touch their own day; nobody can read the table directly
 alter table public.visits enable row level security;
@@ -32,9 +36,12 @@ create policy "update own visit" on public.visits
 create or replace function public.touch_visit()
 returns void
 language sql security definer set search_path = public as $$
-  insert into public.visits (user_id, day)
-  values (auth.uid(), (now() at time zone 'Asia/Jerusalem')::date)
-  on conflict (user_id, day) do update set last_at = now();
+  insert into public.visits (user_id, day, visit_count, visit_start)
+  values (auth.uid(), (now() at time zone 'Asia/Jerusalem')::date, 1, now())
+  on conflict (user_id, day) do update set
+    visit_count = public.visits.visit_count + (case when public.visits.last_at < now() - interval '3 minutes' or public.visits.visit_count = 0 then 1 else 0 end),
+    visit_start = case when public.visits.last_at < now() - interval '3 minutes' or public.visits.visit_start is null then now() else public.visits.visit_start end,
+    last_at = now();
 $$;
 revoke all on function public.touch_visit() from public, anon;
 grant execute on function public.touch_visit() to authenticated;
@@ -45,7 +52,7 @@ returns void
 language sql security definer set search_path = public as $$
   insert into public.visits (user_id, day, sessions, entry_at)
   values (auth.uid(), (now() at time zone 'Asia/Jerusalem')::date, 1, now())
-  on conflict (user_id, day) do update set sessions = public.visits.sessions + 1, last_at = now(), entry_at = now();
+  on conflict (user_id, day) do update set sessions = public.visits.sessions + 1, entry_at = now();
 $$;
 revoke all on function public.add_session() from public, anon;
 grant execute on function public.add_session() to authenticated;
@@ -54,9 +61,13 @@ grant execute on function public.add_session() to authenticated;
 create or replace function public.add_minute()
 returns void
 language sql security definer set search_path = public as $$
-  insert into public.visits (user_id, day, minutes)
-  values (auth.uid(), (now() at time zone 'Asia/Jerusalem')::date, 1)
-  on conflict (user_id, day) do update set minutes = public.visits.minutes + 1, last_at = now();
+  insert into public.visits (user_id, day, minutes, visit_count, visit_start)
+  values (auth.uid(), (now() at time zone 'Asia/Jerusalem')::date, 1, 1, now())
+  on conflict (user_id, day) do update set
+    minutes = public.visits.minutes + 1,
+    visit_count = public.visits.visit_count + (case when public.visits.last_at < now() - interval '3 minutes' or public.visits.visit_count = 0 then 1 else 0 end),
+    visit_start = case when public.visits.last_at < now() - interval '3 minutes' or public.visits.visit_start is null then now() else public.visits.visit_start end,
+    last_at = now();
 $$;
 revoke all on function public.add_minute() from public, anon;
 grant execute on function public.add_minute() to authenticated;
@@ -69,7 +80,7 @@ create or replace function public.admin_stats()
 returns table (
   user_id uuid, username text, email text, registered timestamptz, last_sign_in timestamptz,
   last_visit timestamptz, days_7 int, days_30 int, days_total int, streak int, best_streak int,
-  min_today int, min_7 int, min_total int, sess_today int, sess_7 int, sess_30 int, sess_total int, last_entry timestamptz
+  min_today int, min_7 int, min_total int, sess_today int, sess_7 int, sess_30 int, sess_total int, last_entry timestamptz, visits_today int, visits_total int
 )
 language sql security definer set search_path = public as $$
   with today as (select (now() at time zone 'Asia/Jerusalem')::date as d),
@@ -101,7 +112,9 @@ language sql security definer set search_path = public as $$
          coalesce(sum(v.sessions) filter (where v.day > (select d from today) - 30), 0)::int,
          coalesce(sum(v.sessions), 0)::int,
          -- the latest day's entry start; a day with no counted entry yet: the day's first visit
-         (array_agg(coalesce(v.entry_at, v.first_at) order by v.day desc))[1]
+         (array_agg(coalesce(v.visit_start, v.entry_at, v.first_at) order by v.day desc))[1],
+         coalesce(sum(v.visit_count) filter (where v.day = (select d from today)), 0)::int,
+         coalesce(sum(v.visit_count), 0)::int
   from auth.users u
   left join public.visits v on v.user_id = u.id
   left join per_user pu on pu.user_id = u.id
