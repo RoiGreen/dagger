@@ -13,6 +13,8 @@ create table if not exists public.visits (
 alter table public.visits add column if not exists minutes int not null default 0;
 -- Entries per day: opening the site, or coming back to it after 30 minutes away (add_session())
 alter table public.visits add column if not exists sessions int not null default 0;
+-- When the day's latest entry began (last_at is the latest moment the user was active)
+alter table public.visits add column if not exists entry_at timestamptz;
 
 -- Row level security: a user can only add or touch their own day; nobody can read the table directly
 alter table public.visits enable row level security;
@@ -41,9 +43,9 @@ grant execute on function public.touch_visit() to authenticated;
 create or replace function public.add_session()
 returns void
 language sql security definer set search_path = public as $$
-  insert into public.visits (user_id, day, sessions)
-  values (auth.uid(), (now() at time zone 'Asia/Jerusalem')::date, 1)
-  on conflict (user_id, day) do update set sessions = public.visits.sessions + 1, last_at = now();
+  insert into public.visits (user_id, day, sessions, entry_at)
+  values (auth.uid(), (now() at time zone 'Asia/Jerusalem')::date, 1, now())
+  on conflict (user_id, day) do update set sessions = public.visits.sessions + 1, last_at = now(), entry_at = now();
 $$;
 revoke all on function public.add_session() from public, anon;
 grant execute on function public.add_session() to authenticated;
@@ -67,7 +69,7 @@ create or replace function public.admin_stats()
 returns table (
   user_id uuid, username text, email text, registered timestamptz, last_sign_in timestamptz,
   last_visit timestamptz, days_7 int, days_30 int, days_total int, streak int, best_streak int,
-  min_today int, min_7 int, min_total int, sess_today int, sess_7 int, sess_30 int, sess_total int
+  min_today int, min_7 int, min_total int, sess_today int, sess_7 int, sess_30 int, sess_total int, last_entry timestamptz
 )
 language sql security definer set search_path = public as $$
   with today as (select (now() at time zone 'Asia/Jerusalem')::date as d),
@@ -97,7 +99,8 @@ language sql security definer set search_path = public as $$
          coalesce(sum(v.sessions) filter (where v.day = (select d from today)), 0)::int,
          coalesce(sum(v.sessions) filter (where v.day > (select d from today) - 7), 0)::int,
          coalesce(sum(v.sessions) filter (where v.day > (select d from today) - 30), 0)::int,
-         coalesce(sum(v.sessions), 0)::int
+         coalesce(sum(v.sessions), 0)::int,
+         max(v.entry_at)
   from auth.users u
   left join public.visits v on v.user_id = u.id
   left join per_user pu on pu.user_id = u.id
