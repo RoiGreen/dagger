@@ -801,6 +801,7 @@ table.box { direction: ltr; }
 .stattiles div { flex: 1 1 120px; display: grid; justify-items: center; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--sunk); }
 .stattiles b { font-family: var(--font-num); font-size: 1.8rem; }
 .stattiles small { color: var(--muted); font-weight: 600; }
+.stats .muted { color: var(--muted); }
 .stats td.pn small { display: block; color: var(--muted); font-size: .75rem; }
 .pfav:hover { background: rgba(255,255,255,.2); }
 .pfav.on { background: #ffc23d; border-color: #ffc23d; color: #1a1208; }
@@ -4623,9 +4624,9 @@ async function connectSite() {
       <div class="stats"><h3>סטטיסטיקות כניסה</h3>
         <div class="stattiles"><div><b>${rows.length}</b><small>משתמשים רשומים</small></div><div><b>${nToday}</b><small>נכנסו היום</small></div><div><b>${nWeek}</b><small>נכנסו השבוע</small></div></div>
         <div class="tbl-wrap"><table class="box"><thead><tr><th class="nosort">משתמש</th><th class="nosort">נרשם</th><th class="nosort">כניסה אחרונה</th><th class="nosort">ימים ב־7 ימים</th><th class="nosort">ימים ב־30 יום</th><th class="nosort">סה״כ ימים</th></tr></thead><tbody>
-        ${rows.map((r) => `<tr><td class="pn"><b>${esc(r.username || "–")}</b><small dir="ltr">${esc(r.email || "")}</small></td><td>${day(r.registered)}</td><td>${day(r.last_visit || r.last_sign_in)}</td><td>${r.days_7}</td><td>${r.days_30}</td><td>${r.days_total}</td></tr>`).join("")}
+        ${rows.map((r) => `<tr><td class="pn"><b>${esc(r.username || "–")}</b><small dir="ltr">${esc(r.email || "")}</small></td><td>${day(r.registered)}</td><td>${r.last_visit ? day(r.last_visit) : `<span class="muted" title="לא נכנס מאז תחילת הספירה. זו הפעם האחרונה שהקליד סיסמה">${day(r.last_sign_in)} (התחברות)</span>`}</td><td>${r.days_7}</td><td>${r.days_30}</td><td>${r.days_total}</td></tr>`).join("")}
         </tbody></table></div>
-        <p class="hint">הכניסות נספרות מיום ההתקנה, 14.10.26: כל יום שמשתמש נכנס בו נספר פעם אחת. לפני כן מוצגת הכניסה האחרונה לחשבון</p></div>`;
+        <p class="hint">הכניסות נספרות מ־14.10.26: כל יום שמשתמש פתח בו את האתר נספר פעם אחת. מי שלא נכנס מאז מוצג עם הפעם האחרונה שהקליד סיסמה, באפור</p></div>`;
     $("gameModal").hidden = false;
   });
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && remote?.refresh) remote.refresh(); });
