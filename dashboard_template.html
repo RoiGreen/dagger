@@ -4606,13 +4606,14 @@ async function connectSite() {
   // one row per user per day (Israel time): the owner's statistics count the days each user came in
   const ilDay = () => new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date());
   let visitDay = null;
+  // every opening of the site and every return to its tab marks the visit (and "online now")
   async function logVisit(uid) {
-    const day = ilDay();
-    if (visitDay === day) return;
-    visitDay = day;
     try {
-      const { error: e1 } = await sb.from("visits").insert({ user_id: uid, day });
-      if (e1) await sb.from("visits").update({ last_at: new Date().toISOString() }).eq("user_id", uid).eq("day", day);
+      const { error: e1 } = await sb.rpc("touch_visit");
+      if (!e1) return;
+      // before touch_visit exists on the server: at least the day's row
+      const day = ilDay();
+      if (visitDay !== day) { visitDay = day; await sb.from("visits").insert({ user_id: uid, day }); }
     } catch (e) {}
   }
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && signedInAs) logVisit(signedInAs); });
@@ -4633,7 +4634,7 @@ async function connectSite() {
   }, 60e3);
   // Online now: an active minute (or a visit) in the last 2.5 minutes. The view refreshes every 30 seconds while open.
   let statsTimer = null;
-  $("statsBtn").addEventListener("click", () => { showStats(true); clearInterval(statsTimer); statsTimer = setInterval(() => showStats(false), 30e3); });
+  $("statsBtn").addEventListener("click", async () => { await logVisit(signedInAs); showStats(true); clearInterval(statsTimer); statsTimer = setInterval(() => showStats(false), 30e3); });
   async function showStats(first) {
     if (!first && ($("gameModal").hidden || !$("gameCard").querySelector(".stats"))) { clearInterval(statsTimer); return; }
     const { data: rows, error: e5 } = await sb.rpc("admin_stats");

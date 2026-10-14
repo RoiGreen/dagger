@@ -23,6 +23,18 @@ drop policy if exists "update own visit" on public.visits;
 create policy "update own visit" on public.visits
   for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+-- A visit (opening the site, coming back to its tab): today's row for the signed-in user, last_at = now.
+-- Through a function, because a plain update cannot see rows (nobody may read the table).
+create or replace function public.touch_visit()
+returns void
+language sql security definer set search_path = public as $$
+  insert into public.visits (user_id, day)
+  values (auth.uid(), (now() at time zone 'Asia/Jerusalem')::date)
+  on conflict (user_id, day) do update set last_at = now();
+$$;
+revoke all on function public.touch_visit() from public, anon;
+grant execute on function public.touch_visit() to authenticated;
+
 -- One active minute for the signed-in user, on today's row (Israel time); the server picks the user and the day
 create or replace function public.add_minute()
 returns void
