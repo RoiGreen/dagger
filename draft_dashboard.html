@@ -793,6 +793,9 @@ table.box { direction: ltr; }
 .pform { position: absolute; top: 50%; left: 28px; transform: translateY(-80%); display: grid; gap: 4px; justify-items: start; max-width: 190px; }
 .pform select { width: auto; min-width: 160px; background-color: rgba(255,255,255,.12); color: #fff; border-color: rgba(255,255,255,.28); font-weight: 700; }
 .pform select option { color: #10182b; }
+.pfav { justify-self: stretch; padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.1); color: #fff; font: inherit; font-weight: 700; font-size: .85rem; cursor: pointer; }
+.pfav:hover { background: rgba(255,255,255,.2); }
+.pfav.on { background: #ffc23d; border-color: #ffc23d; color: #1a1208; }
 .pform small { font-size: .72rem; color: rgba(255,255,255,.8); }
 @media (max-width: 700px) { .pform { position: static; transform: none; margin: 0 auto 10px; justify-items: center; } }
 .pmodewrap { justify-self: stretch; display: flex; justify-content: center; margin-top: 10px; }
@@ -2360,8 +2363,10 @@ function openPlayer(id) {
   const ownerTag = `<div class="powner${owner ? "" : " fa"}${p.team26 ? " withlogo" : ""}">${owner ? `<span dir="ltr">Team: <b dir="auto">${esc(owner)}</b></span>` : "שחקן חופשי"}</div>`;
   // recent form: the same choice as the bar over the tables, so the numbers and the league ranks follow it
   const formOpts = [["", "עונה שלמה"], ["7", "7 ימים אחרונים"], ["14", "14 ימים אחרונים"], ["30", "חודש אחרון"]];
-  const formSel = p.L ? `<div class="pform"><select data-cardform="${p.id}" aria-label="כושר עדכני">${formOpts.map(([v, l]) => `<option value="${v}"${(st.formWin || "") === v ? " selected" : ""}>${l}</option>`).join("")}</select>
-    ${st.formWin && !p.has ? `<small>אין משחקים בטווח: מוצגת העונה</small>` : ""}</div>` : "";
+  const isFav = fav.has(p.id);
+  const favBtn = `<button type="button" class="pfav${isFav ? " on" : ""}" data-cardfav="${p.id}" aria-pressed="${isFav}">${isFav ? "★ במועדפים" : "☆ הוסף למועדפים"}</button>`;
+  const formSel = `<div class="pform">${favBtn}${p.L ? `<select data-cardform="${p.id}" aria-label="כושר עדכני">${formOpts.map(([v, l]) => `<option value="${v}"${(st.formWin || "") === v ? " selected" : ""}>${l}</option>`).join("")}</select>
+    ${st.formWin && !p.has ? `<small>אין משחקים בטווח: מוצגת העונה</small>` : ""}` : ""}</div>`;
   // basic / advanced switch, under the name, team and owner lines and centred like them
   const modeSeg = p.L ? `<div class="pmodewrap${p.team26 ? " withlogo" : ""}"><div class="seg pmode" role="group" aria-label="סוג הנתונים">${[["basic", "נתונים בסיסיים"], ["adv", "נתונים מתקדמים"]].map(([k, l]) =>
     `<button type="button" data-cardmode="${k}" data-pid="${p.id}" aria-pressed="${cardMode === k}">${l}</button>`).join("")}</div></div>` : "";
@@ -2380,6 +2385,13 @@ function openPlayer(id) {
 document.addEventListener("click", (e) => {
   const cm = e.target.closest("[data-cardmode]");
   if (cm) { cardMode = cm.dataset.cardmode; openPlayer(Number(cm.dataset.pid)); return; }
+  const cf = e.target.closest("[data-cardfav]");
+  if (cf) {  // favorite from the player card: the same list as the table's ★
+    const id = Number(cf.dataset.cardfav);
+    fav.has(id) ? fav.delete(id) : fav.add(id);
+    saveSettings(); flushPicks(); render(); openPlayer(id);
+    return;
+  }
   const el = e.target.closest("[data-pcard]");
   if (el) { e.stopPropagation(); openPlayer(Number(el.dataset.pcard)); }
 }, true);
