@@ -1409,9 +1409,12 @@ function seasonRange() {
 
 // Combine the chosen seasons into one line per player: per-game stats weighted by games,
 // advanced stats weighted by minutes, and the team of his latest chosen season
-// Recent-form windows come from the latest season chosen: the 2026-27 preseason when it is chosen (and the 2026-27
-// regular season is not), else the regular season (2026-27 once it starts, before that the end of 2025-26)
-const formFromPre = () => { const ys = chosenSeasons(); return ys.includes(D.preseason) && !ys.includes(D.current) && !!D.formEndPre; };
+// Recent-form windows (7 / 14 / 30 days) exist only for the season in progress, chosen on its own: the 2026-27
+// preseason until the regular season has games, then the 2026-27 regular season. Several seasons: whole seasons only.
+const regStarted = () => !!D.formEnd && GAMES.some((g) => !g.pre && g.d <= D.formEnd);
+const liveSeason = () => (regStarted() ? D.current : D.preseason);
+const formAllowed = () => { const ys = chosenSeasons(); return ys.length === 1 && ys[0] === liveSeason() && !!(regStarted() ? D.formEnd : D.formEndPre); };
+const formFromPre = () => !regStarted();
 function applySeasons() {
   const ys = chosenSeasons();
   for (const p of players) {
@@ -1457,6 +1460,7 @@ function applySeasons() {
     setLines(p);
   }
   // Recent form: the last 7 / 14 / 30 days replace the season numbers; he must have played about half his team's games
+  if (st.formWin && !formAllowed()) st.formWin = "";  // another season chosen: back to the whole season
   if (st.formWin && !st.vsOpp) {
     const pre = formFromPre();
     for (const p of players) {
@@ -2372,7 +2376,7 @@ function openPlayer(id) {
   const formOpts = [["", "עונה שלמה"], ["7", "7 ימים אחרונים"], ["14", "14 ימים אחרונים"], ["30", "חודש אחרון"]];
   const isFav = fav.has(p.id);
   const favBtn = `<button type="button" class="pfav${isFav ? " on" : ""}" data-cardfav="${p.id}" aria-pressed="${isFav}">${isFav ? "★ במועדפים" : "☆ הוסף למועדפים"}</button>`;
-  const formSel = `<div class="pform">${favBtn}${p.L ? `<select data-cardform="${p.id}" aria-label="כושר עדכני">${formOpts.map(([v, l]) => `<option value="${v}"${(st.formWin || "") === v ? " selected" : ""}>${l}</option>`).join("")}</select>
+  const formSel = `<div class="pform">${favBtn}${p.L ? `<select data-cardform="${p.id}" aria-label="כושר עדכני">${formOpts.map(([v, l]) => `<option value="${v}"${(st.formWin || "") === v ? " selected" : ""}${v && !formAllowed() ? " disabled" : ""}>${l}</option>`).join("")}</select>
     ${st.formWin && !p.has ? `<small>אין משחקים בטווח: מוצגת העונה</small>` : ""}` : ""}</div>`;
   // basic / advanced switch, under the name, team and owner lines and centred like them
   const modeSeg = p.L ? `<div class="pmodewrap${p.team26 ? " withlogo" : ""}"><div class="seg pmode" role="group" aria-label="סוג הנתונים">${[["basic", "נתונים בסיסיים"], ["adv", "נתונים מתקדמים"]].map(([k, l]) =>
@@ -4656,6 +4660,8 @@ function syncControls() {
   $("minGp").min = 0; $("minGp").max = onlyCur ? Math.max(D.curMaxGp || 1, 1) : 82;
   $("minGp").value = st.minGp; $("minGpOut").textContent = onlyCur ? Math.min(st.minGp, D.curMaxGp || 1) : st.minGp;
   setField("formWinTop", st.formWin || "");
+  const canForm = formAllowed();
+  for (const o of $("formWinTop").options) o.disabled = !!o.value && !canForm;
   // which games the recent-form window covers, on hover
   let formTip = "";
   if (st.formWin && D.formEnd) {
@@ -4664,7 +4670,7 @@ function syncControls() {
     const d = (x) => x.toLocaleDateString("he-IL", { day: "numeric", month: "numeric", year: "2-digit", timeZone: "UTC" });
     formTip = `משחקי ${pre ? "הפרה־סיזן" : "העונה הסדירה"} מ־${d(start)} עד ${d(end)}`;
   }
-  $("formWinTop").title = formTip;
+  $("formWinTop").title = canForm ? formTip : `7 / 14 ימים וחודש אחרון: רק כשבוחרים לבד את ${liveSeason() === D.current ? "עונת 2026-27" : "הפרה־סיזן 2026-27"}`;
   $("minMin").value = st.minMin; $("minMinOut").textContent = st.minMin;
   syncCatFilters();
   setField("maxAge", st.maxAge);
