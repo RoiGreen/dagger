@@ -9,6 +9,9 @@ create table if not exists public.visits (
   primary key (user_id, day)
 );
 
+-- Active minutes per day: added one at a time by add_minute() while the site is open, visible and in use
+alter table public.visits add column if not exists minutes int not null default 0;
+
 -- Row level security: a user can only add or touch their own day; nobody can read the table directly
 alter table public.visits enable row level security;
 
@@ -20,13 +23,26 @@ drop policy if exists "update own visit" on public.visits;
 create policy "update own visit" on public.visits
   for update to authenticated using (auth.uid() = user_id) with check (auth.uid() = user_id);
 
+-- One active minute for the signed-in user, on today's row (Israel time); the server picks the user and the day
+create or replace function public.add_minute()
+returns void
+language sql security definer set search_path = public as $$
+  insert into public.visits (user_id, day, minutes)
+  values (auth.uid(), (now() at time zone 'Asia/Jerusalem')::date, 1)
+  on conflict (user_id, day) do update set minutes = public.visits.minutes + 1, last_at = now();
+$$;
+revoke all on function public.add_minute() from public, anon;
+grant execute on function public.add_minute() to authenticated;
+
 -- The statistics, for the site owner only (any other account gets no rows).
 -- streak: days in a row up to today (or up to yesterday, when today has no visit yet); best_streak: the longest run.
+-- min_*: active minutes today / in the last 7 days / in total.
 drop function if exists public.admin_stats();
 create or replace function public.admin_stats()
 returns table (
   user_id uuid, username text, email text, registered timestamptz, last_sign_in timestamptz,
-  last_visit timestamptz, days_7 int, days_30 int, days_total int, streak int, best_streak int
+  last_visit timestamptz, days_7 int, days_30 int, days_total int, streak int, best_streak int,
+  min_today int, min_7 int, min_total int
 )
 language sql security definer set search_path = public as $$
   with today as (select (now() at time zone 'Asia/Jerusalem')::date as d),
@@ -35,7 +51,7 @@ language sql security definer set search_path = public as $$
     from public.visits v
   ),
   islands as (
-    select user_id, grp, min(day) as first_day, max(day) as last_day, count(*)::int as len from runs group by user_id, grp
+    select user_id, grp, max(day) as last_day, count(*)::int as len from runs group by user_id, grp
   ),
   per_user as (
     select i.user_id,
@@ -49,7 +65,10 @@ language sql security definer set search_path = public as $$
          (count(v.day) filter (where v.day > (select d from today) - 30))::int,
          count(v.day)::int,
          coalesce(max(pu.cur), 0)::int,
-         coalesce(max(pu.best), 0)::int
+         coalesce(max(pu.best), 0)::int,
+         coalesce(sum(v.minutes) filter (where v.day = (select d from today)), 0)::int,
+         coalesce(sum(v.minutes) filter (where v.day > (select d from today) - 7), 0)::int,
+         coalesce(sum(v.minutes), 0)::int
   from auth.users u
   left join public.visits v on v.user_id = u.id
   left join per_user pu on pu.user_id = u.id

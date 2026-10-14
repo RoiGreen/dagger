@@ -4614,19 +4614,37 @@ async function connectSite() {
     } catch (e) {}
   }
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && signedInAs) logVisit(signedInAs); });
+  // Active time: every minute the site is open, on screen and used (mouse, keys, scroll or touch in the last
+  // 2 minutes) adds one minute. With several tabs open only one of them counts (a lock in this browser).
+  let lastUse = Date.now();
+  const used = () => { lastUse = Date.now(); };
+  for (const ev of ["pointermove", "pointerdown", "keydown", "wheel", "scroll", "touchstart"]) addEventListener(ev, used, { passive: true, capture: true });
+  const TAB = Math.random().toString(36).slice(2), BEAT = "dagger-beat";
+  setInterval(() => {
+    if (!signedInAs || document.visibilityState !== "visible" || Date.now() - lastUse > 120e3) return;
+    try {
+      const held = JSON.parse(localStorage.getItem(BEAT) || "null");
+      if (held && held.tab !== TAB && Date.now() - held.t < 90e3) return;  // another tab is counting
+      localStorage.setItem(BEAT, JSON.stringify({ tab: TAB, t: Date.now() }));
+    } catch (e) {}
+    sb.rpc("add_minute").then(() => {}, () => {});
+  }, 60e3);
   $("statsBtn").addEventListener("click", async () => {
     const { data: rows, error: e5 } = await sb.rpc("admin_stats");
     if (e5 || !rows) return showToast("לא הצלחתי לטעון את הסטטיסטיקות");
     const day = (t) => t ? new Date(t).toLocaleString("he-IL", { timeZone: "Asia/Jerusalem", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" }) : "–";
     const today = ilDay(), inDay = (t) => t && new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem", year: "numeric", month: "2-digit", day: "2-digit" }).format(new Date(t)) === today;
     const nToday = rows.filter((r) => inDay(r.last_visit)).length, nWeek = rows.filter((r) => r.days_7 > 0).length;
+    // minutes as "12 דק׳" / "3 שע׳ 40 דק׳"; before the minutes column exists: –
+    const dur = (m) => m == null ? "–" : m < 60 ? `${m} דק׳` : `${Math.floor(m / 60)} שע׳${m % 60 ? ` ${m % 60} דק׳` : ""}`;
+    const week = rows.some((r) => r.min_7 != null) ? rows.reduce((a, r) => a + (r.min_7 || 0), 0) : null;
     $("gameCard").innerHTML = `<button type="button" class="gclose" data-gclose="1" aria-label="סגירה">✕</button>
       <div class="stats"><h3>סטטיסטיקות כניסה</h3>
-        <div class="stattiles"><div><b>${rows.length}</b><small>משתמשים רשומים</small></div><div><b>${nToday}</b><small>נכנסו היום</small></div><div><b>${nWeek}</b><small>נכנסו השבוע</small></div></div>
-        <div class="tbl-wrap"><table class="box"><thead><tr><th class="nosort">משתמש</th><th class="nosort">נרשם</th><th class="nosort">כניסה אחרונה</th><th class="nosort">ימים ב־7 ימים</th><th class="nosort">ימים ב־30 יום</th><th class="nosort">סה״כ ימים</th><th class="nosort" title="ימים ברצף עד היום (או עד אתמול, אם היום עוד לא נכנס). בסוגריים: הרצף הארוך ביותר">ימים ברצף</th></tr></thead><tbody>
-        ${rows.map((r) => `<tr><td class="pn"><b>${esc(r.username || "–")}</b><small dir="ltr">${esc(r.email || "")}</small></td><td>${day(r.registered)}</td><td>${r.last_visit ? day(r.last_visit) : `<span class="muted" title="לא נכנס מאז תחילת הספירה. זו הפעם האחרונה שהקליד סיסמה">${day(r.last_sign_in)} (התחברות)</span>`}</td><td>${r.days_7}</td><td>${r.days_30}</td><td>${r.days_total}</td><td>${r.streak ?? "–"}${r.best_streak > (r.streak ?? 0) ? ` <small class="muted">(${r.best_streak})</small>` : ""}</td></tr>`).join("")}
+        <div class="stattiles"><div><b>${rows.length}</b><small>משתמשים רשומים</small></div><div><b>${nToday}</b><small>נכנסו היום</small></div><div><b>${nWeek}</b><small>נכנסו השבוע</small></div><div><b>${dur(week)}</b><small>זמן באתר השבוע, כולם</small></div></div>
+        <div class="tbl-wrap"><table class="box"><thead><tr><th class="nosort">משתמש</th><th class="nosort">נרשם</th><th class="nosort">כניסה אחרונה</th><th class="nosort">ימים ב־7 ימים</th><th class="nosort">ימים ב־30 יום</th><th class="nosort">סה״כ ימים</th><th class="nosort" title="ימים ברצף עד היום (או עד אתמול, אם היום עוד לא נכנס). בסוגריים: הרצף הארוך ביותר">ימים ברצף</th><th class="nosort" title="זמן פעיל: האתר פתוח, מוצג על המסך ובשימוש">זמן היום</th><th class="nosort">ממוצע ליום</th><th class="nosort">זמן כולל</th></tr></thead><tbody>
+        ${rows.map((r) => `<tr><td class="pn"><b>${esc(r.username || "–")}</b><small dir="ltr">${esc(r.email || "")}</small></td><td>${day(r.registered)}</td><td>${r.last_visit ? day(r.last_visit) : `<span class="muted" title="לא נכנס מאז תחילת הספירה. זו הפעם האחרונה שהקליד סיסמה">${day(r.last_sign_in)} (התחברות)</span>`}</td><td>${r.days_7}</td><td>${r.days_30}</td><td>${r.days_total}</td><td>${r.streak ?? "–"}${r.best_streak > (r.streak ?? 0) ? ` <small class="muted">(${r.best_streak})</small>` : ""}</td><td>${dur(r.min_today)}</td><td>${r.days_total && r.min_total != null ? dur(Math.round(r.min_total / r.days_total)) : "–"}</td><td>${dur(r.min_total)}</td></tr>`).join("")}
         </tbody></table></div>
-        <p class="hint">הכניסות נספרות מ־14.10.26: כל יום שמשתמש פתח בו את האתר נספר פעם אחת. מי שלא נכנס מאז מוצג עם הפעם האחרונה שהקליד סיסמה, באפור</p></div>`;
+        <p class="hint">הכניסות נספרות מ־14.10.26: כל יום שמשתמש פתח בו את האתר נספר פעם אחת. מי שלא נכנס מאז מוצג עם הפעם האחרונה שהקליד סיסמה, באפור. זמן: דקות שבהן האתר היה פתוח, על המסך ובשימוש</p></div>`;
     $("gameModal").hidden = false;
   });
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible" && remote?.refresh) remote.refresh(); });
