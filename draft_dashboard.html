@@ -993,8 +993,9 @@ table.cmpt td.lbl { min-width: 5.5em; }
 </style>
 
 <script>
-  try { document.documentElement.dataset.theme = localStorage.getItem("fantasy-theme") || "dark"; }
-  catch (e) { document.documentElement.dataset.theme = "dark"; }
+  // light until the viewer picks dark with the button (that choice is kept in this browser)
+  try { document.documentElement.dataset.theme = localStorage.getItem("fantasy-theme") || "light"; }
+  catch (e) { document.documentElement.dataset.theme = "light"; }
 </script>
 <div class="auth" id="auth" hidden>
   <form class="auth-card" id="authForm" novalidate>
