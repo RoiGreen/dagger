@@ -105,6 +105,10 @@ button:focus-visible, input:focus-visible, select:focus-visible, th:focus-visibl
 .catbar .track { position: relative; height: 10px; background: var(--sunk); border-radius: 3px; overflow: hidden; }
 .catbar .track::after { content: ""; position: absolute; inset-block: 0; inset-inline-start: 50%; width: 1px; background: var(--muted); opacity: .5; }
 .catbar .fill { position: absolute; inset-block: 0; border-radius: 2px; }
+.catbar .fill.ghost { opacity: .35; }
+.catbar.withprev { grid-template-columns: 44px 1fr 92px; }
+.catbar .dz { font-style: normal; font-weight: 800; margin-inline-start: 4px; } .catbar .dz.up { color: var(--pos); } .catbar .dz.dn { color: var(--neg); }
+.mprev { margin: 0 0 4px; font-size: .85rem; color: var(--muted); } .mprev b { color: var(--accent); }
 .catbar .v { text-align: start; direction: ltr; }
 .catbar.punted { opacity: .4; }
 .empty { color: var(--muted); font-size: .88rem; margin: 0; }
@@ -2751,6 +2755,7 @@ function showToast(text) {
   clearTimeout(window.toastTimer);
   window.toastTimer = setTimeout(() => { $("toast").hidden = true; }, 4500);
 }
+let PICK_PREVIEW = null;  // the player in the draft room's pick box, previewed on my team's bars
 const pickValue = (p, rank) => `${p.name} · ${p.team26 || "FA"}${rank ? ` · #${rank}` : ""}`;
 let PICK_LOOKUP = new Map();
 // The draft has no limits: every player with numbers can be picked, whatever the table filters (games minimum,
@@ -4519,15 +4524,25 @@ function renderMine() {
     $("mineBars").innerHTML = `<p class="hint">סה״כ נקודות פנטזי למשחק: <b style="font-family:var(--font-num);color:var(--ink)">${fmt1(total)}</b></p>`;
     return;
   }
-  const sums = CATS.map((c) => ({ c, v: mp.reduce((a, p) => a + (zAll.get(p.id)?.z[c.k] ?? 0), 0) }));
-  const maxAbs = Math.max(3, ...sums.map((s) => Math.abs(s.v)));
-  $("mineBars").innerHTML = sums.map(({ c, v }) => {
+  // a player typed in the draft room's pick box (not picked yet): what he would add, per category
+  const pv = PICK_PREVIEW && !mine.has(PICK_PREVIEW) ? PLAYER_BY_ID.get(PICK_PREVIEW) : null;
+  const pz = pv ? zAll.get(pv.id) : null;
+  const sums = CATS.map((c) => {
+    const v = mp.reduce((a, p) => a + (zAll.get(p.id)?.z[c.k] ?? 0), 0), d = pz ? pz.z[c.k] : 0;
+    return { c, v, d };
+  });
+  const maxAbs = Math.max(3, ...sums.map((s) => Math.max(Math.abs(s.v), Math.abs(s.v + s.d))));
+  const fill = (v, cls) => {
     const w = (Math.abs(v) / maxAbs) * 50;
     const side = v >= 0 ? `inset-inline-start:calc(50% - ${w}%)` : `inset-inline-start:50%`;
-    return `<div class="catbar${st.punts.has(c.k) ? " punted" : ""}"><span><bdi>${c.l}</bdi></span>
-      <span class="track"><span class="fill" style="${side};width:${w}%;background:var(${v >= 0 ? "--pos" : "--neg"})"></span></span>
-      <span class="v">${v >= 0 ? "+" : ""}${v.toFixed(1)}</span></div>`;
-  }).join("") + `<p class="hint">ביחס לקבוצה ממוצעת בליגה: 0 = ממוצע, פלוס = חוזקה, מינוס = חולשה</p>`;
+    return `<span class="fill${cls}" style="${side};width:${w}%;background:var(${v >= 0 ? "--pos" : "--neg"})"></span>`;
+  };
+  const sg = (x) => `${x >= 0 ? "+" : "−"}${Math.abs(x).toFixed(1)}`;
+  $("mineBars").innerHTML = (pv ? `<p class="mprev">עם <b>${esc(pv.name)}</b>: בצבע בהיר הקבוצה אחרי שתבחר בו, ובצבע מה שהוא מוסיף</p>` : "") + sums.map(({ c, v, d }) => {
+    return `<div class="catbar${st.punts.has(c.k) ? " punted" : ""}${pv ? " withprev" : ""}"><span><bdi>${c.l}</bdi></span>
+      <span class="track">${pv ? fill(v + d, " ghost") : ""}${fill(v, "")}</span>
+      <span class="v">${sg(v)}${pv ? ` <i class="dz ${d >= 0 ? "up" : "dn"}">${sg(d)}</i>` : ""}</span></div>`;
+  }).join("");
 }
 
 // ---------- persistence of picks ----------
@@ -5129,9 +5144,14 @@ $("pickBtn").addEventListener("click", () => {
   const id = PICK_LOOKUP.get($("pickInput").value);
   if (!id) return showToast("בחר שחקן מהרשימה שנפתחת בזמן ההקלדה.");
   makePick(id, Number($("pickTeam").value));
-  $("pickInput").value = "";
+  $("pickInput").value = ""; PICK_PREVIEW = null; renderMine();
 });
 $("pickInput").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); $("pickBtn").click(); } });
+$("pickInput").addEventListener("input", () => {
+  const id = PICK_LOOKUP.get($("pickInput").value) || null;
+  if (id === PICK_PREVIEW) return;
+  PICK_PREVIEW = id; renderMine();
+});
 // Checkboxes in the per-player menu: table tags only, never draft-room picks
 document.addEventListener("change", (e) => {
   const box = e.target.closest("input[data-am]");
