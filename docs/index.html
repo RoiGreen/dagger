@@ -3383,6 +3383,7 @@ $("viewCmp").addEventListener("click", (e) => {
     if (CMP_MODES[c.mode].pickup !== CMP_MODES[t.dataset.cmpmode].pickup) { c.a = []; c.b = []; }
     c.drops = []; c.adds = [];
     c.mode = t.dataset.cmpmode;
+    c.chart = "val";  // every mode opens on the values chart
     const M = CMP_MODES[c.mode];
     if (M.max) { c.a = c.a.slice(-M.max); c.b = c.b.slice(-M.max); }
     if (M.team && c.ta === c.tb) c.tb = (c.ta + 1) % Math.max(st.teams, 1);
