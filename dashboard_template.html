@@ -420,8 +420,6 @@ table.cmpt tr.tot td { border-top: 2px solid var(--line); font-weight: 700; }
 table.cmpt tr:not(.tot) + tr.tot td { border-top: 3px solid color-mix(in srgb, var(--ink) 55%, transparent); }
 table.cmpt td.lbl { font-family: var(--font-num); font-weight: 700; text-align: start; }
 .vbars { display: grid; grid-auto-flow: column; grid-auto-columns: minmax(0, 1fr); gap: 10px; height: 340px; padding-top: 18px; }
-/* categories left to right (PTS first); in each pair the sides keep the table's order (first side on the right) */
-.vbars { direction: ltr; } .vbars .vpair { direction: rtl; }
 .vgrp { display: grid; grid-template-rows: minmax(0, 1fr) auto; gap: 6px; min-width: 0; }
 .vgrp.punted { opacity: .35; }
 .vpair { position: relative; display: flex; justify-content: center; gap: 3px; border-bottom: 1px solid var(--line); }
