@@ -4621,17 +4621,21 @@ async function connectSite() {
   // Entries (for the statistics, not unique): opening the site counts one, and so does coming back after 30 minutes
   // without using it (another tab, the computer asleep). Several tabs at once are one entry (a mark in this browser).
   const SESS = "dagger-sess", GAP = 30 * 60e3;
+  let entryOn = false;  // an entry is under way (counted on the server)
+  const markEntry = () => { try { localStorage.setItem(SESS, String(Date.now())); } catch (e) {} };
   function countEntry() {
     if (!signedInAs) return;
-    try {
-      const last = Number(localStorage.getItem(SESS) || 0);
-      localStorage.setItem(SESS, String(Date.now()));
-      if (Date.now() - last < GAP) return;
-    } catch (e) {}
-    sb.rpc("add_session").then(() => {}, () => {});
+    let last = 0;
+    try { last = Number(localStorage.getItem(SESS) || 0); } catch (e) {}
+    if (Date.now() - last < GAP) { entryOn = true; markEntry(); return; }  // the same entry goes on
+    // the mark is set only once the server has counted it, so a failed call is tried again on the next return
+    sb.rpc("add_session").then(({ error: e6 }) => { if (!e6) { entryOn = true; markEntry(); } }, () => {});
   }
   // keep the mark fresh while the site is in use, so a reload or a second tab is not a new entry
-  setInterval(() => { if (signedInAs && document.visibilityState === "visible" && Date.now() - lastUse < 120e3) { try { localStorage.setItem(SESS, String(Date.now())); } catch (e) {} } }, 60e3);
+  setInterval(() => {
+    if (!signedInAs || document.visibilityState !== "visible" || Date.now() - lastUse > 120e3) return;
+    if (entryOn) markEntry(); else countEntry();
+  }, 60e3);
   document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") countEntry(); });
   // Active time: every minute the site is open, on screen and used (mouse, keys, scroll or touch in the last
   // 2 minutes) adds one minute. With several tabs open only one of them counts (a lock in this browser).
