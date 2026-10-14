@@ -3071,14 +3071,19 @@ function renderCmpSide(side) {
       const pool = pickupRoster().filter((p) => !c.a.includes(p.id)).sort(byRank);
       if (psel !== document.activeElement) psel.innerHTML = `<option value="">${pool.length ? "בחר שחקן להוריד" : "אין שחקנים בקבוצה הזו"}</option>` + pool.map(opt).join("");
     } else {
+      // the player to add can be typed: the list narrows to matching names
       if (box.dataset.mode !== "pickB") {
-        box.innerHTML = `<select data-cmppick="b" aria-label="שחקן להוסיף"></select>`;
+        box.innerHTML = `<input data-cmptp="b" list="cmpTpb" autocomplete="off" aria-label="שחקן להוסיף" placeholder="הקלד או בחר שחקן להוסיף"><datalist id="cmpTpb"></datalist>`;
         box.dataset.mode = "pickB";
       }
-      const psel = box.querySelector("[data-cmppick]");
+      const psel = box.querySelector("[data-cmptp]");
       const drafted = new Set(picks.map((x) => x.id));
       const pool = players.filter((p) => p.L && !drafted.has(p.id) && !c.b.includes(p.id)).sort(byRank);
-      if (psel !== document.activeElement) psel.innerHTML = `<option value="">בחר שחקן להוסיף</option>` + pool.slice(0, 500).map(opt).join("");
+      if (psel !== document.activeElement) {
+        const label = (p) => `${p.name} · ${p.pos || "–"} · ${p.team26 || "FA"}${rank.has(p.id) ? ` · #${rank.get(p.id)}` : ""}`;
+        CMP_TP.b = new Map(pool.map((p) => [label(p), p.id]));
+        $("cmpTpb").innerHTML = pool.slice(0, 500).map((p) => `<option value="${esc(label(p))}"></option>`).join("");
+      }
     }
   }
   const who = (p) => `${esc(p.name)}<small>${esc(p.pos || "–")} · ${esc(p.team26 || "FA")}</small>`;
@@ -3250,7 +3255,7 @@ function renderCmp() {
   const teamish = M.team || M.pickup || (c.mode === "players" && (LA.length > 1 || LB.length > 1));
   const avg = teamish && c.agg === "avg";
   const A = cmpTotals(LA, avg), B = cmpTotals(LB, avg);
-  const name = (side, L) => M.pickup ? `${teamName(c.pt)} ${side === "a" ? "לפני" : "אחרי"}`
+  const name = (side, L) => M.pickup ? `${teamName(c.pt)} ${side === "a" ? "Before" : "After"}`
     : M.team ? teamName(side === "a" ? c.ta : c.tb) : L.length === 1 ? L[0].name : c.mode === "players" ? (L.length === 2 ? `${L[0].name}, ${L[1].name}` : `${L[0].name}, ${L[1].name} ועוד ${L.length - 2}`) : M[side];
   const nA = name("a", LA), nB = name("b", LB);
   const per = st.mode === "g" ? "למשחק" : "ל־36 דקות";
