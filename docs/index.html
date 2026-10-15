@@ -3006,7 +3006,7 @@ function renderDraftAdvice() {
   box.innerHTML = `<div class="dadv-top">
     <div class="dadv-focus"><b>חפש לפי</b><div class="chips">${cats.map((c) => `<button type="button" data-focus="${c.k}" aria-pressed="${DRAFT_FOCUS.has(c.k)}">${heb(c.k)}</button>`).join("")}${focus.length ? `<button type="button" class="clr" data-focus="">נקה</button>` : ""}</div></div>
     <div class="dadv-prof"><b title="לעומת הממוצע של שאר הקבוצות בליגה שלך עד עכשיו">הפרופיל שלך מול הליגה</b>
-      ${row("לחזק", build, "ok")}${row("צמודות", close, "mid", "בערך 50-50 מול הליגה: בחירה אחת יכולה להכריע")}${row("להשאיר", enough, "done", "כמעט בטוחות לך: אין צורך לצבור עוד")}${row("לוותר", drop, "no")}</div>
+      ${row("לחזק", build, "ok")}${row("צמודות", close, "mid", "בערך 50-50 מול הליגה: בחירה אחת יכולה להכריע")}${row("מובטחות", enough, "done", "כמעט בטוח שתנצח בהן: אין צורך לצבור עוד")}${row("לוותר", drop, "no")}</div>
   </div>
     <b class="dadv-h" title="${focus.length ? "השחקנים הזמינים הכי חזקים בקטגוריות שבחרת יחד" : "השחקנים שהכי מעלים את מספר הקטגוריות שתנצח בשבוע מול הליגה, לפי הסדר"}">${focus.length ? `${full ? "השחקנים החופשיים " : ""}הכי חזקים ב${list(focus).replace(/, ([^,]*)$/, " וב$1").replace(/, /g, ", ב")}` : full ? "שחקנים חופשיים שמתאימים לך" : "מומלץ לבחירה הבאה"}</b>
     <div class="dadv-cards">${best.map((x, i) => `<div class="dadv-card${i ? "" : " top"}${PICK_PREVIEW === x.p.id ? " sel" : ""}" data-advpick="${x.p.id}" title="לחיצה: לבחירה (ואז &quot;בחר&quot;), לחיצה נוספת: ביטול">
