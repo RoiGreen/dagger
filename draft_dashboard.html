@@ -345,6 +345,7 @@ table.dboard td .dn { font-weight: 700; }
 @media (max-width: 900px) { .dadvice .dadv-top { grid-template-columns: minmax(0, 1fr); } }
 .dadvice .dadv-focus { display: grid; gap: 6px; }
 .dadvice .dadv-focus .chips { display: grid; grid-template-columns: repeat(5, max-content); gap: 6px; }  /* 9 categories: 5 + 4 */
+.dadvice .dadv-focus .chips.tiers { grid-template-columns: repeat(3, max-content); }
 .dadvice .dadv-prof { display: grid !important; gap: 4px; }
 .dadvice .prow { display: grid; grid-template-columns: 4.5em 1fr; gap: 8px; align-items: baseline; }
 .dadvice .prow .pl { color: var(--muted); font-weight: 600; }
@@ -2947,7 +2948,15 @@ const ncdf = (x) => {
 };
 const ADV_SPREAD = 5;
 // "חפש לפי": categories the user picks; the recommendation becomes the best available in their sum
-const DRAFT_FOCUS = new Set();  // how far a team's weekly total in one category swings against an average team, in score units
+const DRAFT_FOCUS = new Set();
+// Team tiers for 2026-27 from the season win totals (Fanatics sportsbook, October 2026), ranked within each conference:
+// 1 = places 1-6 (playoffs), 2 = places 7-10 (play-in), 3 = places 11-15 (likely tanking: rest and minutes for the young)
+const TEAM_TIER = {
+  NYK: 1, BOS: 1, PHI: 1, DET: 1, CLE: 1, MIA: 1, TOR: 2, IND: 2, ATL: 2, ORL: 2, CHA: 3, WAS: 3, CHI: 3, MIL: 3, BKN: 3,
+  OKC: 1, SAS: 1, DEN: 1, HOU: 1, MIN: 1, LAL: 1, POR: 2, PHX: 2, GSW: 2, UTA: 2, DAL: 3, MEM: 3, LAC: 3, NOP: 3, SAC: 3,
+};
+const TIER_LABEL = { 1: "פלייאוף", 2: "פליי אין", 3: "טנקינג" };
+const DRAFT_TIERS = new Set();  // empty = all teams  // how far a team's weekly total in one category swings against an average team, in score units
 function renderDraftAdvice() {
   const box = $("draftAdvice"), me = myIdx();
   const mineIds = picks.filter((x) => x.team === me).map((x) => x.id);
@@ -2975,7 +2984,7 @@ function renderDraftAdvice() {
   const close = cats.filter((c) => !done.has(c.k) && !buildSet.has(c.k) && P[c.k] >= 0.35 && P[c.k] <= 0.65);
   const closeSet = new Set(close.map((c) => c.k));
   const taken = new Set(picks.map((x) => x.id));
-  const pool = players.filter((p) => p.L && (p.team26 || p.rookie) && !taken.has(p.id) && zAll.has(p.id))
+  const pool = players.filter((p) => p.L && (p.team26 || p.rookie) && !taken.has(p.id) && zAll.has(p.id) && (!DRAFT_TIERS.size || DRAFT_TIERS.has(TEAM_TIER[p.team26])))
     .sort((a, b) => draftVal(b) - draftVal(a)).slice(0, 90);
   const gainOf = (p) => {
     const z = zAll.get(p.id).z;
@@ -3004,13 +3013,14 @@ function renderDraftAdvice() {
   // top: "חפש לפי" on the right, my profile on the left, one line per group
   const row = (label, cs, cls, tip = "") => (cs.length ? `<div class="prow"${tip ? ` title="${tip}"` : ""}><span class="pl">${label}</span><i class="${cls}">${list(cs)}</i></div>` : "");
   box.innerHTML = `<div class="dadv-top">
-    <div class="dadv-focus"><b>חפש לפי</b><div class="chips">${cats.map((c) => `<button type="button" data-focus="${c.k}" aria-pressed="${DRAFT_FOCUS.has(c.k)}">${heb(c.k)}</button>`).join("")}${focus.length ? `<button type="button" class="clr" data-focus="">נקה</button>` : ""}</div></div>
+    <div class="dadv-focus"><b>חפש לפי</b><div class="chips">${cats.map((c) => `<button type="button" data-focus="${c.k}" aria-pressed="${DRAFT_FOCUS.has(c.k)}">${heb(c.k)}</button>`).join("")}${focus.length ? `<button type="button" class="clr" data-focus="">נקה</button>` : ""}</div>
+      <b>דרג הקבוצה</b><div class="chips tiers">${[1, 2, 3].map((t) => `<button type="button" data-tier="${t}" aria-pressed="${DRAFT_TIERS.has(t)}" title="${Object.keys(TEAM_TIER).filter((k) => TEAM_TIER[k] === t).join(", ")}">${t} · ${TIER_LABEL[t]}</button>`).join("")}</div></div>
     <div class="dadv-prof"><b title="לעומת הממוצע של שאר הקבוצות בליגה שלך עד עכשיו">הפרופיל שלך מול הליגה</b>
       ${row("לחזק", build, "ok")}${row("צמודות", close, "mid", "בערך 50-50 מול הליגה: בחירה אחת יכולה להכריע")}${row("מובטחות", enough, "done", "כמעט בטוח שתנצח בהן: אין צורך לצבור עוד")}${row("לוותר", drop, "no")}</div>
   </div>
     <b class="dadv-h" title="${focus.length ? "השחקנים הזמינים הכי חזקים בקטגוריות שבחרת יחד" : "השחקנים שהכי מעלים את מספר הקטגוריות שתנצח בשבוע מול הליגה, לפי הסדר"}">${focus.length ? `${full ? "השחקנים החופשיים " : ""}הכי חזקים ב${list(focus).replace(/, ([^,]*)$/, " וב$1").replace(/, /g, ", ב")}` : full ? "שחקנים חופשיים שמתאימים לך" : "מומלץ לבחירה הבאה"}</b>
     <div class="dadv-cards">${best.map((x, i) => `<div class="dadv-card${i ? "" : " top"}${PICK_PREVIEW === x.p.id ? " sel" : ""}" data-advpick="${x.p.id}" title="לחיצה: לבחירה (ואז &quot;בחר&quot;), לחיצה נוספת: ביטול">
-      <div class="dadv-name"><span class="rk">${i + 1}</span><bdi class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</bdi>${x.p.hurt?.s === "OUT" ? injuryPill(x.p) : ""}<small>${esc(x.p.pos || "")} · ${esc(x.p.team26 || "FA")}</small></div>
+      <div class="dadv-name"><span class="rk">${i + 1}</span><bdi class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</bdi>${x.p.hurt?.s === "OUT" ? injuryPill(x.p) : ""}<small>${esc(x.p.pos || "")} · ${esc(x.p.team26 || "FA")}${TEAM_TIER[x.p.team26] ? ` · דרג ${TEAM_TIER[x.p.team26]}` : ""}</small></div>
       <div class="dadv-stats">${(() => {
         // his weakest of the categories shown (lowest score) in red; the best of the three in each category in green
         const zp = zAll.get(x.p.id).z, weak = showCats.length > 1 ? showCats.reduce((a, c) => (zp[c.k] < zp[a.k] ? c : a)).k : null;
@@ -5194,6 +5204,8 @@ $("draftAdvice").addEventListener("click", (e) => {
     if (label) { $("pickInput").value = label; PICK_PREVIEW = id; renderMine(); renderDraftAdvice(); $("pickBtn").focus(); }
     return;
   }
+  const tb = e.target.closest("[data-tier]");
+  if (tb) { const t = Number(tb.dataset.tier); DRAFT_TIERS.has(t) ? DRAFT_TIERS.delete(t) : DRAFT_TIERS.add(t); return renderDraftAdvice(); }
   const b = e.target.closest("[data-focus]");
   if (!b) return;
   const k = b.dataset.focus;
