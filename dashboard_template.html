@@ -1590,7 +1590,7 @@ const hasPos = (p, x) => (p.pos || "").split("/").includes(x);
 const st = {
   fmt: "cat", cats: [...STD_CATS], scoring: "h2h", mode: "g", teams: 8, roster: 13, punts: new Set(), settingsVersion: 5,
   q: "", minGp: 0, minMin: 0, catFilters: [{ cat: "PTS", val: 0 }], pos: new Set(), teamSel: [], maxAge: 42,
-  show: ["free"], onlyMoved: false, noHurt: false, weekGames: [], formWin: "", muOpp: null, weekAdds: 3, muAdds: null, il: {}, muGrid: "a", inj: "all", rookies: "all", myPos: 1, snake: true, roles: [], leagueName: "", teamNames: [], tags: {}, tagsMigrated: false,
+  show: ["free"], onlyMoved: false, noHurt: false, weekGames: [], formWin: "", muOpp: null, schedSeed: null, oppByWeek: {}, weekAdds: 3, muAdds: null, il: {}, muGrid: "a", inj: "all", rookies: "all", myPos: 1, snake: true, roles: [], leagueName: "", teamNames: [], tags: {}, tagsMigrated: false,
   cmp: { mode: "players", a: [], b: [], ta: 0, tb: 1, tta: null, ttb: null, chart: "val", sw: { a: [], b: [] }, fold: { a: false, b: false }, drops: [], adds: [] },
   sort: "zTotal", asc: false, tab: "board", advSort: "USG", advAsc: false, teamSort: "PACE", teamAsc: false, availSeasons: [2], vsOpp: "",
 };
@@ -4136,12 +4136,71 @@ function muWeekRange() {
   const w = weekOf(shiftDay(base.from, 7 * off));
   return { ...w, next: false, off };
 }
+// The league's schedule: a round robin (every team meets every other once per round of n-1 weeks), so over 21 weeks
+// with 8 teams each pair meets exactly 3 times. The order of the weeks is shuffled in every round, from a seed kept
+// in the league settings, so the schedule looks random but stays the same on every reload and device.
+function seeded(seed) {
+  let a = seed >>> 0;
+  return () => { a = (a + 0x6D2B79F5) >>> 0; let t = a; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
+}
+function shuffled(arr, rnd) {
+  const a = [...arr];
+  for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+  return a;
+}
+let SCHED = { key: null, rounds: null };
+function schedRounds(n) {
+  if (st.schedSeed == null) { st.schedSeed = Math.floor(Math.random() * 2 ** 31); saveSettings(); }
+  const key = `${n}|${st.schedSeed}`;
+  if (SCHED.key === key) return SCHED.rounds;
+  const rnd = seeded(st.schedSeed);
+  // circle method; an odd number of teams gets a bye (-1)
+  const ids = shuffled(Array.from({ length: n }, (_, i) => i), rnd);
+  if (ids.length % 2) ids.push(-1);
+  const N = ids.length, rounds = [];
+  let ring = [...ids];
+  for (let r = 0; r < N - 1; r++) {
+    const opp = new Map();
+    for (let i = 0; i < N / 2; i++) { const a = ring[i], b = ring[N - 1 - i]; opp.set(a, b); opp.set(b, a); }
+    rounds.push(opp);
+    ring = [ring[0], ring[N - 1], ...ring.slice(1, N - 1)];
+  }
+  SCHED = { key, rounds, rnd };
+  return rounds;
+}
+// the order of the rounds in cycle c (no pair meets in two weeks running across cycles)
+const SCHED_ORDER = new Map();
+function cycleOrder(c, R) {
+  const key = `${SCHED.key}|${c}`;
+  if (SCHED_ORDER.has(key)) return SCHED_ORDER.get(key);
+  const rnd = seeded((st.schedSeed || 0) + 7919 * (c + 1));
+  let o = shuffled(Array.from({ length: R }, (_, i) => i), rnd);
+  if (c > 0 && R > 1 && o[0] === cycleOrder(c - 1, R)[R - 1]) [o[0], o[1]] = [o[1], o[0]];
+  SCHED_ORDER.set(key, o);
+  return o;
+}
+// week number in the season (0 = the week of the first regular-season game)
+function seasonWeek(from) {
+  const first = weekOf(SEASON_DAYS[0] || from).from;
+  return Math.max(0, Math.round((Date.parse(from + "T12:00:00Z") - Date.parse(first + "T12:00:00Z")) / (7 * 864e5)));
+}
+// my opponent in a week: a hand pick for that week, else the schedule
+function scheduledOpp(from) {
+  const n = Math.max(st.teams, 1), me = myIdx();
+  const hand = st.oppByWeek?.[from];
+  if (hand != null && hand < n && hand !== me) return hand;
+  if (n < 2) return null;
+  const rounds = schedRounds(n), R = rounds.length, w = seasonWeek(from);
+  const o = rounds[cycleOrder(Math.floor(w / R), R)[w % R]].get(me);
+  return o != null && o >= 0 ? o : (me + 1) % n;  // a bye week: the next team, to still have a matchup to plan
+}
 function renderMatchup() {
   if (st.tab !== "mu") return;
   WEEK = muWeekRange();
   MU = { model: new Map(), games: new Map() };
   for (const g of GAMES) if (!g.pre) { MU.games.set(`${g.h}|${g.d}`, g); MU.games.set(`${g.a}|${g.d}`, g); }
   const n = Math.max(st.teams, 1), me = myIdx();
+  st.muOpp = scheduledOpp(WEEK.from);
   if (st.muOpp == null || st.muOpp >= n || st.muOpp === me) st.muOpp = (me + 1) % n;
   const sel = $("muOpp");
   if (sel !== document.activeElement) {
@@ -4421,7 +4480,12 @@ function renderMatchup() {
       ${MU_ROSTER === "b" ? rosterTable("b", st.muOpp, oppP, B, ilB, oppName) : rosterTable("a", me, mineP, A, ilA, myName)}
     </div>`;
 }
-$("muOpp").addEventListener("change", (e) => { st.muOpp = Number(e.target.value); saveSettings(); renderMatchup(); });
+// a hand pick holds for that week only; the other weeks keep the schedule
+$("muOpp").addEventListener("change", (e) => {
+  st.muOpp = Number(e.target.value);
+  st.oppByWeek = { ...(st.oppByWeek || {}), [WEEK.from]: st.muOpp };
+  saveSettings(); renderMatchup();
+});
 for (const [id, d] of [["muPrev", -1], ["muNext", 1], ["muNow", 0]]) {
   $(id).addEventListener("click", () => { st.muWeekOff = d ? (st.muWeekOff || 0) + d : 0; renderMatchup(); });
 }
