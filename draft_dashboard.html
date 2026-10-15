@@ -2941,7 +2941,8 @@ const DRAFT_FOCUS = new Set();  // how far a team's weekly total in one category
 function renderDraftAdvice() {
   const box = $("draftAdvice"), me = myIdx();
   const mineIds = picks.filter((x) => x.team === me).map((x) => x.id);
-  if (st.fmt !== "cat" || !mineIds.length || mineIds.length >= st.roster) { box.hidden = true; return; }
+  if (st.fmt !== "cat" || !mineIds.length) { box.hidden = true; return; }
+  const full = mineIds.length >= st.roster;  // roster full (draft over): the same advice, for free agents
   const zAll = last.now.z, cats = CATS.filter((c) => !st.punts.has(c.k));
   // the other teams of my league so far: their average per player, scaled to my number of players (0 before they pick)
   const others = Array.from({ length: Math.max(st.teams, 1) }, (_, t) => t).filter((t) => t !== me)
@@ -2996,7 +2997,7 @@ function renderDraftAdvice() {
       ${enough.length ? `<span>מספיק: <i class="done">${list(enough)}</i></span>` : ""}
       ${drop.length ? `<span>לוותר: <i class="no">${list(drop)}</i></span>` : ""}</div>
     <div class="dadv-focus"><b>חפש לפי:</b>${cats.map((c) => `<button type="button" data-focus="${c.k}" aria-pressed="${DRAFT_FOCUS.has(c.k)}">${heb(c.k)}</button>`).join("")}${focus.length ? `<button type="button" class="clr" data-focus="">נקה</button>` : ""}</div>
-    <b class="dadv-h" title="${focus.length ? "השחקנים הזמינים הכי חזקים בקטגוריות שבחרת יחד" : "השחקנים שהכי מעלים את מספר הקטגוריות שתנצח בשבוע מול הליגה, לפי הסדר"}">${focus.length ? `הכי חזקים ב${list(focus).replace(/, ([^,]*)$/, " וב$1").replace(/, /g, ", ב")}` : "מומלץ לבחירה הבאה"}</b>
+    <b class="dadv-h" title="${focus.length ? "השחקנים הזמינים הכי חזקים בקטגוריות שבחרת יחד" : "השחקנים שהכי מעלים את מספר הקטגוריות שתנצח בשבוע מול הליגה, לפי הסדר"}">${focus.length ? `${full ? "השחקנים החופשיים " : ""}הכי חזקים ב${list(focus).replace(/, ([^,]*)$/, " וב$1").replace(/, /g, ", ב")}` : full ? "שחקנים חופשיים שמתאימים לך" : "מומלץ לבחירה הבאה"}</b>
     <div class="dadv-cards">${best.map((x, i) => `<div class="dadv-card${i ? "" : " top"}">
       <div class="dadv-name"><span class="rk">${i + 1}</span><bdi class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</bdi>${x.p.hurt?.s === "OUT" ? injuryPill(x.p) : ""}<small>${esc(x.p.pos || "")} · ${esc(x.p.team26 || "FA")}</small></div>
       <div class="dadv-stats">${showCats.map((c) => `<span><small>${heb(c.k)}</small><b class="${bestIn[c.k] === x.p.id ? "lead" : ""}">${statTxt(x.p, c.k)}</b></span>`).join("")}</div>
