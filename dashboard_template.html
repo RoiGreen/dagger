@@ -341,6 +341,10 @@ table.dboard td .dn { font-weight: 700; }
 .dadvice .dadv-prof, .dadvice .dadv-picks { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; }
 .dadvice i { font-style: normal; font-weight: 700; } .dadvice i.ok { color: var(--pos); } .dadvice i.done { color: var(--muted); } .dadvice i.no { color: var(--neg); } .dadvice i.mid { color: #d97706; }
 .dadvice .dadv-h { font-size: .95rem; }
+.dadvice .dadv-focus { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.dadvice .dadv-focus button { padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: .82rem; font-weight: 600; cursor: pointer; }
+.dadvice .dadv-focus button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
+.dadvice .dadv-focus button.clr { border-style: dashed; color: var(--muted); }
 .dadvice .dadv-cards { display: grid; grid-template-columns: repeat(auto-fit, minmax(230px, 1fr)); gap: 10px; }
 .dadvice .dadv-card { background: var(--surface); border: 1px solid var(--line); border-radius: 10px; padding: 10px 12px; display: grid; gap: 8px; }
 .dadvice .dadv-card.top { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
@@ -2931,7 +2935,9 @@ const ncdf = (x) => {
   const p = d * t * (0.3193815 + t * (-0.3565638 + t * (1.781478 + t * (-1.821256 + t * 1.330274))));
   return x > 0 ? 1 - p : p;
 };
-const ADV_SPREAD = 5;  // how far a team's weekly total in one category swings against an average team, in score units
+const ADV_SPREAD = 5;
+// "חפש לפי": categories the user picks; the recommendation becomes the best available in their sum
+const DRAFT_FOCUS = new Set();  // how far a team's weekly total in one category swings against an average team, in score units
 function renderDraftAdvice() {
   const box = $("draftAdvice"), me = myIdx();
   const mineIds = picks.filter((x) => x.team === me).map((x) => x.id);
@@ -2968,10 +2974,14 @@ function renderDraftAdvice() {
     const gc = cats.map((c) => ({ k: c.k, g: (ncdf((S[c.k] + z[c.k] - per[c.k]) / ADV_SPREAD) - P[c.k]) * wOf(c.k) }));
     return { p, g: gc.reduce((a, x) => a + x.g, 0), help: gc.filter((x) => x.g > 0.01).sort((a, b) => b.g - a.g).slice(0, 3) };
   };
-  const best = pool.map(gainOf).sort((a, b) => b.g - a.g).slice(0, 3);
+  // with categories chosen in "חפש לפי": the best available in their sum (the weekly score per category)
+  const focus = cats.filter((c) => DRAFT_FOCUS.has(c.k));
+  const best = focus.length
+    ? pool.map((p) => ({ p, g: focus.reduce((a, c) => a + zAll.get(p.id).z[c.k], 0) })).sort((a, b) => b.g - a.g).slice(0, 3)
+    : pool.map(gainOf).sort((a, b) => b.g - a.g).slice(0, 3);
   const list = (cs) => cs.map((c) => heb(c.k)).join(", ");
   // the numbers shown under each recommended player: the categories to build, the best of the three in bold
-  const showCats = [...build, ...close].length ? [...build, ...close] : cats.slice(0, 5);
+  const showCats = focus.length ? focus : [...build, ...close].length ? [...build, ...close] : cats.slice(0, 5);
   const val = (p, k) => p.L.g[k];
   const statTxt = (p, k) => (k.endsWith("_PCT") ? fmt3(val(p, k)) : fmt1(val(p, k)));
   const bestIn = Object.fromEntries(showCats.map((c) => {
@@ -2985,7 +2995,8 @@ function renderDraftAdvice() {
       ${close.length ? `<span title="בערך 50-50 מול הליגה: בחירה אחת יכולה להכריע">צמודות: <i class="mid">${list(close)}</i></span>` : ""}
       ${enough.length ? `<span>מספיק: <i class="done">${list(enough)}</i></span>` : ""}
       ${drop.length ? `<span>לוותר: <i class="no">${list(drop)}</i></span>` : ""}</div>
-    <b class="dadv-h" title="השחקנים שהכי מעלים את מספר הקטגוריות שתנצח בשבוע מול הליגה, לפי הסדר">מומלץ לבחירה הבאה</b>
+    <div class="dadv-focus"><b>חפש לפי:</b>${cats.map((c) => `<button type="button" data-focus="${c.k}" aria-pressed="${DRAFT_FOCUS.has(c.k)}">${heb(c.k)}</button>`).join("")}${focus.length ? `<button type="button" class="clr" data-focus="">נקה</button>` : ""}</div>
+    <b class="dadv-h" title="${focus.length ? "השחקנים הזמינים הכי חזקים בקטגוריות שבחרת יחד" : "השחקנים שהכי מעלים את מספר הקטגוריות שתנצח בשבוע מול הליגה, לפי הסדר"}">${focus.length ? `הכי חזקים ב${list(focus).replace(/, ([^,]*)$/, " וב$1").replace(/, /g, ", ב")}` : "מומלץ לבחירה הבאה"}</b>
     <div class="dadv-cards">${best.map((x, i) => `<div class="dadv-card${i ? "" : " top"}">
       <div class="dadv-name"><span class="rk">${i + 1}</span><bdi class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</bdi>${x.p.hurt?.s === "OUT" ? injuryPill(x.p) : ""}<small>${esc(x.p.pos || "")} · ${esc(x.p.team26 || "FA")}</small></div>
       <div class="dadv-stats">${showCats.map((c) => `<span><small>${heb(c.k)}</small><b class="${bestIn[c.k] === x.p.id ? "lead" : ""}">${statTxt(x.p, c.k)}</b></span>`).join("")}</div>
@@ -5158,6 +5169,13 @@ $("pickBtn").addEventListener("click", () => {
   $("pickInput").value = ""; PICK_PREVIEW = null; renderMine();
 });
 $("pickInput").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); $("pickBtn").click(); } });
+$("draftAdvice").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-focus]");
+  if (!b) return;
+  const k = b.dataset.focus;
+  if (!k) DRAFT_FOCUS.clear(); else if (DRAFT_FOCUS.has(k)) DRAFT_FOCUS.delete(k); else DRAFT_FOCUS.add(k);
+  renderDraftAdvice();
+});
 $("pickInput").addEventListener("input", () => {
   const id = PICK_LOOKUP.get($("pickInput").value) || null;
   if (id === PICK_PREVIEW) return;
