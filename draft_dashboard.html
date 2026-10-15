@@ -341,6 +341,15 @@ table.dboard td .dn { font-weight: 700; }
 .dadvice .dadv-prof, .dadvice .dadv-picks { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; }
 .dadvice i { font-style: normal; font-weight: 700; } .dadvice i.ok { color: var(--pos); } .dadvice i.done { color: var(--muted); } .dadvice i.no { color: var(--neg); } .dadvice i.mid { color: #d97706; }
 .dadvice .dadv-h { font-size: .95rem; }
+.dadvice .dadv-check { background: var(--surface); border: 1px solid var(--accent); border-radius: 10px; padding: 10px 12px; display: grid; gap: 8px; }
+.dadvice .ckh { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
+.dadvice .ckg { font-weight: 800; font-size: .85rem; padding: 2px 10px; border-radius: 999px; }
+.dadvice .ckg.up { color: var(--pos); background: color-mix(in srgb, var(--pos) 12%, transparent); } .dadvice .ckg.dn { color: var(--neg); background: color-mix(in srgb, var(--neg) 12%, transparent); }
+.dadvice table.ckt th, .dadvice table.ckt td { padding: 4px 8px; font-size: .84rem; text-align: center; white-space: nowrap; }
+.dadvice table.ckt td { font-family: var(--font-num); direction: ltr; unicode-bidi: isolate; }
+.dadvice table.ckt td.lbl { font-family: var(--font-body); direction: rtl; text-align: start; color: var(--muted); font-weight: 700; }
+.dadvice table.ckt .up { color: var(--pos); font-weight: 800; } .dadvice table.ckt .dn { color: var(--neg); font-weight: 800; }
+.dadvice table.ckt .ckn { color: var(--muted); font-weight: 400; }
 .dadvice .dadv-top { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; gap: 10px 28px; align-items: start; }
 .dadvice .dadv-prof { justify-self: center; }
 .dadvice .dadv-tiers { display: grid; gap: 6px; justify-items: stretch; margin-inline-end: 56px; }
@@ -3027,6 +3036,22 @@ function renderDraftAdvice() {
     ? pool.map((p) => ({ p, g: focus.reduce((a, c) => a + zAll.get(p.id).z[c.k], 0) })).sort((a, b) => b.g - a.g).slice(0, 3)
     : blendFit(pool.map(gainOf)).slice(0, 3);
   const list = (cs) => cs.map((c) => heb(c.k)).join(", ");
+  // the player in the pick box (typed or a card clicked): per category his average, his score, and my team now → with him
+  const checkBlock = () => {
+    const cp = PICK_PREVIEW && !mineIds.includes(PICK_PREVIEW) ? PLAYER_BY_ID.get(PICK_PREVIEW) : null;
+    if (!cp || !zAll.has(cp.id)) return "";
+    const z = zAll.get(cp.id).z, sg = (v) => `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}`;
+    // categories he lifts or lowers: my chance to win each, with him added
+    const up = cats.filter((c) => z[c.k] >= 0.3), down = cats.filter((c) => z[c.k] <= -0.3);
+    return `<div class="dadv-check"><div class="ckh"><b>בדיקה: <bdi>${esc(cp.name)}</bdi></b>${cp.hurt?.s === "OUT" ? injuryPill(cp) : ""}
+        <small>${esc(cp.pos || "")} · ${esc(cp.team26 || "FA")} · Z ${shownVal(zAll.get(cp.id).total).toFixed(2)}</small>
+        ${up.length ? `<span class="ckg up">מחזק: ${list(up)}</span>` : ""}${down.length ? `<span class="ckg dn">מחליש: ${list(down)}</span>` : ""}</div>
+      <table class="box ckt"><thead><tr><th class="nosort"></th>${cats.map((c) => `<th class="nosort">${heb(c.k)}</th>`).join("")}</tr></thead><tbody>
+        <tr><td class="lbl">ממוצע</td>${cats.map((c) => `<td>${statTxt(cp, c.k)}</td>`).join("")}</tr>
+        <tr><td class="lbl">ציון</td>${cats.map((c) => `<td class="${z[c.k] >= 0.3 ? "up" : z[c.k] <= -0.3 ? "dn" : ""}">${sg(z[c.k])}</td>`).join("")}</tr>
+        <tr><td class="lbl">הקבוצה שלך</td>${cats.map((c) => { const now = S[c.k], aft = S[c.k] + z[c.k]; return `<td><span class="ckn">${sg(now)} → </span><b class="${aft > now + 0.05 ? "up" : aft < now - 0.05 ? "dn" : ""}">${sg(aft)}</b></td>`; }).join("")}</tr>
+      </tbody></table></div>`;
+  };
   // the numbers shown under each recommended player: the categories to build, the best of the three in bold
   const showCats = focus.length ? focus : [...build, ...close].length ? [...build, ...close] : cats.slice(0, 5);
   const val = (p, k) => p.L.g[k];
@@ -3045,6 +3070,7 @@ function renderDraftAdvice() {
       ${row("לחזק", build, "ok")}${row("צמודות", close, "mid", "בערך 50-50 מול הליגה: בחירה אחת יכולה להכריע")}${row("מובטחות", enough, "done", "כמעט בטוח שתנצח בהן: אין צורך לצבור עוד")}${row("לוותר", drop, "no")}</div>
     <div class="dadv-tiers"><b title="אפשר לבחור כמה">דרג הקבוצה</b>${[1, 2, 3].map((t) => `<button type="button" data-tier="${t}" aria-pressed="${DRAFT_TIERS.has(t)}" title="${Object.keys(TEAM_TIER).filter((k) => TEAM_TIER[k] === t).join(", ")}">${t} · ${TIER_LABEL[t]}</button>`).join("")}</div>
   </div>
+    ${checkBlock()}
     <b class="dadv-h" title="${focus.length ? "השחקנים הזמינים הכי חזקים בקטגוריות שבחרת יחד" : "בעיקר הדירוג הכללי, וההתאמה לפרופיל שלך מכריעה בין שחקנים קרובים"}">${focus.length ? `${full ? "השחקנים החופשיים " : ""}הכי חזקים ב${list(focus).replace(/, ([^,]*)$/, " וב$1").replace(/, /g, ", ב")}` : full ? "שחקנים חופשיים שמתאימים לך" : "מומלץ לבחירה הבאה"}</b>
     <div class="dadv-cards">${best.map((x, i) => `<div class="dadv-card${i ? "" : " top"}${PICK_PREVIEW === x.p.id ? " sel" : ""}" data-advpick="${x.p.id}" title="לחיצה: לבחירה (ואז &quot;בחר&quot;), לחיצה נוספת: ביטול">
       <div class="dadv-name"><span class="rk">${i + 1}</span><bdi class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</bdi>${x.p.hurt?.s === "OUT" ? injuryPill(x.p) : ""}<small>${esc(x.p.pos || "")} · ${esc(x.p.team26 || "FA")}${TEAM_TIER[x.p.team26] ? ` · דרג ${TEAM_TIER[x.p.team26]}` : ""}</small></div>
@@ -5219,7 +5245,7 @@ $("pickBtn").addEventListener("click", () => {
   const id = PICK_LOOKUP.get($("pickInput").value);
   if (!id) return showToast("בחר שחקן מהרשימה שנפתחת בזמן ההקלדה.");
   makePick(id, Number($("pickTeam").value));
-  $("pickInput").value = ""; PICK_PREVIEW = null; renderMine();
+  $("pickInput").value = ""; PICK_PREVIEW = null; renderMine(); renderDraftAdvice();
 });
 $("pickInput").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); $("pickBtn").click(); } });
 $("draftAdvice").addEventListener("click", (e) => {
@@ -5242,7 +5268,7 @@ $("draftAdvice").addEventListener("click", (e) => {
 $("pickInput").addEventListener("input", () => {
   const id = PICK_LOOKUP.get($("pickInput").value) || null;
   if (id === PICK_PREVIEW) return;
-  PICK_PREVIEW = id; renderMine();
+  PICK_PREVIEW = id; renderMine(); renderDraftAdvice();
 });
 // Checkboxes in the per-player menu: table tags only, never draft-room picks
 document.addEventListener("change", (e) => {
