@@ -3008,7 +3008,7 @@ function renderDraftAdvice() {
       ${row("לחזק", build, "ok")}${row("צמודות", close, "mid", "בערך 50-50 מול הליגה: בחירה אחת יכולה להכריע")}${row("להשאיר", enough, "done", "כמעט בטוחות לך: אין צורך לצבור עוד")}${row("לוותר", drop, "no")}</div>
   </div>
     <b class="dadv-h" title="${focus.length ? "השחקנים הזמינים הכי חזקים בקטגוריות שבחרת יחד" : "השחקנים שהכי מעלים את מספר הקטגוריות שתנצח בשבוע מול הליגה, לפי הסדר"}">${focus.length ? `${full ? "השחקנים החופשיים " : ""}הכי חזקים ב${list(focus).replace(/, ([^,]*)$/, " וב$1").replace(/, /g, ", ב")}` : full ? "שחקנים חופשיים שמתאימים לך" : "מומלץ לבחירה הבאה"}</b>
-    <div class="dadv-cards">${best.map((x, i) => `<div class="dadv-card${i ? "" : " top"}${PICK_PREVIEW === x.p.id ? " sel" : ""}" data-advpick="${x.p.id}" title="לחיצה: לבחירה (ואז "בחר")">
+    <div class="dadv-cards">${best.map((x, i) => `<div class="dadv-card${i ? "" : " top"}${PICK_PREVIEW === x.p.id ? " sel" : ""}" data-advpick="${x.p.id}" title="לחיצה: לבחירה (ואז &quot;בחר&quot;), לחיצה נוספת: ביטול">
       <div class="dadv-name"><span class="rk">${i + 1}</span><bdi class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</bdi>${x.p.hurt?.s === "OUT" ? injuryPill(x.p) : ""}<small>${esc(x.p.pos || "")} · ${esc(x.p.team26 || "FA")}</small></div>
       <div class="dadv-stats">${showCats.map((c) => `<span><small>${heb(c.k)}</small><b class="${bestIn[c.k] === x.p.id ? "lead" : ""}">${statTxt(x.p, c.k)}</b></span>`).join("")}</div>
     </div>`).join("")}</div>`;
@@ -5185,6 +5185,7 @@ $("draftAdvice").addEventListener("click", (e) => {
   if (card && !e.target.closest("[data-pcard], .injpill")) {
     // the player goes into the pick box (with his preview on my team); "בחר" makes the pick
     const id = Number(card.dataset.advpick), label = [...PICK_LOOKUP].find(([, v]) => v === id)?.[0];
+    if (PICK_PREVIEW === id) { $("pickInput").value = ""; PICK_PREVIEW = null; renderMine(); renderDraftAdvice(); return; }  // a second click undoes it
     if (label) { $("pickInput").value = label; PICK_PREVIEW = id; renderMine(); renderDraftAdvice(); $("pickBtn").focus(); }
     return;
   }
