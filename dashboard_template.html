@@ -1126,6 +1126,11 @@ table.cmpt td.lbl { min-width: 5.5em; }
             <button id="fmtP" aria-pressed="false" data-fmt="pts">נקודות</button>
           </div>
         </div>
+        <div class="field" id="catPickF">
+          <span class="lbl">הקטגוריות בליגה</span>
+          <div class="chips" id="catPick"></div>
+          <p class="hint" id="catPickNote">במצ׳אפ השבועי נספרות בינתיים רק 9 הקטגוריות הרגילות</p>
+        </div>
         <div class="row2">
           <div class="field"><label for="teams">קבוצות בליגה</label><input type="number" id="teams" min="4" max="30" value="8"></div>
           <div class="field"><label for="roster">שחקנים בסגל</label><input type="number" id="roster" min="5" max="20" value="13"></div>
@@ -1430,11 +1435,24 @@ table.cmpt td.lbl { min-width: 5.5em; }
 const D = /*__DATA__*/null;
 const S = D.stats;
 const ix = Object.fromEntries(S.map((s, i) => [s, i]));
-const CATS = [
-  { k: "PTS", l: "PTS" }, { k: "REB", l: "REB" }, { k: "AST", l: "AST" },
+// Every category a league can play with; a league picks its own (st.cats), the standard 9 by default
+const ALL_CATS = [
+  { k: "PTS", l: "PTS" }, { k: "REB", l: "REB" }, { k: "OREB", l: "OREB" }, { k: "AST", l: "AST" },
   { k: "STL", l: "STL" }, { k: "BLK", l: "BLK" }, { k: "FG3M", l: "3PM" },
-  { k: "FG_PCT", l: "FG%" }, { k: "FT_PCT", l: "FT%" }, { k: "TOV", l: "TOV" },
+  { k: "FG_PCT", l: "FG%" }, { k: "FT_PCT", l: "FT%" }, { k: "FG3_PCT", l: "3P%" },
+  { k: "DD2", l: "DD" }, { k: "TD3", l: "TD" }, { k: "TOV", l: "TOV" },
 ];
+const STD_CATS = ["PTS", "REB", "AST", "STL", "BLK", "FG3M", "FG_PCT", "FT_PCT", "TOV"];
+const CATS = ALL_CATS.filter((c) => STD_CATS.includes(c.k));  // the league's categories (changed in place)
+function setCats(keys) {
+  const ok = ALL_CATS.filter((c) => (keys || []).includes(c.k));
+  CATS.splice(0, CATS.length, ...(ok.length >= 3 ? ok : ALL_CATS.filter((c) => STD_CATS.includes(c.k))));
+}
+// The weekly matchup knows the standard categories only (its game-by-game model has no 3P% / OREB / doubles yet)
+const MU_CATS = () => CATS.filter((c) => STD_CATS.includes(c.k));
+// percentages: made, attempted
+const PCT_PARTS = { FG_PCT: ["FGM", "FGA"], FT_PCT: ["FTM", "FTA"], FG3_PCT: ["FG3M", "FG3A"] };
+const catFmt = (k) => (k.endsWith("_PCT") ? fmt3 : k === "DD2" || k === "TD3" ? (x) => x.toFixed(2) : fmt1);
 const PTSW = { PTS: 1, FG3M: 1, FGA: -1, FGM: 2, FTA: -1, FTM: 1, REB: 1, AST: 2, STL: 4, BLK: 4, TOV: -2 };
 
 function line(arr, mode) {
@@ -1443,6 +1461,7 @@ function line(arr, mode) {
   S.forEach((s, i) => { o[s] = s === "MIN" ? arr[i] : arr[i] * f; });
   o.FG_PCT = arr[ix.FGA] ? arr[ix.FGM] / arr[ix.FGA] : 0;
   o.FT_PCT = arr[ix.FTA] ? arr[ix.FTM] / arr[ix.FTA] : 0;
+  o.FG3_PCT = arr[ix.FG3A] ? arr[ix.FG3M] / arr[ix.FG3A] : 0;
   return o;
 }
 // Fantasy points; a punted category's points drop out (FG% / FT% take their makes and attempts with them)
@@ -1565,7 +1584,7 @@ const hasPos = (p, x) => (p.pos || "").split("/").includes(x);
 
 // ---------- state ----------
 const st = {
-  fmt: "cat", mode: "g", teams: 8, roster: 13, punts: new Set(), settingsVersion: 5,
+  fmt: "cat", cats: [...STD_CATS], mode: "g", teams: 8, roster: 13, punts: new Set(), settingsVersion: 5,
   q: "", minGp: 0, minMin: 0, catFilters: [{ cat: "PTS", val: 0 }], pos: new Set(), teamSel: [], maxAge: 42,
   show: ["free"], onlyMoved: false, noHurt: false, weekGames: [], formWin: "", muOpp: null, weekAdds: 3, muAdds: null, il: {}, muGrid: "a", inj: "all", rookies: "all", myPos: 1, snake: true, roles: [], leagueName: "", teamNames: [], tags: {}, tagsMigrated: false,
   cmp: { mode: "players", a: [], b: [], ta: 0, tb: 1, tta: null, ttb: null, chart: "val", sw: { a: [], b: [] }, fold: { a: false, b: false }, drops: [], adds: [] },
@@ -1660,6 +1679,8 @@ function applySettings(s) {
   // Saved picks of the old Guard / Forward / Center filter are dropped
   Object.assign(st, s, { punts: new Set(s.punts || []), pos: new Set((s.pos || []).filter((x) => POSITIONS.includes(x))) });
   st.sort = st.fmt === "pts" ? "fp" : "zTotal"; st.asc = false;  // a visit opens sorted by the league's own value
+  if (!Array.isArray(st.cats)) st.cats = [...STD_CATS];
+  setCats(st.cats);
 }
 const settingsData = () => ({ ...st, punts: [...st.punts], pos: [...st.pos] });
 try {
@@ -1698,14 +1719,14 @@ function meanStd(xs) {
 // multiplied by SCALE so the totals spread as widely as the old scores (order unchanged). No cap on a category:
 // a cap at 3 made no difference in 9 seasons of simulated drafts, and every extra block still counts in a matchup.
 let SCALE = 1;
-const TAU_IX = Object.fromEntries(["PTS", "REB", "AST", "STL", "BLK", "FG3M", "FG_PCT", "FT_PCT", "TOV"].map((k, i) => [k, i]));
+const TAU_IX = Object.fromEntries(["PTS", "REB", "AST", "STL", "BLK", "FG3M", "FG_PCT", "FT_PCT", "TOV", "FG3_PCT", "OREB", "DD2", "TD3"].map((k, i) => [k, i]));
 // one player's week-to-week noise per category, over the chosen seasons (games-weighted); per 36 scales it up
 function playerNoise(p, mode) {
   if (!p.tau) return null;
   const ys = chosenSeasons().filter((y) => p.tau[y]);
   const use = ys.length ? ys : Object.keys(p.tau);
   let wsum = 0;
-  const v = new Array(9).fill(0);
+  const v = new Array(13).fill(0);
   for (const y of use) {
     const g = p.seasons?.[y]?.gp || 1;
     p.tau[y].forEach((x, i) => { v[i] += x * g; });
@@ -1719,7 +1740,7 @@ function poolNoise(pool, mode) {
   const key = mode + "|" + pool.map((p) => p.id).join(",");
   if (NOISE_CACHE.key === key) return NOISE_CACHE.v;
   const rows = pool.map((p) => playerNoise(p, mode)).filter(Boolean);
-  const v = new Array(9).fill(0);
+  const v = new Array(13).fill(0);
   rows.forEach((r) => r.forEach((x, i) => { v[i] += x / rows.length; }));
   NOISE_CACHE = { key, v: rows.length ? v : null };
   return NOISE_CACHE.v;
@@ -1730,15 +1751,15 @@ function zScores(list, pool, mode, opts = {}) {
   const noise = opts.old ? null : poolNoise(pool, mode);
   for (const c of CATS) {
     let get;
-    if (c.k === "FG_PCT" || c.k === "FT_PCT") {
-      const [m, a] = c.k === "FG_PCT" ? ["FGM", "FGA"] : ["FTM", "FTA"];
+    if (PCT_PARTS[c.k]) {
+      const [m, a] = PCT_PARTS[c.k];
       const lg = pool.reduce((s, p) => s + p.L[mode][m], 0) / Math.max(pool.reduce((s, p) => s + p.L[mode][a], 0), 1e-9);
       get = (p) => p.L[mode][m] - lg * p.L[mode][a];
     } else {
       get = (p) => p.L[mode][c.k];
     }
     const [mu, sd] = meanStd(pool.map(get));
-    const den = noise ? Math.sqrt(sd * sd + 1.04 * noise[TAU_IX[c.k]]) : sd;
+    const den = noise ? Math.sqrt(sd * sd + 1.04 * (noise[TAU_IX[c.k]] || 0)) : sd;
     const sign = c.k === "TOV" ? -1 : 1;
     for (const p of list) {
       let z = sign * (get(p) - mu) / den;
@@ -1830,7 +1851,8 @@ function heat(z) {
   return `background:color-mix(in srgb, var(${z >= 0 ? "--pos" : "--neg"}) ${pct.toFixed(0)}%, transparent)`;
 }
 
-const COLS = [
+const COLS = [];
+const buildCols = () => COLS.splice(0, COLS.length,
   { k: "rank", l: "Rank", asc: true },
   { k: "name", l: "Player Name", asc: true }, { k: "age", l: "גיל", asc: true }, { k: "gp", l: "GP", asc: false },
   { k: "avail", l: "זמינות", asc: false },
@@ -1838,8 +1860,8 @@ const COLS = [
   ...CATS.map((c) => ({ k: c.k, l: c.l, asc: c.k === "TOV", cat: true })),
   { k: "zTotal", l: "Z", asc: false },
   { k: "fp", l: "FPTS", asc: false },
-  { k: "act", l: "", nosort: true },
-];
+  { k: "act", l: "", nosort: true });
+buildCols();
 
 let last = null;
 function compute() {
@@ -1876,7 +1898,7 @@ function passes(p) {
 }
 
 // The score explanation's example: the top player of the ranking as it is now, worked out step by step
-const HEB_CAT = { PTS: "נקודות", REB: "ריבאונדים", AST: "אסיסטים", STL: "חטיפות", BLK: "חסימות", FG3M: "שלשות", FG_PCT: "אחוז מהשדה", FT_PCT: "אחוז עונשין", TOV: "איבודים" };
+const HEB_CAT = { PTS: "נקודות", REB: "ריבאונדים", AST: "אסיסטים", STL: "חטיפות", BLK: "חסימות", FG3M: "שלשות", FG3_PCT: "אחוז שלשות", OREB: "ריבאונד התקפה", DD2: "דאבל דאבל", TD3: "טריפל דאבל", FG_PCT: "אחוז מהשדה", FT_PCT: "אחוז עונשין", TOV: "איבודים" };
 function fillZHelp(list, now) {
   const fx = (v, d = 1) => (v < 0 ? `מינוס ${Math.abs(v).toFixed(d)}` : v.toFixed(d));
   const mode = st.mode, size = st.teams * st.roster;
@@ -1895,7 +1917,7 @@ function fillZHelp(list, now) {
   $("zStep2").innerHTML = `<b>2. כמה זה נדיר:</b> 6 אסיסטים מעל הממוצע יש לעשרות שחקנים, אבל 2 חסימות מעל הממוצע יש רק לבודדים. לכן כל קטגוריה מקבלת ציון לפי כמה נדיר להגיע לרמה כזאת: 0 ממוצע, 1 טוב, 2 מהטובים בליגה, 3 יוצא דופן. ${nm} ב${name}: <b>${fx(z.z[c.k])}</b>`;
   // once players are taken, the market is weaker: every score rises by the same amount (the order stays)
   const shift = Math.abs(AVAIL_LEVEL) >= 0.05;
-  $("zStep3").innerHTML = `<b>3. מחברים:</b> סכום 9 הקטגוריות הוא ציון ה־Z. באיבודים, פחות זה טוב. ${nm}: <b>${fx(z.total)}</b>`;
+  $("zStep3").innerHTML = `<b>3. מחברים:</b> סכום ${CATS.length} הקטגוריות הוא ציון ה־Z. באיבודים, פחות זה טוב. ${nm}: <b>${fx(z.total)}</b>`;
   $("zMarket").innerHTML = shift
     ? `<b>בזמן הדראפט:</b> השחקנים שנבחרו יצאו מהשוק, אז כל הציונים עולים ב־${fx(-AVAIL_LEVEL)}. הסדר לא משתנה` : "";
 }
@@ -1954,7 +1976,7 @@ function render() {
     const cls = [st.sort === c.k ? "sorted" : "", st.sort === c.k && st.asc ? "asc" : "", c.nosort ? "nosort" : "", c.k === "act" ? "acts" : "",
                  c.cat && st.punts.has(c.k) ? "punted" : ""].join(" ");
     if (c.k === "rank" && posR) return posTh(posR);  // one position picked: show only the rank within it
-    const tip = c.k === "zTotal" ? ' title="כמה השחקן יעזור לך לנצח מצ׳אפ שבועי, בסכום 9 הקטגוריות. 0 = שחקן ממוצע מבין השחקנים שנבחרים בליגה"' : "";
+    const tip = c.k === "zTotal" ? ` title="כמה השחקן יעזור לך לנצח מצ׳אפ שבועי, בסכום ${CATS.length} הקטגוריות. 0 = שחקן ממוצע מבין השחקנים שנבחרים בליגה"` : "";
     return `<th class="${cls}"${tip} ${c.nosort ? "" : `tabindex="0" data-k="${c.k}"`} scope="col">${esc(label)}</th>`;
   }).join("");
 
@@ -1962,7 +1984,7 @@ function render() {
   const rowHtml = ({ p, rank, z }) => {
     const o = p.L[m];
     const cats = CATS.map((c) => {
-      const v = c.k.endsWith("_PCT") ? fmt3(o[c.k]) : fmt1(o[c.k]);
+      const v = catFmt(c.k)(o[c.k] || 0);
       const punted = st.punts.has(c.k) ? " punted" : "";
       return `<td class="cat${punted}" style="${heat(z.z[c.k])}">${v}</td>`;
     }).join("");
@@ -2835,7 +2857,11 @@ function activeFilters() {
     st.maxAge < 42, st.onlyMoved, st.noHurt, st.rookies !== "all", st.roles.length].filter(Boolean).length;
 }
 function syncLeaguePanel() {
-  const fmtTxt = st.fmt === "pts" ? "נקודות" : "9 קטגוריות";
+  const fmtTxt = st.fmt === "pts" ? "נקודות" : `${CATS.length} קטגוריות`;
+  $("fmt9").textContent = `${CATS.length} קטגוריות`;
+  $("catPickF").hidden = st.fmt === "pts";
+  $("catPickNote").hidden = CATS.every((c) => STD_CATS.includes(c.k));
+  $("catPick").innerHTML = ALL_CATS.map((c) => `<button type="button" class="chip" data-catpick="${c.k}" aria-pressed="${CATS.includes(c)}">${c.l}</button>`).join("");
   const punts = [...st.punts].map((k) => CATS.find((c) => c.k === k)?.l).filter(Boolean);
   $("leagueSum").textContent = [st.leagueName, fmtTxt, `${st.teams} קבוצות`, `${st.roster} בסגל`].filter(Boolean).join(" · ");  // Punt shows below anyway
   setField("muAddsMax", st.weekAdds ?? 3);
@@ -3170,9 +3196,10 @@ const FP_PARTS = [
 const fpParts = () => FP_PARTS.filter((x) => !st.punts.has(x.off));
 function cmpTotals(list, avg = false) {
   const m = st.mode, o = { n: list.length };
-  for (const k of ["PTS", "REB", "AST", "STL", "BLK", "FG3M", "TOV", "FGM", "FGA", "FTM", "FTA"]) o[k] = list.reduce((a, p) => a + p.L[m][k], 0);
+  for (const k of ["PTS", "REB", "AST", "STL", "BLK", "FG3M", "TOV", "FGM", "FGA", "FTM", "FTA", "FG3A", "OREB", "DD2", "TD3"]) o[k] = list.reduce((a, p) => a + (p.L[m][k] || 0), 0);
   o.FG_PCT = o.FGA ? o.FGM / o.FGA : list.length ? 0 : null;  // nobody on a side: no percentage to show
   o.FT_PCT = o.FTA ? o.FTM / o.FTA : list.length ? 0 : null;
+  o.FG3_PCT = o.FG3A ? o.FG3M / o.FG3A : list.length ? 0 : null;
   const zs = list.map(zOf);
   o.z = Object.fromEntries(CATS.map((c) => [c.k, zs.reduce((a, r) => a + (r ? r.z[c.k] : 0), 0)]));
   o.Z = CATS.filter((c) => !st.punts.has(c.k)).reduce((a, c) => a + o.z[c.k], 0) - AVAIL_LEVEL * list.length;  // against the best players on the market
@@ -3844,7 +3871,7 @@ function muModel(p) {
     // per-category Z of his line, and how it moves when a game is 10% richer (a soft defence, a fast pace)
     const zs = zScores([{ id: p.id, L: { g: L } }, { id: -1, L: { g: Object.fromEntries(Object.entries(L).map(([k, x]) => [k, x * 1.1])) } }], last.now.pool, "g");
     const z = zs.get(p.id).z, z11 = zs.get(-1).z;
-    const dz = Object.fromEntries(CATS.map((c) => [c.k, z11[c.k] - z[c.k]]));
+    const dz = Object.fromEntries(MU_CATS().map((c) => [c.k, z11[c.k] - z[c.k]]));
     m = { mean, v, covFG: cFG * Math.sqrt(v.FGM * v.FGA), covFT: cFT * Math.sqrt(v.FTM * v.FTA), z, dz };
   }
   MU.model.set(p.id, m);
@@ -3858,7 +3885,7 @@ function muVal(p, f = 1) {
   if (!m) return -99;
   if (st.fmt === "pts") return m.mean.FP * f;
   let v = 0;
-  for (const c of CATS) {
+  for (const c of MU_CATS()) {
     const w = st.punts.has(c.k) ? 0 : MU.w ? MU.w[c.k] : 1;
     v += w * (m.z[c.k] + (f - 1) * 10 * m.dz[c.k]);
   }
@@ -3966,7 +3993,7 @@ function muOdds(A, B) {
     const p = M / N;
     return { p, v: Math.max(0, (T.v[m] - 2 * p * cov + p * p * T.v[a]) / (N * N)) };
   };
-  const cats = CATS.map((c) => {
+  const cats = MU_CATS().map((c) => {
     if (c.k.endsWith("_PCT")) {
       const [m, a, cv] = c.k === "FG_PCT" ? ["FGM", "FGA", "covFG"] : ["FTM", "FTA", "covFT"];
       const x = pct(A, m, a, A[cv]), y = pct(B, m, a, B[cv]);
@@ -4294,11 +4321,11 @@ function renderMatchup() {
       const role = onIL ? "ilrow" : cur === "BN" ? "benchrow" : "startrow";
       return `<tr class="${role}"><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span></span><small class="ppos">${esc(p.pos || "")}</small>${onIL ? "" : (() => { const c = T.cell.get(`${p.id}|${d}`);
         return c?.out ? `<small class="pday out">OUT</small>` : c ? `<small class="pday">${esc(c.gm ? `${c.gm.g.h === p.team26 ? "" : "@"}${c.gm.opp}` : c.r ? `${c.r[2] ? "" : "@"}${c.r[1]}` : "")}</small>` : `<small class="pday none">אין משחק</small>`; })()}${p.hurt ? injuryPill(p) : ""}</td>
-        <td>${onIL ? "IL" : `${g1(w.starts)}/${w.games}`}</td><td class="mslotc">${onIL ? "" : slotSel}</td>${CATS.map((c) => `<td>${onIL ? "" : cell9(w.o, c.k)}</td>`).join("")}<td class="macts">${acts}</td></tr>`;
+        <td>${onIL ? "IL" : `${g1(w.starts)}/${w.games}`}</td><td class="mslotc">${onIL ? "" : slotSel}</td>${MU_CATS().map((c) => `<td>${onIL ? "" : cell9(w.o, c.k)}</td>`).join("")}<td class="macts">${acts}</td></tr>`;
     }).join("");
     const full = active.length >= st.roster;
     return `<div class="muroster"><h4>${esc(title)}</h4>
-      <div class="muauto"><button type="button" class="mact" data-muclear="${t}" title="כל השחקנים לספסל, כדי לבנות את ההרכב מהתחלה">איפוס הרכב</button><button type="button" class="mact${manual ? "" : " on"}" data-muauto="${t}" title="משבץ את השחקנים החזקים ביותר בעמדות שמתאימות להם, כל יום מחדש">בחירה אוטומטית</button></div><table class="box murt"><thead><tr><th class="nosort">שחקן</th><th class="nosort" data-tip="משחקים בהרכב מתוך המשחקים שלו השבוע">הרכב</th><th class="nosort">עמדה</th>${CATS.map((c) => `<th class="nosort">${c.l}</th>`).join("")}<th class="nosort"></th></tr></thead><tbody>${rows}</tbody></table>
+      <div class="muauto"><button type="button" class="mact" data-muclear="${t}" title="כל השחקנים לספסל, כדי לבנות את ההרכב מהתחלה">איפוס הרכב</button><button type="button" class="mact${manual ? "" : " on"}" data-muauto="${t}" title="משבץ את השחקנים החזקים ביותר בעמדות שמתאימות להם, כל יום מחדש">בחירה אוטומטית</button></div><table class="box murt"><thead><tr><th class="nosort">שחקן</th><th class="nosort" data-tip="משחקים בהרכב מתוך המשחקים שלו השבוע">הרכב</th><th class="nosort">עמדה</th>${MU_CATS().map((c) => `<th class="nosort">${c.l}</th>`).join("")}<th class="nosort"></th></tr></thead><tbody>${rows}</tbody></table>
       <div class="muadd" data-muaddbox="${t}">
         <input list="muFree" placeholder="הוספת שחקן חופשי…" autocomplete="off" data-muaddin="${t}" aria-label="שחקן להוספה">
         <select data-muaddout="${t}" aria-label="במקום">${full ? "" : `<option value="">יש מקום בסגל (${active.length}/${st.roster})</option>`}${active.map((p) => `<option value="${p.id}">במקום ${esc(p.name)}</option>`).join("")}</select>
@@ -5023,8 +5050,9 @@ function update(recompute = true) {
   render();
 }
 
-$("puntChips").innerHTML = CATS.map((c) => `<button class="chip punt" data-punt="${c.k}" aria-pressed="false">${c.l}</button>`).join("")
-  + `<button class="chip puntreset" type="button" data-puntreset="1">איפוס</button>`;
+const renderPuntChips = () => { $("puntChips").innerHTML = CATS.map((c) => `<button class="chip punt" data-punt="${c.k}" aria-pressed="false">${c.l}</button>`).join("")
+  + `<button class="chip puntreset" type="button" data-puntreset="1">איפוס</button>`; };
+renderPuntChips();
 const teams = [...new Set(players.map((p) => p.team26).filter(Boolean))].sort();
 $("vsOpp").innerHTML += [...teams].sort((a, b) => (TEAM_NAMES[a] || a).localeCompare(TEAM_NAMES[b] || b))
   .map((t) => `<option value="${t}">${esc(TEAM_NAMES[t] || t)}</option>`).join("");
@@ -5095,6 +5123,15 @@ document.addEventListener("click", (e) => {
   if (t.dataset.mode) { st.mode = t.dataset.mode; return update(); }
   if (t.dataset.wg) { const n = Number(t.dataset.wg); st.weekGames = st.weekGames.includes(n) ? st.weekGames.filter((x) => x !== n) : [...st.weekGames, n]; return update(false); }
   if (t.dataset.pos) { st.pos.has(t.dataset.pos) ? st.pos.delete(t.dataset.pos) : st.pos.add(t.dataset.pos); return update(false); }
+  if (t.dataset.catpick) {
+    const k = t.dataset.catpick, on = st.cats.includes(k);
+    if (on && st.cats.length <= 3) return;  // at least 3 categories
+    st.cats = on ? st.cats.filter((x) => x !== k) : [...st.cats, k];
+    setCats(st.cats); buildCols(); renderPuntChips();
+    for (const x of [...st.punts]) if (!CATS.some((c) => c.k === x)) st.punts.delete(x);
+    if (!CATS.some((c) => c.k === st.sort) && ALL_CATS.some((c) => c.k === st.sort)) { st.sort = "zTotal"; st.asc = false; }
+    return update();
+  }
   if (t.dataset.puntreset) { st.punts.clear(); return update(); }
   if (t.dataset.punt) { st.punts.has(t.dataset.punt) ? st.punts.delete(t.dataset.punt) : st.punts.add(t.dataset.punt); return update(); }
   if (t.dataset.k) {
@@ -5148,7 +5185,7 @@ for (const id of ["resetBtn", "draftResetBtn"]) $(id).addEventListener("click", 
 const SORT_OPTS = {
   board: [
     { k: "rank", l: "דירוג", asc: true },
-    { k: "zTotal", l: "ערך 9 קטגוריות (Z)", asc: false },
+    { k: "zTotal", l: "ערך הקטגוריות (Z)", asc: false },
     { k: "fp", l: "נקודות פנטזי (FPTS)", asc: false },
     { k: "PTS", l: "נקודות (PTS)", asc: false },
     { k: "REB", l: "ריבאונדים (REB)", asc: false },

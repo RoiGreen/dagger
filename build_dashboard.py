@@ -29,7 +29,29 @@ SITE_RESET = ("html{color-scheme:light dark}body{margin:0;font:14px/1.45 system-
               "img{max-width:100%}[hidden]{display:none!important}")
 
 SEASON_MIN_GP = 5  # a season counts for a player once he played this many games in it
-STATS = ["MIN", "PTS", "REB", "AST", "STL", "BLK", "FG3M", "TOV", "FGM", "FGA", "FTM", "FTA"]
+STATS = ["MIN", "PTS", "REB", "AST", "STL", "BLK", "FG3M", "TOV", "FGM", "FGA", "FTM", "FTA",
+         "FG3A", "OREB", "DD2", "TD3"]  # the last four: for leagues with other categories (3P%, OREB, double / triple doubles)
+
+
+def read_base(path) -> pd.DataFrame:
+    """A season per-game table; DD2 / TD3 come as season counts, turned into per game."""
+    df = pd.read_csv(path)
+    for c in ("DD2", "TD3"):
+        df[c] = df[c] / df["GP"].clip(lower=1) if c in df else 0.0
+    for c in ("FG3A", "OREB"):
+        if c not in df:
+            df[c] = 0.0
+    return df
+
+
+def with_doubles(df: pd.DataFrame) -> pd.DataFrame:
+    """Game logs: a double-double / triple-double flag per game (10+ in two / three of PTS REB AST STL BLK)."""
+    if df.empty:
+        return df.assign(DD2=pd.Series(dtype=int), TD3=pd.Series(dtype=int)) if "DD2" not in df else df
+    if "DD2" not in df or "TD3" not in df:
+        tens = (df[["PTS", "REB", "AST", "STL", "BLK"]] >= 10).sum(axis=1)
+        df = df.assign(DD2=(tens >= 2).astype(int), TD3=(tens >= 3).astype(int))
+    return df
 ADV = ["USG_PCT", "PACE", "OFF_RATING"]
 TEAM_ADV = ["PACE", "OFF_RATING", "DEF_RATING", "NET_RATING"]
 
@@ -145,7 +167,7 @@ def team_logos() -> dict:
 FORM_DAYS = [7, 14, 30]
 
 
-TAU_CATS = ["PTS", "REB", "AST", "STL", "BLK", "FG3M", "FG_PCT", "FT_PCT", "TOV"]
+TAU_CATS = ["PTS", "REB", "AST", "STL", "BLK", "FG3M", "FG_PCT", "FT_PCT", "TOV", "FG3_PCT", "OREB", "DD2", "TD3"]
 
 
 def attach_week_noise(players: list[dict]) -> None:
@@ -159,14 +181,15 @@ def attach_week_noise(players: list[dict]) -> None:
     for y, f in files.items():
         if not f.exists():
             continue
-        d = pd.read_csv(f, usecols=["PLAYER_ID", "GAME_DATE", "MIN", "PTS", "REB", "AST", "STL", "BLK", "FG3M", "TOV",
-                                    "FGM", "FGA", "FTM", "FTA"])
+        d = with_doubles(pd.read_csv(f))[["PLAYER_ID", "GAME_DATE", "MIN", "PTS", "REB", "AST", "STL", "BLK", "FG3M", "TOV",
+                                          "FGM", "FGA", "FTM", "FTA", "FG3A", "OREB", "DD2", "TD3"]]
         d = d[d["MIN"] > 0].copy()
         d["WEEK"] = (pd.to_datetime(d["GAME_DATE"].astype(str).str[:10]) - pd.to_datetime(d["GAME_DATE"].astype(str).str[:10]).min()).dt.days // 7
-        fg, ft = d["FGM"].sum() / d["FGA"].sum(), d["FTM"].sum() / d["FTA"].sum()
+        fg, ft, f3 = d["FGM"].sum() / d["FGA"].sum(), d["FTM"].sum() / d["FTA"].sum(), d["FG3M"].sum() / max(d["FG3A"].sum(), 1)
         w = d.groupby(["PLAYER_ID", "WEEK"]).mean(numeric_only=True)
         w["FG_PCT"] = w["FGM"] - fg * w["FGA"]
         w["FT_PCT"] = w["FTM"] - ft * w["FTA"]
+        w["FG3_PCT"] = w["FG3M"] - f3 * w["FG3A"]
         g = w.groupby(level=0)
         var = g[TAU_CATS].var()
         var = var[g.size() >= 4]
@@ -180,8 +203,8 @@ def attach_form(players: list[dict]) -> str | None:
     """Recent form: each player's averages over the last 7 / 14 / 30 days of regular-season games, counted back from
     the latest game played (the 2026-27 regular season once it starts, before that the end of 2025-26).
     p["form"] = {"7": [games, [STATS averages]], ...}. Returns the last game date."""
-    cur = pd.read_csv(CURRENT_LOGS) if CURRENT_LOGS.exists() and CURRENT_LOGS.stat().st_size > 200 else pd.DataFrame()
-    logs = cur if not cur.empty else pd.read_csv(DATA / "player_game_logs_regular.csv")
+    cur = with_doubles(pd.read_csv(CURRENT_LOGS)) if CURRENT_LOGS.exists() and CURRENT_LOGS.stat().st_size > 200 else pd.DataFrame()
+    logs = cur if not cur.empty else with_doubles(pd.read_csv(DATA / "player_game_logs_regular.csv"))
     return form_windows(players, logs, "form")
 
 
@@ -330,7 +353,7 @@ def injured_players(current: pd.DataFrame, roster: pd.DataFrame) -> list[dict]:
     seen, out = set(), []
     for season in PREVIOUS_SEASONS:
         tag = season.replace("-", "_")
-        base = pd.read_csv(DATA / f"players_base_pergame_regular_{tag}.csv")
+        base = read_base(DATA / f"players_base_pergame_regular_{tag}.csv")
         adv = pd.read_csv(DATA / f"players_advanced_pergame_regular_{tag}.csv").set_index("PLAYER_ID")
         full = base[(base["GP"] >= FULL_SEASON_GP) & (base["MIN"] >= FULL_ROLE_MIN)]
         for _, r in full.iterrows():
@@ -358,7 +381,12 @@ def rookies(existing: set[int]) -> list[dict]:
         return []
     out = []
     births = json.loads(BIRTHDATES.read_text(encoding="utf-8")) if BIRTHDATES.exists() else {}
-    for _, r in pd.read_csv(ROOKIE_CSV).iterrows():
+    rk = pd.read_csv(ROOKIE_CSV)
+    rk["FG3A"] = rk["FG3M"] / 0.35       # a typical 35% from three
+    rk["OREB"] = rk["REB"] * 0.25        # about a quarter of rebounds are offensive
+    rk["DD2"] = ((rk["PTS"] >= 12) & (rk["REB"] >= 8)).astype(float) * 0.3  # a rough share of games
+    rk["TD3"] = 0.0
+    for _, r in rk.iterrows():
         pid = int(r["PLAYER_ID"])
         if pid in existing:
             continue
@@ -371,7 +399,7 @@ def rookies(existing: set[int]) -> list[dict]:
             "team26": r["TEAM"],
             "pos": None if pd.isna(r["POSITION"]) else r["POSITION"],
             "gp": int(round(r["GP"])),
-            "s": [round(float(r[c]), 2) for c in STATS],
+            "s": [round(float(r[c]), 2) if c in r else 0.0 for c in STATS],
             "rookie": True,
             "seasons": {},
             "pick": int(r["PICK"]),
@@ -386,7 +414,7 @@ def log_lines(path: Path, skip: set[int] = frozenset()) -> dict[int, dict]:
     """Per-game line per player from a game-log file (games he actually played)."""
     if not path.exists() or path.stat().st_size < 100:
         return {}
-    logs = pd.read_csv(path)
+    logs = with_doubles(pd.read_csv(path))
     logs = logs[(logs["MIN"] > 0) & ~logs["PLAYER_ID"].isin(skip)].sort_values("GAME_DATE")
     # the NBA's advanced numbers for the same games (saved next to the logs by daily_update.py)
     adv_path = path.with_name(path.name.replace("game_logs_", "advanced_"))
@@ -408,7 +436,7 @@ def name_key(name: str) -> str:
 
 def attach_vs(players: list[dict]) -> None:
     """Each player's average over his last VS_GAMES games against every opponent he has faced."""
-    frames = [pd.read_csv(f, usecols=["PLAYER_ID", "GAME_ID", "GAME_DATE", "MATCHUP"] + STATS, dtype={"GAME_ID": str})
+    frames = [with_doubles(pd.read_csv(f, dtype={"GAME_ID": str}))[["PLAYER_ID", "GAME_ID", "GAME_DATE", "MATCHUP"] + STATS]
               for f in GAME_LOG_FILES if f.exists() and f.stat().st_size > 100]
     logs = pd.concat(frames, ignore_index=True)
     logs = logs[logs["MIN"] > 0]
@@ -472,7 +500,7 @@ def season_players(roster: pd.DataFrame) -> list[dict]:
     """One record per player with a line for each season he played (per game, plus advanced)."""
     by_id: dict[int, dict] = {}
     for y in AVAIL_SEASONS:
-        base = pd.read_csv(DATA / f"players_base_pergame_regular{SEASON_TAG[y]}.csv")
+        base = read_base(DATA / f"players_base_pergame_regular{SEASON_TAG[y]}.csv")
         adv = pd.read_csv(DATA / f"players_advanced_pergame_regular{SEASON_TAG[y]}.csv").set_index("PLAYER_ID")
         for _, r in base[base["GP"] >= SEASON_MIN_GP].iterrows():
             pid = int(r["PLAYER_ID"])
@@ -508,7 +536,7 @@ def season_players(roster: pd.DataFrame) -> list[dict]:
 
 
 def main() -> None:
-    current = pd.read_csv(DATA / "players_base_pergame_regular.csv")
+    current = read_base(DATA / "players_base_pergame_regular.csv")
     roster = pd.read_csv(DATA / "player_index_2026_27.csv").set_index("PERSON_ID")
 
     # Missed most of 2025-26 after a full season before it: drives the "injured" filter and its CSV
@@ -535,7 +563,7 @@ def main() -> None:
     attach_recent(players)
     form_end = attach_form(players)
     # the 2026-27 preseason has its own windows: they apply when the preseason is the latest season chosen
-    pre_logs = pd.read_csv(PRESEASON_LOGS) if PRESEASON_LOGS.exists() and PRESEASON_LOGS.stat().st_size > 200 else pd.DataFrame()
+    pre_logs = with_doubles(pd.read_csv(PRESEASON_LOGS)) if PRESEASON_LOGS.exists() and PRESEASON_LOGS.stat().st_size > 200 else pd.DataFrame()
     form_end_pre = form_windows(players, pre_logs, "formPre")
     attach_week_noise(players)
     # Embedded, because claude.ai artifacts cannot load images from other sites
