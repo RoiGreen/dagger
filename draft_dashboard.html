@@ -2952,12 +2952,28 @@ const ncdf = (x) => {
 const ADV_SPREAD = 5;
 // "חפש לפי": categories the user picks; the recommendation becomes the best available in their sum
 const DRAFT_FOCUS = new Set();
-// Team tiers for 2026-27 from the season win totals (Fanatics sportsbook, October 2026), ranked within each conference:
-// 1 = places 1-6 (playoffs), 2 = places 7-10 (play-in), 3 = places 11-15 (likely tanking: rest and minutes for the young)
-const TEAM_TIER = {
-  NYK: 1, BOS: 1, PHI: 1, DET: 1, CLE: 1, MIA: 1, TOR: 2, IND: 2, ATL: 2, ORL: 2, CHA: 3, WAS: 3, CHI: 3, MIL: 3, BKN: 3,
-  OKC: 1, SAS: 1, DEN: 1, HOU: 1, MIN: 1, LAL: 1, POR: 2, PHX: 2, GSW: 2, UTA: 2, DAL: 3, MEM: 3, LAC: 3, NOP: 3, SAC: 3,
+// Team tiers for 2026-27, ranked within each conference: 1 = places 1-6 (playoffs), 2 = places 7-10 (play-in),
+// 3 = places 11-15 (likely tanking: rest and minutes for the young).
+// Before the season: the season win totals (Fanatics sportsbook, October 2026). Once games are played, each team's
+// expected final wins = wins so far + the games left at its preseason pace, so real results take over game by game.
+const WIN_TOTAL = {
+  NYK: 52.5, BOS: 51.5, PHI: 50.5, DET: 49.5, CLE: 48.5, MIA: 46.5, TOR: 45.5, IND: 44.5, ATL: 43.5, ORL: 43.5, CHA: 39.5, WAS: 35.5, CHI: 29.5, MIL: 26.5, BKN: 24.5,
+  OKC: 60.5, SAS: 59.5, DEN: 49.5, HOU: 48.5, MIN: 48.5, LAL: 46.5, POR: 43.5, PHX: 40.5, GSW: 39.5, UTA: 35.5, DAL: 34.5, MEM: 28.5, LAC: 27.5, NOP: 27.5, SAC: 20.5,
 };
+const EAST = new Set(["NYK", "BOS", "PHI", "DET", "CLE", "MIA", "TOR", "IND", "ATL", "ORL", "CHA", "WAS", "CHI", "MIL", "BKN"]);
+const TEAM_TIER = (() => {
+  const rec = {};
+  for (const g of GAMES) {
+    if (g.pre || !g.fin || g.hs == null) continue;
+    for (const [t, won] of [[g.h, g.hs > g.as], [g.a, g.as > g.hs]]) { rec[t] = rec[t] || { w: 0, g: 0 }; rec[t].g++; if (won) rec[t].w++; }
+  }
+  const expected = (t) => { const r = rec[t] || { w: 0, g: 0 }; return r.w + (82 - r.g) * (WIN_TOTAL[t] / 82); };
+  const out = {};
+  for (const conf of [[...EAST], Object.keys(WIN_TOTAL).filter((t) => !EAST.has(t))]) {
+    conf.sort((a, b) => expected(b) - expected(a)).forEach((t, i) => { out[t] = i < 6 ? 1 : i < 10 ? 2 : 3; });
+  }
+  return out;
+})();
 const TIER_LABEL = { 1: "פלייאוף", 2: "פליי אין", 3: "טנקינג" };
 const DRAFT_TIERS = new Set();  // empty = all teams  // how far a team's weekly total in one category swings against an average team, in score units
 function renderDraftAdvice() {
