@@ -3015,9 +3015,9 @@ function renderDraftAdvice() {
   };
   // with categories chosen in "חפש לפי": the best available in their sum (the weekly score per category)
   const focus = cats.filter((c) => DRAFT_FOCUS.has(c.k));
-  // the advice is mostly fit, plus a share of the player's overall value (his Z): more of it in the first rounds,
-  // while the profile is still forming (40% with one pick), down to 15% as the roster fills
-  const ovShare = Math.max(0.15, 0.4 - 0.03 * (mineIds.length - 1));
+  // the advice is 90% the player's overall value (his Z) and 10% fit to my profile: in 9 seasons of simulated drafts
+  // (8 teams, pickups) fit-led picks won fewer matchups (51.6%) than best-available (54.6%); 90/10 matched it
+  const ovShare = 0.9;
   const blendFit = (rows) => {
     const norm = (xs) => { const [m, sd] = meanStd(xs); return xs.map((x) => (x - m) / (sd || 1)); };
     const f = norm(rows.map((r) => r.g)), o = norm(rows.map((r) => zAll.get(r.p.id).total));
@@ -3045,7 +3045,7 @@ function renderDraftAdvice() {
       ${row("לחזק", build, "ok")}${row("צמודות", close, "mid", "בערך 50-50 מול הליגה: בחירה אחת יכולה להכריע")}${row("מובטחות", enough, "done", "כמעט בטוח שתנצח בהן: אין צורך לצבור עוד")}${row("לוותר", drop, "no")}</div>
     <div class="dadv-tiers"><b title="אפשר לבחור כמה">דרג הקבוצה</b>${[1, 2, 3].map((t) => `<button type="button" data-tier="${t}" aria-pressed="${DRAFT_TIERS.has(t)}" title="${Object.keys(TEAM_TIER).filter((k) => TEAM_TIER[k] === t).join(", ")}">${t} · ${TIER_LABEL[t]}</button>`).join("")}</div>
   </div>
-    <b class="dadv-h" title="${focus.length ? "השחקנים הזמינים הכי חזקים בקטגוריות שבחרת יחד" : "השחקנים שהכי מעלים את מספר הקטגוריות שתנצח בשבוע מול הליגה, לפי הסדר"}">${focus.length ? `${full ? "השחקנים החופשיים " : ""}הכי חזקים ב${list(focus).replace(/, ([^,]*)$/, " וב$1").replace(/, /g, ", ב")}` : full ? "שחקנים חופשיים שמתאימים לך" : "מומלץ לבחירה הבאה"}</b>
+    <b class="dadv-h" title="${focus.length ? "השחקנים הזמינים הכי חזקים בקטגוריות שבחרת יחד" : "בעיקר הדירוג הכללי, וההתאמה לפרופיל שלך מכריעה בין שחקנים קרובים"}">${focus.length ? `${full ? "השחקנים החופשיים " : ""}הכי חזקים ב${list(focus).replace(/, ([^,]*)$/, " וב$1").replace(/, /g, ", ב")}` : full ? "שחקנים חופשיים שמתאימים לך" : "מומלץ לבחירה הבאה"}</b>
     <div class="dadv-cards">${best.map((x, i) => `<div class="dadv-card${i ? "" : " top"}${PICK_PREVIEW === x.p.id ? " sel" : ""}" data-advpick="${x.p.id}" title="לחיצה: לבחירה (ואז &quot;בחר&quot;), לחיצה נוספת: ביטול">
       <div class="dadv-name"><span class="rk">${i + 1}</span><bdi class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</bdi>${x.p.hurt?.s === "OUT" ? injuryPill(x.p) : ""}<small>${esc(x.p.pos || "")} · ${esc(x.p.team26 || "FA")}${TEAM_TIER[x.p.team26] ? ` · דרג ${TEAM_TIER[x.p.team26]}` : ""}</small></div>
       <div class="dadv-stats">${(() => {
