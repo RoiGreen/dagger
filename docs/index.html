@@ -343,18 +343,6 @@ table.dboard td .dn { font-weight: 700; }
 .dadvice .dadv-h { font-size: .95rem; }
 .dadvice .dadv-note { margin: 0; font-size: .8rem; color: var(--accent); font-weight: 700; }
 .dadvice .dadv-none { margin: 0; color: var(--muted); }
-.dadvice .dadv-check { background: var(--surface); border: 1px solid var(--accent); border-radius: 10px; padding: 10px 12px; display: grid; gap: 8px; }
-.dadvice .ckh { display: flex; flex-wrap: wrap; align-items: center; gap: 6px 12px; }
-.dadvice .ckg { font-weight: 800; font-size: .85rem; padding: 2px 10px; border-radius: 999px; }
-.dadvice .ckg.up { color: var(--pos); background: color-mix(in srgb, var(--pos) 12%, transparent); } .dadvice .ckg.dn { color: var(--neg); background: color-mix(in srgb, var(--neg) 12%, transparent); }
-.dadvice .cktiles { display: grid; grid-template-columns: repeat(9, minmax(0, 1fr)); gap: 8px; direction: ltr; }
-@media (max-width: 900px) { .dadvice .cktiles { grid-template-columns: repeat(5, minmax(0, 1fr)); } }
-.dadvice .ckt { display: grid; justify-items: center; gap: 2px; padding: 8px 4px; border-radius: 10px; background: var(--sunk); border: 1px solid var(--line); }
-.dadvice .ckt small { font-family: var(--font-num); font-weight: 700; letter-spacing: .06em; color: var(--muted); }
-.dadvice .ckt b { font-family: var(--font-num); font-size: 1.15rem; font-weight: 800; }
-.dadvice .ckt i { font-style: normal; font-family: var(--font-num); font-size: .8rem; font-weight: 700; color: var(--muted); }
-.dadvice .ckt.up { background: color-mix(in srgb, var(--pos) 10%, var(--surface)); border-color: color-mix(in srgb, var(--pos) 40%, var(--line)); } .dadvice .ckt.up i { color: var(--pos); }
-.dadvice .ckt.dn { background: color-mix(in srgb, var(--neg) 8%, var(--surface)); border-color: color-mix(in srgb, var(--neg) 35%, var(--line)); } .dadvice .ckt.dn i { color: var(--neg); }
 .dadvice .dadv-top { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; gap: 10px 28px; align-items: start; }
 .dadvice .dadv-prof { justify-self: center; }
 .dadvice .dadv-tiers { display: grid; gap: 6px; justify-items: stretch; margin-inline-end: 56px; }
@@ -3085,18 +3073,6 @@ function renderDraftAdvice() {
     ? pool.map((p) => ({ p, g: focus.reduce((a, c) => a + zAll.get(p.id).z[c.k], 0) })).sort((a, b) => b.g - a.g).slice(0, 3)
     : blendFit(pool.map(gainOf)).slice(0, 3);
   const list = (cs) => cs.map((c) => heb(c.k)).join(", ");
-  // the player in the pick box (typed or a card clicked): per category his average, his score, and my team now → with him
-  const checkBlock = () => {
-    const cp = PICK_PREVIEW && !mineIds.includes(PICK_PREVIEW) ? PLAYER_BY_ID.get(PICK_PREVIEW) : null;
-    if (!cp || !zAll.has(cp.id)) return "";
-    const z = zAll.get(cp.id).z, sg = (v) => (Math.abs(v) < 0.05 ? "0.0" : `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}`);
-    // categories he lifts or lowers: my chance to win each, with him added
-    const up = cats.filter((c) => z[c.k] >= 0.3), down = cats.filter((c) => z[c.k] <= -0.3);
-    return `<div class="dadv-check"><div class="ckh"><b>בדיקה: <bdi>${esc(cp.name)}</bdi></b>${cp.hurt?.s === "OUT" ? injuryPill(cp) : ""}
-        <small>${esc(cp.pos || "")} · ${esc(cp.team26 || "FA")} · Z ${shownVal(zAll.get(cp.id).total).toFixed(2)}</small>
-        ${up.length ? `<span class="ckg up">מחזק: ${up.map((c) => c.l).join(", ")}</span>` : ""}${down.length ? `<span class="ckg dn">מחליש: ${down.map((c) => c.l).join(", ")}</span>` : ""}</div>
-      <div class="cktiles">${cats.map((c) => `<div class="ckt ${z[c.k] >= 0.3 ? "up" : z[c.k] <= -0.3 ? "dn" : ""}"><small>${c.l}</small><b>${statTxt(cp, c.k)}</b><i>${sg(z[c.k])}</i></div>`).join("")}</div></div>`;
-  };
   // the numbers shown under each recommended player: the categories to build, the best of the three in bold
   const showCats = focus.length ? focus : [...build, ...close].length ? [...build, ...close] : cats.slice(0, 5);
   const val = (p, k) => p.L.g[k];
@@ -3115,7 +3091,6 @@ function renderDraftAdvice() {
       ${row("לחזק", build, "ok")}${row("צמודות", close, "mid", "בערך 50-50 מול הליגה: בחירה אחת יכולה להכריע")}${row("מובטחות", enough, "done", "כמעט בטוח שתנצח בהן: אין צורך לצבור עוד")}${row("לוותר", drop, "no")}</div>
     <div class="dadv-tiers"><b title="אפשר לבחור כמה">דרג הקבוצה</b>${[1, 2, 3].map((t) => `<button type="button" data-tier="${t}" aria-pressed="${DRAFT_TIERS.has(t)}" title="${Object.keys(TEAM_TIER).filter((k) => TEAM_TIER[k] === t).join(", ")}">${t} · ${TIER_LABEL[t]}</button>`).join("")}</div>
   </div>
-    ${checkBlock()}
     <b class="dadv-h" title="${focus.length ? "השחקנים הזמינים הכי חזקים בקטגוריות שבחרת יחד" : "בעיקר הדירוג הכללי, וההתאמה לפרופיל שלך מכריעה בין שחקנים קרובים"}">${focus.length ? `${full ? "השחקנים החופשיים " : ""}הכי חזקים ב${list(focus).replace(/, ([^,]*)$/, " וב$1").replace(/, /g, ", ב")}` : full ? "שחקנים חופשיים שמתאימים לך" : "מומלץ לבחירה הבאה"}</b>
     <div class="dadv-cards">${best.map((x, i) => `<div class="dadv-card${i ? "" : " top"}${PICK_PREVIEW === x.p.id ? " sel" : ""}" data-advpick="${x.p.id}">
       <div class="dadv-name"><span class="rk">${i + 1}</span><bdi class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</bdi>${x.p.hurt?.s === "OUT" ? injuryPill(x.p) : ""}<small>${esc(x.p.pos || "")} · ${esc(x.p.team26 || "FA")}</small></div>
