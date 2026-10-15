@@ -3080,8 +3080,8 @@ function renderDraftAdvice() {
   </div>
     ${checkBlock()}
     <b class="dadv-h" title="${focus.length ? "השחקנים הזמינים הכי חזקים בקטגוריות שבחרת יחד" : "בעיקר הדירוג הכללי, וההתאמה לפרופיל שלך מכריעה בין שחקנים קרובים"}">${focus.length ? `${full ? "השחקנים החופשיים " : ""}הכי חזקים ב${list(focus).replace(/, ([^,]*)$/, " וב$1").replace(/, /g, ", ב")}` : full ? "שחקנים חופשיים שמתאימים לך" : "מומלץ לבחירה הבאה"}</b>
-    <div class="dadv-cards">${best.map((x, i) => `<div class="dadv-card${i ? "" : " top"}${PICK_PREVIEW === x.p.id ? " sel" : ""}" data-advpick="${x.p.id}" title="לחיצה: לבחירה (ואז &quot;בחר&quot;), לחיצה נוספת: ביטול">
-      <div class="dadv-name"><span class="rk">${i + 1}</span><bdi class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</bdi>${x.p.hurt?.s === "OUT" ? injuryPill(x.p) : ""}<small>${esc(x.p.pos || "")} · ${esc(x.p.team26 || "FA")}${TEAM_TIER[x.p.team26] ? ` · דרג ${TEAM_TIER[x.p.team26]}` : ""}</small></div>
+    <div class="dadv-cards">${best.map((x, i) => `<div class="dadv-card${i ? "" : " top"}${PICK_PREVIEW === x.p.id ? " sel" : ""}" data-advpick="${x.p.id}">
+      <div class="dadv-name"><span class="rk">${i + 1}</span><bdi class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</bdi>${x.p.hurt?.s === "OUT" ? injuryPill(x.p) : ""}<small>${esc(x.p.pos || "")} · ${esc(x.p.team26 || "FA")}</small></div>
       <div class="dadv-stats">${(() => {
         // his weakest of the categories shown (lowest score) in red; the best of the three in each category in green
         const zp = zAll.get(x.p.id).z, weak = showCats.length > 1 ? showCats.reduce((a, c) => (zp[c.k] < zp[a.k] ? c : a)).k : null;
