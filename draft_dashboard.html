@@ -885,7 +885,8 @@ table.box { direction: ltr; }
 .pinfo > div { display: grid; gap: 4px; justify-items: center; text-align: center; }  /* name centred over the team line */
 .pnm { text-align: center !important; }
 .powner { margin-top: 6px; text-align: center; font-size: .85rem; color: #dce4f5; justify-self: stretch; }
-.powner .pgames { margin-inline-end: 12px; padding: 1px 9px; border-radius: 999px; background: rgba(255,255,255,.12); color: #fff; font-weight: 600; font-size: .8rem; }
+.powner .pgames { display: inline-grid; justify-items: center; vertical-align: middle; margin-inline-end: 14px; padding: 3px 12px; border-radius: 10px; background: rgba(255,255,255,.12); color: #fff; line-height: 1.2; }
+.powner .pgames b { font-family: var(--font-num); font-size: .95rem; direction: rtl; } .powner .pgames small { font-size: .72rem; opacity: .85; }
 .powner.withlogo, .pnm.withlogo { padding-right: 54px; justify-self: stretch; }  /* the logo sits on the right */  /* centred under the team name, not under the logo */
 .powner b { color: #ffb020; }
 .powner.fa { color: #3ddc97; font-weight: 700; }
@@ -2447,7 +2448,7 @@ function openPlayer(id) {
   const gy = p.srcSeason, gpl = gy != null ? p.seasons?.[gy]?.gp : null;
   const teamGames = (pre) => GAMES.filter((g) => !!g.pre === pre && g.fin && (g.h === p.team26 || g.a === p.team26)).length;
   const gTot = gy === D.preseason ? teamGames(true) : gy === D.current ? teamGames(false) : gy != null ? 82 : 0;
-  const gamesTag = gpl != null && gTot ? `<span class="pgames" title="משחקים ששיחק מתוך משחקי הקבוצה, ${seasonLabel(gy)}">שיחק ${gpl} מתוך ${Math.max(gTot, gpl)} · ${seasonLabel(gy)}</span>` : "";
+  const gamesTag = gpl != null && gTot ? `<span class="pgames" title="משחקים ששיחק מתוך משחקי הקבוצה בעונה שבחרת"><b>שיחק ${gpl}/${Math.max(gTot, gpl)}</b><small>עונת ${seasonLabel(gy)}</small></span>` : "";
   const ownerTag = `<div class="powner${owner ? "" : " fa"}${p.team26 ? " withlogo" : ""}">${gamesTag}${owner ? `<span dir="ltr">Team: <b dir="auto">${esc(owner)}</b></span>` : "שחקן חופשי"}</div>`;
   // recent form: the same choice as the bar over the tables, so the numbers and the league ranks follow it
   const formOpts = [["", "עונה שלמה"], ["7", "7 ימים אחרונים"], ["14", "14 ימים אחרונים"], ["30", "חודש אחרון"]];
