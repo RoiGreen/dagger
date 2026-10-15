@@ -239,9 +239,9 @@ RECENT_GAMES = 30  # games in the player card
 def attach_recent(players: list[dict]) -> None:
     """Each player's last RECENT_GAMES team games (2025-26 regular season, then 2026-27 preseason and regular season),
     games he sat out included: [date, opponent, home 1/0, team pts, opp pts, MIN, PTS, FGM, FGA, FTM, FTA, 3PM, 3PA,
-    REB, AST, STL, BLK, TOV], or [date, opponent, home, team pts, opp pts] for a game he did not play."""
+    REB, AST, STL, BLK, TOV, OREB], or [date, opponent, home, team pts, opp pts] for a game he did not play."""
     cols = ["PLAYER_ID", "TEAM_ABBREVIATION", "GAME_ID", "GAME_DATE", "MATCHUP", "MIN", "PTS", "FGM", "FGA", "FTM", "FTA",
-            "FG3M", "FG3A", "REB", "AST", "STL", "BLK", "TOV"]
+            "FG3M", "FG3A", "REB", "AST", "STL", "BLK", "TOV", "OREB"]
     frames = [pd.read_csv(f, usecols=cols, dtype={"GAME_ID": str}) for f in [DATA / "player_game_logs_regular.csv", PRESEASON_LOGS, CURRENT_LOGS]
               if f.exists() and f.stat().st_size > 200]
     logs = pd.concat(frames, ignore_index=True)
@@ -264,7 +264,8 @@ def attach_recent(players: list[dict]) -> None:
         for r in g.itertuples():
             t = tg_idx.loc[(r.GAME_ID, r.TEAM_ABBREVIATION)]
             rows[r.GAME_ID] = [r.GAME_DATE, t.opp, int(t.home), int(t.pts), int(t.opp_pts), round(float(r.MIN)), int(r.PTS), int(r.FGM), int(r.FGA),
-                               int(r.FTM), int(r.FTA), int(r.FG3M), int(r.FG3A), int(r.REB), int(r.AST), int(r.STL), int(r.BLK), int(r.TOV)]
+                               int(r.FTM), int(r.FTA), int(r.FG3M), int(r.FG3A), int(r.REB), int(r.AST), int(r.STL), int(r.BLK), int(r.TOV),
+                               int(r.OREB)]
         # games his latest team played after he joined it, without him
         last = g.iloc[-1]
         team = last.TEAM_ABBREVIATION
