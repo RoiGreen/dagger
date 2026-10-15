@@ -341,11 +341,14 @@ table.dboard td .dn { font-weight: 700; }
 .dadvice .dadv-prof, .dadvice .dadv-picks { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; }
 .dadvice i { font-style: normal; font-weight: 700; } .dadvice i.ok { color: var(--pos); } .dadvice i.done { color: var(--muted); } .dadvice i.no { color: var(--neg); } .dadvice i.mid { color: #d97706; }
 .dadvice .dadv-h { font-size: .95rem; }
-.dadvice .dadv-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px 24px; align-items: start; }
+.dadvice .dadv-top { display: grid; grid-template-columns: max-content minmax(0, 1fr) max-content; gap: 10px 28px; align-items: start; }
+.dadvice .dadv-prof { justify-self: center; }
+.dadvice .dadv-tiers { display: grid; gap: 6px; justify-items: stretch; }
+.dadvice .dadv-tiers button { padding: 4px 12px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: .82rem; font-weight: 600; cursor: pointer; }
+.dadvice .dadv-tiers button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
 @media (max-width: 900px) { .dadvice .dadv-top { grid-template-columns: minmax(0, 1fr); } }
 .dadvice .dadv-focus { display: grid; gap: 6px; }
 .dadvice .dadv-focus .chips { display: grid; grid-template-columns: repeat(5, max-content); gap: 6px; }  /* 9 categories: 5 + 4 */
-.dadvice .dadv-focus .chips.tiers { grid-template-columns: repeat(3, max-content); }
 .dadvice .dadv-prof { display: grid !important; gap: 4px; }
 .dadvice .prow { display: grid; grid-template-columns: 4.5em 1fr; gap: 8px; align-items: baseline; }
 .dadvice .prow .pl { color: var(--muted); font-weight: 600; }
@@ -3013,10 +3016,10 @@ function renderDraftAdvice() {
   // top: "חפש לפי" on the right, my profile on the left, one line per group
   const row = (label, cs, cls, tip = "") => (cs.length ? `<div class="prow"${tip ? ` title="${tip}"` : ""}><span class="pl">${label}</span><i class="${cls}">${list(cs)}</i></div>` : "");
   box.innerHTML = `<div class="dadv-top">
-    <div class="dadv-focus"><b>חפש לפי</b><div class="chips">${cats.map((c) => `<button type="button" data-focus="${c.k}" aria-pressed="${DRAFT_FOCUS.has(c.k)}">${heb(c.k)}</button>`).join("")}${focus.length ? `<button type="button" class="clr" data-focus="">נקה</button>` : ""}</div>
-      <b>דרג הקבוצה</b><div class="chips tiers">${[1, 2, 3].map((t) => `<button type="button" data-tier="${t}" aria-pressed="${DRAFT_TIERS.has(t)}" title="${Object.keys(TEAM_TIER).filter((k) => TEAM_TIER[k] === t).join(", ")}">${t} · ${TIER_LABEL[t]}</button>`).join("")}</div></div>
+    <div class="dadv-focus"><b>חפש לפי</b><div class="chips">${cats.map((c) => `<button type="button" data-focus="${c.k}" aria-pressed="${DRAFT_FOCUS.has(c.k)}">${heb(c.k)}</button>`).join("")}${focus.length ? `<button type="button" class="clr" data-focus="">נקה</button>` : ""}</div></div>
     <div class="dadv-prof"><b title="לעומת הממוצע של שאר הקבוצות בליגה שלך עד עכשיו">הפרופיל שלך מול הליגה</b>
       ${row("לחזק", build, "ok")}${row("צמודות", close, "mid", "בערך 50-50 מול הליגה: בחירה אחת יכולה להכריע")}${row("מובטחות", enough, "done", "כמעט בטוח שתנצח בהן: אין צורך לצבור עוד")}${row("לוותר", drop, "no")}</div>
+    <div class="dadv-tiers"><b title="אפשר לבחור כמה">דרג הקבוצה</b>${[1, 2, 3].map((t) => `<button type="button" data-tier="${t}" aria-pressed="${DRAFT_TIERS.has(t)}" title="${Object.keys(TEAM_TIER).filter((k) => TEAM_TIER[k] === t).join(", ")}">${t} · ${TIER_LABEL[t]}</button>`).join("")}</div>
   </div>
     <b class="dadv-h" title="${focus.length ? "השחקנים הזמינים הכי חזקים בקטגוריות שבחרת יחד" : "השחקנים שהכי מעלים את מספר הקטגוריות שתנצח בשבוע מול הליגה, לפי הסדר"}">${focus.length ? `${full ? "השחקנים החופשיים " : ""}הכי חזקים ב${list(focus).replace(/, ([^,]*)$/, " וב$1").replace(/, /g, ", ב")}` : full ? "שחקנים חופשיים שמתאימים לך" : "מומלץ לבחירה הבאה"}</b>
     <div class="dadv-cards">${best.map((x, i) => `<div class="dadv-card${i ? "" : " top"}${PICK_PREVIEW === x.p.id ? " sel" : ""}" data-advpick="${x.p.id}" title="לחיצה: לבחירה (ואז &quot;בחר&quot;), לחיצה נוספת: ביטול">
