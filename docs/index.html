@@ -821,6 +821,10 @@ table.box { direction: ltr; }
 .pform select option { color: #10182b; }
 .pfav { justify-self: stretch; margin-bottom: 12px; padding: 6px 12px; border-radius: 999px; border: 1px solid rgba(255,255,255,.35); background: rgba(255,255,255,.1); color: #fff; font: inherit; font-weight: 700; font-size: .85rem; cursor: pointer; }
 .stats { padding: 18px; display: grid; gap: 14px; }
+/* the statistics open wide, so the whole table shows at once */
+.gcard:has(.stats) { width: min(1560px, 100%); }
+.stats table.box th, .stats table.box td { padding: 6px 7px; font-size: .84rem; white-space: nowrap; }
+.stats table.box td.pn { white-space: normal; }
 .stats h3 { margin: 0; }
 .stattiles { display: flex; gap: 12px; flex-wrap: wrap; }
 .stattiles div { flex: 1 1 120px; display: grid; justify-items: center; padding: 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--sunk); }
