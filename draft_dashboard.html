@@ -341,7 +341,16 @@ table.dboard td .dn { font-weight: 700; }
 .dadvice .dadv-prof, .dadvice .dadv-picks { display: flex; flex-wrap: wrap; gap: 6px 16px; align-items: baseline; }
 .dadvice i { font-style: normal; font-weight: 700; } .dadvice i.ok { color: var(--pos); } .dadvice i.done { color: var(--muted); } .dadvice i.no { color: var(--neg); } .dadvice i.mid { color: #d97706; }
 .dadvice .dadv-h { font-size: .95rem; }
-.dadvice .dadv-focus { display: flex; flex-wrap: wrap; gap: 6px; align-items: center; }
+.dadvice .dadv-top { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 10px 24px; align-items: start; }
+@media (max-width: 900px) { .dadvice .dadv-top { grid-template-columns: minmax(0, 1fr); } }
+.dadvice .dadv-focus { display: grid; gap: 6px; }
+.dadvice .dadv-focus .chips { display: flex; flex-wrap: wrap; gap: 6px; }
+.dadvice .dadv-prof { display: grid !important; gap: 4px; }
+.dadvice .prow { display: grid; grid-template-columns: 4.5em 1fr; gap: 8px; align-items: baseline; }
+.dadvice .prow .pl { color: var(--muted); font-weight: 600; }
+.dadvice .dadv-card { cursor: pointer; transition: border-color .15s, box-shadow .15s; }
+.dadvice .dadv-card:hover { border-color: color-mix(in srgb, var(--accent) 60%, var(--line)); }
+.dadvice .dadv-card.sel { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); border-color: var(--accent); box-shadow: 0 0 0 2px var(--accent) inset; }
 .dadvice .dadv-focus button { padding: 3px 10px; border-radius: 999px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; font-size: .82rem; font-weight: 600; cursor: pointer; }
 .dadvice .dadv-focus button[aria-pressed="true"] { background: var(--accent); border-color: var(--accent); color: #fff; }
 .dadvice .dadv-focus button.clr { border-style: dashed; color: var(--muted); }
@@ -2991,14 +3000,15 @@ function renderDraftAdvice() {
     return [c.k, top?.p.id];
   }));
   box.hidden = false;
-  box.innerHTML = `<div class="dadv-prof"><b title="לעומת הממוצע של שאר הקבוצות בליגה שלך עד עכשיו">הפרופיל שלך מול הליגה:</b>
-      ${build.length ? `<span>לחזק: <i class="ok">${list(build)}</i></span>` : ""}
-      ${close.length ? `<span title="בערך 50-50 מול הליגה: בחירה אחת יכולה להכריע">צמודות: <i class="mid">${list(close)}</i></span>` : ""}
-      ${enough.length ? `<span>מספיק: <i class="done">${list(enough)}</i></span>` : ""}
-      ${drop.length ? `<span>לוותר: <i class="no">${list(drop)}</i></span>` : ""}</div>
-    <div class="dadv-focus"><b>חפש לפי:</b>${cats.map((c) => `<button type="button" data-focus="${c.k}" aria-pressed="${DRAFT_FOCUS.has(c.k)}">${heb(c.k)}</button>`).join("")}${focus.length ? `<button type="button" class="clr" data-focus="">נקה</button>` : ""}</div>
+  // top: "חפש לפי" on the right, my profile on the left, one line per group
+  const row = (label, cs, cls, tip = "") => (cs.length ? `<div class="prow"${tip ? ` title="${tip}"` : ""}><span class="pl">${label}</span><i class="${cls}">${list(cs)}</i></div>` : "");
+  box.innerHTML = `<div class="dadv-top">
+    <div class="dadv-focus"><b>חפש לפי</b><div class="chips">${cats.map((c) => `<button type="button" data-focus="${c.k}" aria-pressed="${DRAFT_FOCUS.has(c.k)}">${heb(c.k)}</button>`).join("")}${focus.length ? `<button type="button" class="clr" data-focus="">נקה</button>` : ""}</div></div>
+    <div class="dadv-prof"><b title="לעומת הממוצע של שאר הקבוצות בליגה שלך עד עכשיו">הפרופיל שלך מול הליגה</b>
+      ${row("לחזק", build, "ok")}${row("צמודות", close, "mid", "בערך 50-50 מול הליגה: בחירה אחת יכולה להכריע")}${row("להשאיר", enough, "done", "כמעט בטוחות לך: אין צורך לצבור עוד")}${row("לוותר", drop, "no")}</div>
+  </div>
     <b class="dadv-h" title="${focus.length ? "השחקנים הזמינים הכי חזקים בקטגוריות שבחרת יחד" : "השחקנים שהכי מעלים את מספר הקטגוריות שתנצח בשבוע מול הליגה, לפי הסדר"}">${focus.length ? `${full ? "השחקנים החופשיים " : ""}הכי חזקים ב${list(focus).replace(/, ([^,]*)$/, " וב$1").replace(/, /g, ", ב")}` : full ? "שחקנים חופשיים שמתאימים לך" : "מומלץ לבחירה הבאה"}</b>
-    <div class="dadv-cards">${best.map((x, i) => `<div class="dadv-card${i ? "" : " top"}">
+    <div class="dadv-cards">${best.map((x, i) => `<div class="dadv-card${i ? "" : " top"}${PICK_PREVIEW === x.p.id ? " sel" : ""}" data-advpick="${x.p.id}" title="לחיצה: לבחירה (ואז "בחר")">
       <div class="dadv-name"><span class="rk">${i + 1}</span><bdi class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</bdi>${x.p.hurt?.s === "OUT" ? injuryPill(x.p) : ""}<small>${esc(x.p.pos || "")} · ${esc(x.p.team26 || "FA")}</small></div>
       <div class="dadv-stats">${showCats.map((c) => `<span><small>${heb(c.k)}</small><b class="${bestIn[c.k] === x.p.id ? "lead" : ""}">${statTxt(x.p, c.k)}</b></span>`).join("")}</div>
     </div>`).join("")}</div>`;
@@ -5171,6 +5181,13 @@ $("pickBtn").addEventListener("click", () => {
 });
 $("pickInput").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); $("pickBtn").click(); } });
 $("draftAdvice").addEventListener("click", (e) => {
+  const card = e.target.closest("[data-advpick]");
+  if (card && !e.target.closest("[data-pcard], .injpill")) {
+    // the player goes into the pick box (with his preview on my team); "בחר" makes the pick
+    const id = Number(card.dataset.advpick), label = [...PICK_LOOKUP].find(([, v]) => v === id)?.[0];
+    if (label) { $("pickInput").value = label; PICK_PREVIEW = id; renderMine(); renderDraftAdvice(); $("pickBtn").focus(); }
+    return;
+  }
   const b = e.target.closest("[data-focus]");
   if (!b) return;
   const k = b.dataset.focus;
