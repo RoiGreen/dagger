@@ -3015,9 +3015,17 @@ function renderDraftAdvice() {
   };
   // with categories chosen in "חפש לפי": the best available in their sum (the weekly score per category)
   const focus = cats.filter((c) => DRAFT_FOCUS.has(c.k));
+  // the advice is mostly fit, plus a share of the player's overall value (his Z): more of it in the first rounds,
+  // while the profile is still forming (40% with one pick), down to 15% as the roster fills
+  const ovShare = Math.max(0.15, 0.4 - 0.03 * (mineIds.length - 1));
+  const blendFit = (rows) => {
+    const norm = (xs) => { const [m, sd] = meanStd(xs); return xs.map((x) => (x - m) / (sd || 1)); };
+    const f = norm(rows.map((r) => r.g)), o = norm(rows.map((r) => zAll.get(r.p.id).total));
+    return rows.map((r, i) => ({ ...r, s: (1 - ovShare) * f[i] + ovShare * o[i] })).sort((a, b) => b.s - a.s);
+  };
   const best = focus.length
     ? pool.map((p) => ({ p, g: focus.reduce((a, c) => a + zAll.get(p.id).z[c.k], 0) })).sort((a, b) => b.g - a.g).slice(0, 3)
-    : pool.map(gainOf).sort((a, b) => b.g - a.g).slice(0, 3);
+    : blendFit(pool.map(gainOf)).slice(0, 3);
   const list = (cs) => cs.map((c) => heb(c.k)).join(", ");
   // the numbers shown under each recommended player: the categories to build, the best of the three in bold
   const showCats = focus.length ? focus : [...build, ...close].length ? [...build, ...close] : cats.slice(0, 5);
