@@ -365,6 +365,7 @@ table.dboard td .dn { font-weight: 700; }
 .dadvice .dadv-stats span { display: grid; justify-items: center; min-width: 52px; }
 .dadvice .dadv-stats b { font-family: var(--font-num); font-weight: 500; font-size: 1rem; direction: ltr; unicode-bidi: isolate; }
 .dadvice .dadv-stats b.lead { font-weight: 800; color: var(--pos); }
+.dadvice .dadv-stats b.weak { font-weight: 800; color: var(--neg); }
 .autobar .lbl { font-size: .85rem; color: var(--muted); }
 .autobar button, .pickedit button { font: inherit; font-size: .85rem; font-weight: 600; padding: 6px 12px; border-radius: 8px;
   border: 1px solid var(--line); background: var(--surface); color: var(--ink); cursor: pointer; }
@@ -3010,7 +3011,11 @@ function renderDraftAdvice() {
     <b class="dadv-h" title="${focus.length ? "השחקנים הזמינים הכי חזקים בקטגוריות שבחרת יחד" : "השחקנים שהכי מעלים את מספר הקטגוריות שתנצח בשבוע מול הליגה, לפי הסדר"}">${focus.length ? `${full ? "השחקנים החופשיים " : ""}הכי חזקים ב${list(focus).replace(/, ([^,]*)$/, " וב$1").replace(/, /g, ", ב")}` : full ? "שחקנים חופשיים שמתאימים לך" : "מומלץ לבחירה הבאה"}</b>
     <div class="dadv-cards">${best.map((x, i) => `<div class="dadv-card${i ? "" : " top"}${PICK_PREVIEW === x.p.id ? " sel" : ""}" data-advpick="${x.p.id}" title="לחיצה: לבחירה (ואז &quot;בחר&quot;), לחיצה נוספת: ביטול">
       <div class="dadv-name"><span class="rk">${i + 1}</span><bdi class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</bdi>${x.p.hurt?.s === "OUT" ? injuryPill(x.p) : ""}<small>${esc(x.p.pos || "")} · ${esc(x.p.team26 || "FA")}</small></div>
-      <div class="dadv-stats">${showCats.map((c) => `<span><small>${heb(c.k)}</small><b class="${bestIn[c.k] === x.p.id ? "lead" : ""}">${statTxt(x.p, c.k)}</b></span>`).join("")}</div>
+      <div class="dadv-stats">${(() => {
+        // his weakest of the categories shown (lowest score) in red; the best of the three in each category in green
+        const zp = zAll.get(x.p.id).z, weak = showCats.length > 1 ? showCats.reduce((a, c) => (zp[c.k] < zp[a.k] ? c : a)).k : null;
+        return showCats.map((c) => `<span><small>${heb(c.k)}</small><b class="${bestIn[c.k] === x.p.id ? "lead" : c.k === weak ? "weak" : ""}">${statTxt(x.p, c.k)}</b></span>`).join("");
+      })()}</div>
     </div>`).join("")}</div>`;
 }
 
