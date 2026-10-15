@@ -1897,7 +1897,7 @@ function fillZHelp(list, now) {
   const shift = Math.abs(AVAIL_LEVEL) >= 0.05;
   $("zStep3").innerHTML = `<b>3. מחברים:</b> סכום 9 הקטגוריות הוא ציון ה־Z. באיבודים, פחות זה טוב. ${nm}: <b>${fx(z.total)}</b>`;
   $("zMarket").innerHTML = shift
-    ? `<b>בזמן הדראפט:</b> השחקנים שנבחרו יצאו מהשוק, אז כל הציונים עולים ב־${fx(-AVAIL_LEVEL)}. הסדר לא משתנה. ${nm}: ${fx(shownVal(z.total))}` : "";
+    ? `<b>בזמן הדראפט:</b> השחקנים שנבחרו יצאו מהשוק, אז כל הציונים עולים ב־${fx(-AVAIL_LEVEL)}. הסדר לא משתנה` : "";
 }
 let BODY_JOB = 0;  // a newer render stops the batches of the one before
 function render() {
