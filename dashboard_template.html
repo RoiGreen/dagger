@@ -3092,7 +3092,7 @@ function renderDraftAdvice() {
     const z = zAll.get(cp.id).z, sg = (v) => (Math.abs(v) < 0.05 ? "0.0" : `${v >= 0 ? "+" : "−"}${Math.abs(v).toFixed(1)}`);
     // categories he lifts or lowers: my chance to win each, with him added
     const up = cats.filter((c) => z[c.k] >= 0.3), down = cats.filter((c) => z[c.k] <= -0.3);
-    return `<div class="dadv-check"><div class="ckh"><b>בדיקה: <bdi>${esc(cp.name)}</bdi></b>${cp.hurt?.s === "OUT" ? injuryPill(cp) : ""}
+    return `<div class="dadv-check"><div class="ckh"><b><bdi>${esc(cp.name)}</bdi></b>${cp.hurt?.s === "OUT" ? injuryPill(cp) : ""}
         <small>${esc(cp.pos || "")} · ${esc(cp.team26 || "FA")} · Z ${shownVal(zAll.get(cp.id).total).toFixed(2)}</small>
         ${up.length ? `<span class="ckg up">מחזק: ${up.map((c) => c.l).join(", ")}</span>` : ""}${down.length ? `<span class="ckg dn">מחליש: ${down.map((c) => c.l).join(", ")}</span>` : ""}</div>
       <div class="cktiles">${cats.map((c) => `<div class="ckt ${z[c.k] >= 0.3 ? "up" : z[c.k] <= -0.3 ? "dn" : ""}"><small>${c.l}</small><b>${statTxt(cp, c.k)}</b><i>${sg(z[c.k])}</i></div>`).join("")}</div></div>`;
