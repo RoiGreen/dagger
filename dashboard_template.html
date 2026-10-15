@@ -4994,7 +4994,17 @@ function setField(id, v) {
   const el = $(id);
   if (el && el !== document.activeElement) el.value = v;
 }
+// The table columns and Punt chips follow the categories, also when they arrive with the account's settings
+let CATS_SIG = CATS.map((c) => c.k).join();
+function syncCats() {
+  const sig = CATS.map((c) => c.k).join();
+  if (sig === CATS_SIG) return;
+  CATS_SIG = sig; buildCols(); renderPuntChips();
+  for (const x of [...st.punts]) if (!CATS.some((c) => c.k === x)) st.punts.delete(x);
+  if (!CATS.some((c) => c.k === st.sort) && ALL_CATS.some((c) => c.k === st.sort)) { st.sort = "zTotal"; st.asc = false; }
+}
 function syncControls() {
+  syncCats();
   for (const b of document.querySelectorAll("[data-fmt]")) b.setAttribute("aria-pressed", b.dataset.fmt === st.fmt);
   for (const b of document.querySelectorAll("[data-mode]")) b.setAttribute("aria-pressed", b.dataset.mode === st.mode);
   for (const b of document.querySelectorAll("[data-pos]")) b.setAttribute("aria-pressed", st.pos.has(b.dataset.pos));
@@ -5154,9 +5164,7 @@ document.addEventListener("click", (e) => {
     const k = t.dataset.catpick, on = st.cats.includes(k);
     if (on && st.cats.length <= 3) return;  // at least 3 categories
     st.cats = on ? st.cats.filter((x) => x !== k) : [...st.cats, k];
-    setCats(st.cats); buildCols(); renderPuntChips();
-    for (const x of [...st.punts]) if (!CATS.some((c) => c.k === x)) st.punts.delete(x);
-    if (!CATS.some((c) => c.k === st.sort) && ALL_CATS.some((c) => c.k === st.sort)) { st.sort = "zTotal"; st.asc = false; }
+    setCats(st.cats); syncCats();
     return update();
   }
   if (t.dataset.puntreset) { st.punts.clear(); return update(); }
