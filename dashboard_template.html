@@ -1211,43 +1211,32 @@ table.cmpt td.lbl { min-width: 5.5em; }
 }
 @media (max-width: 700px) and (prefers-reduced-motion: reduce) { aside { transition: none; } }
 
-/* phone: the player board as cards. Line 1: rank, player, marking, Z. Line 2: every category as a heat strip.
-   The header row stays on top as the key (tap a category to sort by it). */
+/* phone: the player board is the full table, scrolling sideways like a spreadsheet: the header row stays on top,
+   the rank and the player stay on the right, every other column (age, games, minutes, categories, Z, FPTS) slides */
 @media (max-width: 700px) {
-  #viewBoard .tbl-wrap { max-height: none; overflow: visible; border: 0; background: none; box-shadow: none; }
-  #viewBoard table, #viewBoard thead, #viewBoard tbody { display: block; width: 100%; }
-  #viewBoard tr { display: grid; grid-template-columns: repeat(var(--nc, 9), minmax(0, 1fr)); column-gap: 2px; row-gap: 4px; align-items: center; }
-  #viewBoard thead { position: sticky; top: 0; z-index: 6; background: var(--bg); padding: 4px 0 6px; }
-  #viewBoard thead tr { padding-inline: 5px; }
-  #viewBoard tbody tr { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 6px; padding: 6px 5px 5px; }
-  #viewBoard tbody tr.is-mine { border-color: var(--mine); }
-  #viewBoard th, #viewBoard td { border: 0; padding: 3px 0; position: static; min-width: 0; text-align: center; }
-  #viewBoard th { font-size: .74rem; background: none; }
-  /* what a phone card leaves out: age, games, availability, minutes, the other value column, the stat-rank column */
-  #viewBoard .c-age, #viewBoard .c-gp, #viewBoard .c-av, #viewBoard .c-min,
-  #viewBoard th[data-k="age"], #viewBoard th[data-k="gp"], #viewBoard th[data-k="avail"], #viewBoard th[data-k="MIN"],
+  #viewBoard .tbl-wrap { max-height: calc(100dvh - 96px); overflow: auto; -webkit-overflow-scrolling: touch; }
+  #viewBoard th, #viewBoard td { padding: 7px 7px; font-size: .84rem; white-space: nowrap; }
+  #viewBoard thead th { font-size: .74rem; }
+  /* the stat-rank column (sorting by a stat) gives way on a phone, so the pinned columns stay two */
   #viewBoard td.rank:has(+ td.rank), #viewBoard th.nosort:has(+ th[data-k="rank"]) { display: none; }
-  #viewBoard[data-fmt="cat"] td.val + td.val, #viewBoard[data-fmt="cat"] th[data-k="fp"],
-  #viewBoard[data-fmt="pts"] td.val:has(+ td.val), #viewBoard[data-fmt="pts"] th[data-k="zTotal"] { display: none; }
-  /* line 1 */
-  #viewBoard td.rank, #viewBoard th[data-k="rank"], #viewBoard tr > th:first-child { grid-column: 1; grid-row: 1; font-size: .9rem; }
-  #viewBoard td.name, #viewBoard th[data-k="name"] { grid-column: 2 / -4; grid-row: 1; text-align: start; overflow: hidden; }
-  #viewBoard td.acts, #viewBoard th.acts { grid-column: -4 / -2; grid-row: 1; }
-  #viewBoard td.val, #viewBoard th[data-k="zTotal"], #viewBoard th[data-k="fp"] { grid-column: -2 / -1; grid-row: 1; }
-  #viewBoard td.val { font-size: 1.02rem; font-weight: 800; }
-  /* line 2: the categories, small and coloured */
-  #viewBoard td.cat { font-size: .78rem; border-radius: 6px; padding: 5px 0; font-variant-numeric: tabular-nums; }
-  #viewBoard th[data-k] { cursor: pointer; }
+  #viewBoard td.rank, #viewBoard th[data-k="rank"], #viewBoard thead th:first-child { position: sticky; right: 0; z-index: 2;
+    width: 34px; min-width: 34px; max-width: 34px; padding-inline: 2px; background: var(--surface); }
+  #viewBoard td.name, #viewBoard th[data-k="name"] { position: sticky; right: 34px; z-index: 2; background: var(--surface);
+    min-width: 150px; max-width: 160px; box-shadow: -6px 0 8px -6px rgba(0, 0, 0, .25); }
+  #viewBoard thead th[data-k="rank"], #viewBoard thead th[data-k="name"], #viewBoard thead th:first-child { z-index: 4; background: var(--sunk); }
   #viewBoard td.name .nc { gap: 6px; }
-  #viewBoard td.name .avatar { width: 30px; height: 30px; }
-  #viewBoard td.name .nmeta { min-width: 0; }
-  #viewBoard td.name .nline { display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; white-space: normal; }
-  #viewBoard td.name .nline .n { font-size: .95rem; }
-  #viewBoard td.name .nline .t { font-size: .74rem; }
+  #viewBoard td.name .avatar { width: 28px; height: 28px; }
+  #viewBoard td.name .nmeta { min-width: 0; overflow: hidden; }
+  #viewBoard td.name .nline { flex-wrap: wrap; white-space: nowrap; gap: 0 5px; min-width: 0; }
+  #viewBoard td.name .nline .n { flex-basis: 100%; min-width: 0; font-size: .88rem; overflow: hidden; text-overflow: ellipsis;
+    direction: ltr; unicode-bidi: isolate; text-align: right; }  /* a long name is cut at its end ("Victor Wemb…") */
+  #viewBoard td.name .nline .t { font-size: .7rem; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  #viewBoard td.name .nline .injpill, #viewBoard td.name .nline .inj, #viewBoard td.name .nline .rk { font-size: .62rem; padding: 0 4px; }
+  #viewBoard td.name .sched { font-size: .68rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #viewBoard tr.is-mine td.name, #viewBoard tr.is-mine td.rank { background: color-mix(in srgb, var(--mine) 10%, var(--surface)); }
+  #viewBoard td.val { font-weight: 800; }
   .showseg { width: 100%; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
   .showseg button { font-size: .8rem; padding: 6px 2px; line-height: 1.15; }
-  #viewBoard .actpick summary { padding: 4px 6px; font-size: .74rem; min-height: 34px; display: grid; place-items: center; white-space: nowrap; }
-  #viewBoard .actmenu { inset-inline-end: 0; inset-inline-start: auto; }
 }
 
 /* phone: the draft room */
