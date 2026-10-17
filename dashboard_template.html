@@ -1,4 +1,5 @@
 <meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <title>Dagger · NBA Fantasy</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -1069,6 +1070,231 @@ table.cmpt td.lbl { min-width: 5.5em; }
 .vbar.b { --c: color-mix(in srgb, var(--sb) 90%, transparent); }
 
 @media (prefers-reduced-motion: no-preference) { .seg button, .chip, .act button { transition: background-color .12s, color .12s; } }
+
+/* ================= Phone (up to 700px wide) =================
+   Everything for phones lives in these blocks. A wider screen never reads them, so the desktop stays exactly as it is. */
+@media (max-width: 700px) {
+  /* nothing may push the page wider than the screen (the matchup card used to make the whole tab 944px wide) */
+  .view, #muOut, .mugrid, .cmpsec, main { min-width: 0; }
+  .view { grid-template-columns: minmax(0, 1fr); }
+  .wrap { padding-inline: 10px; padding-block: 10px 28px; gap: 10px; }
+
+  /* header: one compact row; the save / injury notes are in the settings sheet */
+  .jumbo-in { padding: 8px 12px; flex-wrap: nowrap; gap: 10px; }
+  .brand { gap: 8px; min-width: 0; }
+  .brand .ball, .brand .logo svg { width: 28px; height: 28px; }
+  header.top h1 { font-size: 1.15rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  .who .save-state { display: none; }
+  .who { grid-template-columns: auto; }
+  .who > .iconbtn { grid-row: auto; grid-column: auto; }
+  /* the night's games: one row that slides sideways, each game two lines (away over home), like a sports app */
+  .ticker { flex-wrap: nowrap; overflow-x: auto; padding: 6px 8px; gap: 6px; scroll-snap-type: x proximity; overscroll-behavior-x: contain; -webkit-overflow-scrolling: touch; }
+  .ticker > * { flex: none; }
+  .ticker .nbalogo { display: none; }
+  .ticker .daynav { position: sticky; inset-inline-start: -8px; z-index: 1; padding-inline: 4px; background: #0a0f1d; border-radius: 8px; }
+  .ticker .game { display: grid; grid-template-columns: auto; gap: 1px; padding: 4px 8px; scroll-snap-align: start; font-size: .8rem; min-width: 84px; }
+  .ticker .game .at { display: none; }
+  .ticker .game .tm { justify-content: space-between; }
+  .ticker .game .time { font-size: .7rem; text-align: center; }
+
+  /* typing never zooms the page on iPhone (it zooms under 16px); fingers get room */
+  input:not([type=checkbox]):not([type=radio]):not([type=range]), select, textarea { font-size: 16px; }
+  .chip { min-height: 36px; }
+  .seg button { min-height: 40px; }
+  .gclose { width: 40px; height: 40px; }
+
+  /* weekly matchup: team | score | team in one row, the chance to win and the leaders under it */
+  .muscore { grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 4px 6px; padding: 12px 8px; }
+  .muscore .mmid { display: contents; }
+  .muscore .mside:first-child { grid-column: 1; grid-row: 1; }
+  .muscore .mnum { grid-column: 2; grid-row: 1; font-size: 2.7rem; gap: 6px; }
+  .muscore .mside:last-child { grid-column: 3; grid-row: 1; }
+  .muscore .mwin { grid-column: 1 / -1; grid-row: 2; }
+  .muscore .wins { grid-column: 1 / -1; grid-row: 3; gap: 0 10px; }
+  .muscore .mside b { font-size: .95rem; overflow-wrap: anywhere; }
+  .muscore .gcount { font-size: 1rem; }
+  .mustack { padding-inline-start: 8px; margin-bottom: 4px; }
+  .mustack .mini { width: 26px; height: 26px; margin-inline-start: -8px; }
+  .mustack .mini:nth-child(n+4) { display: none; }  /* three faces a side */
+  .muroster, .mudaygrid { min-width: 0; }
+  .muscore .wrows.two { grid-template-columns: minmax(0, 1fr); }  /* leaders: one column a side */
+  .muscore .wr { font-size: .82rem; }
+  .mubar2 { width: 38px; margin-inline-end: 4px; }
+  table.box.mucats th, table.box.mucats td { padding-inline: 3px; }
+  /* a suggested pickup: who on top, what it changes under it, the win chance and "בצע" at the side */
+  .mupicks li { display: grid; grid-template-columns: auto 32px minmax(0, 1fr) auto; column-gap: 8px; row-gap: 6px; align-items: center; }
+  .mupicks .rk { grid-column: 1; grid-row: 1; }
+  .mupicks .mimg { grid-column: 2; grid-row: 1; }
+  .mupicks .mwho { grid-column: 3; grid-row: 1; min-width: 0; }
+  .mupicks .mfit { grid-column: 4; grid-row: 1; text-align: center; }
+  .mupicks .mtags { grid-column: 1 / 4; grid-row: 2; justify-items: start; margin: 0; }
+  .mupicks .mtags .trow { justify-content: flex-start; }
+  .mupicks .mgo { grid-column: 4; grid-row: 2; min-height: 36px; }
+  .mupicks .mdropsel { max-width: 100%; }
+  .mupickhead { display: none; }
+  /* roster table and daily lineup: they scroll sideways in their own box, starting from the names, the name column pinned */
+  .muroster { overflow-x: auto; direction: ltr; overscroll-behavior-x: contain; }
+  .mudaygrid .tbl-wrap { direction: ltr; overscroll-behavior-x: contain; }
+  table.box.murt td.pn, table.box.murt th:first-child, table.box.daygrid td.pn, table.box.daygrid th:first-child {
+    position: sticky; left: 0; z-index: 1; background: var(--surface); max-width: 9.5em; overflow: hidden; text-overflow: ellipsis; }
+  table.box.murt td.pn .pday, table.box.murt td.pn .ppos { display: block; }
+  .mupick select { min-width: 0; max-width: 100%; }
+
+  /* player card and game card open as a sheet from the bottom; only their tables scroll sideways */
+  .gmodal { padding: 0; place-items: end stretch; }
+  .gcard { width: 100%; max-height: 92dvh; border-radius: 18px 18px 0 0; overflow-x: hidden; overflow-y: auto; overscroll-behavior: contain; }
+  .gcard .tbl-wrap { overflow-x: auto; }
+  .ghead { padding: 14px 12px; gap: 8px; }
+  .pinfo { flex-direction: column; gap: 8px; }
+  .pnm.withlogo, .powner.withlogo, .pmodewrap.withlogo { padding-right: 0; }
+  .pstats { display: grid; grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 8px 2px; }
+  .pstats div { min-width: 0; }
+  .stats table.box td.pn, .gcard table.box td.pn { min-width: 8.5em; position: sticky; inset-inline-start: 0; z-index: 1; background: var(--surface); }
+
+  /* draft room: nothing cut off at the edge */
+  .dadvice .dadv-focus .chips { display: flex; flex-wrap: wrap; }
+  .dadvice .dadv-stats { grid-template-columns: repeat(5, minmax(0, 1fr)); gap: 6px 4px; }
+  .dadvice .dadv-stats span { min-width: 0; }
+  .pickbar input { flex: 1 1 100%; max-width: none; min-width: 0; }
+  .pickbar select { flex: 1 1 0; min-width: 0; min-height: 44px; }
+  .pickbar .pickbtn { min-height: 44px; flex: 1 1 0; }
+  .autobar { flex-wrap: nowrap; overflow-x: auto; }
+  .autobar button { flex: none; min-height: 40px; }
+  table.dboard th:first-child, table.dboard td:first-child { position: sticky; inset-inline-start: 0; z-index: 1; background: var(--surface); }
+  table.dboard .dimg { display: none; }
+
+  /* pop-ups use the whole width */
+  .calpop { left: 8px !important; right: 8px; width: auto; }
+  .tipbox { left: 12px !important; right: 12px; max-width: none; }
+}
+
+/* phone: tab bar at the bottom, the side panel as a sheet from the bottom (none of it shows on a wider screen) */
+.msetbtn, .mscrim, .msheethead { display: none; }
+@media (max-width: 700px) {
+  .tabs { position: fixed; inset-inline: 0; bottom: 0; z-index: 80; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0;
+    border-radius: 0; border: 0; border-top: 1px solid var(--line); overflow: visible; margin: 0;
+    padding: 4px 2px calc(4px + env(safe-area-inset-bottom, 0px));
+    background: color-mix(in srgb, var(--surface) 94%, transparent); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px);
+    box-shadow: 0 -6px 24px rgba(0, 0, 0, .12); }
+  .tabs button { position: relative; display: grid; justify-items: center; align-content: center; gap: 3px; min-height: 54px; padding: 4px 0;
+    font-size: 0; color: var(--muted); border-radius: 10px; background: none; box-shadow: none; }
+  .tabs button::before { content: ""; width: 23px; height: 23px; background: currentColor; -webkit-mask-size: contain; mask-size: contain;
+    -webkit-mask-repeat: no-repeat; mask-repeat: no-repeat; -webkit-mask-position: center; mask-position: center; }
+  .tabs button::after { content: attr(data-short); font-size: .7rem; font-weight: 700; line-height: 1; }
+  .tabs button[aria-selected="true"] { color: var(--accent); background: none; box-shadow: none; }
+  .tabs .msetbtn { display: grid; border: 0; cursor: pointer; font-family: inherit; }
+  .tabs .msetbtn[aria-expanded="true"] { color: var(--accent); }
+  .msetn { position: absolute; top: 4px; inset-inline-end: 14%; min-width: 18px; height: 18px; padding: 0 5px; border-radius: 9px;
+    background: var(--accent); color: #fff; font: 800 .68rem/18px var(--font-num); text-align: center; }
+  #tabBoard::before { -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6h16M4 12h16M4 18h16'/%3E%3Cpath d='M9 4v16'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 6h16M4 12h16M4 18h16'/%3E%3Cpath d='M9 4v16'/%3E%3C/svg%3E"); }
+  #tabAdv::before { -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 20V11M12 20V4M19 20v-6'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M5 20V11M12 20V4M19 20v-6'/%3E%3C/svg%3E"); }
+  #tabDraft::before { -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='4' width='16' height='16' rx='2'/%3E%3Cpath d='M4 10h16M4 15h16M10 4v16M15 4v16'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Crect x='4' y='4' width='16' height='16' rx='2'/%3E%3Cpath d='M4 10h16M4 15h16M10 4v16M15 4v16'/%3E%3C/svg%3E"); }
+  #tabCmp::before { -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 7h13l-3-3M17 17H4l3 3'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M7 7h13l-3-3M17 17H4l3 3'/%3E%3C/svg%3E"); }
+  #tabMu::before { -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 4h8v5a4 4 0 0 1-8 0zM5 5h3M16 5h3M12 13v4M9 20h6'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M8 4h8v5a4 4 0 0 1-8 0zM5 5h3M16 5h3M12 13v4M9 20h6'/%3E%3C/svg%3E"); }
+  #mSet::before { -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h9M17 7h3M4 17h3M11 17h9'/%3E%3Ccircle cx='15' cy='7' r='2'/%3E%3Ccircle cx='9' cy='17' r='2'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h9M17 7h3M4 17h3M11 17h9'/%3E%3Ccircle cx='15' cy='7' r='2'/%3E%3Ccircle cx='9' cy='17' r='2'/%3E%3C/svg%3E"); }
+  .wrap { padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
+  .toast { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+
+  /* the side panel: a sheet that slides up from the bottom */
+  aside { position: fixed; inset-inline: 0; bottom: 0; z-index: 95; max-height: 86dvh; overflow-y: auto; overscroll-behavior: contain;
+    background: var(--bg); border-radius: 18px 18px 0 0; padding: 0 10px calc(18px + env(safe-area-inset-bottom, 0px));
+    transform: translateY(105%); visibility: hidden; transition: transform .25s ease, visibility .25s;
+    box-shadow: 0 -14px 40px rgba(0, 0, 0, .35); }
+  body.msheet aside { transform: none; visibility: visible; }
+  body.msheet { overflow: hidden; }
+  .msheethead { display: flex; align-items: center; justify-content: space-between; position: sticky; top: 0; z-index: 3;
+    margin-inline: -10px; padding: 16px 16px 10px; background: var(--bg); border-bottom: 1px solid var(--line); }
+  .msheethead::before { content: ""; position: absolute; top: 6px; inset-inline: 0; margin: 0 auto; width: 42px; height: 4px; border-radius: 2px; background: var(--line); }
+  .msheethead b { font-size: 1.05rem; }
+  .mclose { width: 38px; height: 38px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 1rem; cursor: pointer; }
+  body.msheet .mscrim { display: block; position: fixed; inset: 0; z-index: 90; background: rgba(4, 8, 18, .5); }
+}
+@media (max-width: 700px) and (prefers-reduced-motion: reduce) { aside { transition: none; } }
+
+/* phone: the player board as cards. Line 1: rank, player, marking, Z. Line 2: every category as a heat strip.
+   The header row stays on top as the key (tap a category to sort by it). */
+@media (max-width: 700px) {
+  #viewBoard .tbl-wrap { max-height: none; overflow: visible; border: 0; background: none; box-shadow: none; }
+  #viewBoard table, #viewBoard thead, #viewBoard tbody { display: block; width: 100%; }
+  #viewBoard tr { display: grid; grid-template-columns: repeat(var(--nc, 9), minmax(0, 1fr)); column-gap: 2px; row-gap: 4px; align-items: center; }
+  #viewBoard thead { position: sticky; top: 0; z-index: 6; background: var(--bg); padding: 4px 0 6px; }
+  #viewBoard thead tr { padding-inline: 5px; }
+  #viewBoard tbody tr { background: var(--surface); border: 1px solid var(--line); border-radius: 12px; margin-bottom: 6px; padding: 6px 5px 5px; }
+  #viewBoard tbody tr.is-mine { border-color: var(--mine); }
+  #viewBoard th, #viewBoard td { border: 0; padding: 3px 0; position: static; min-width: 0; text-align: center; }
+  #viewBoard th { font-size: .74rem; background: none; }
+  /* what a phone card leaves out: age, games, availability, minutes, the other value column, the stat-rank column */
+  #viewBoard .c-age, #viewBoard .c-gp, #viewBoard .c-av, #viewBoard .c-min,
+  #viewBoard th[data-k="age"], #viewBoard th[data-k="gp"], #viewBoard th[data-k="avail"], #viewBoard th[data-k="MIN"],
+  #viewBoard td.rank:has(+ td.rank), #viewBoard th.nosort:has(+ th[data-k="rank"]) { display: none; }
+  #viewBoard[data-fmt="cat"] td.val + td.val, #viewBoard[data-fmt="cat"] th[data-k="fp"],
+  #viewBoard[data-fmt="pts"] td.val:has(+ td.val), #viewBoard[data-fmt="pts"] th[data-k="zTotal"] { display: none; }
+  /* line 1 */
+  #viewBoard td.rank, #viewBoard th[data-k="rank"], #viewBoard tr > th:first-child { grid-column: 1; grid-row: 1; font-size: .9rem; }
+  #viewBoard td.name, #viewBoard th[data-k="name"] { grid-column: 2 / -4; grid-row: 1; text-align: start; overflow: hidden; }
+  #viewBoard td.acts, #viewBoard th.acts { grid-column: -4 / -2; grid-row: 1; }
+  #viewBoard td.val, #viewBoard th[data-k="zTotal"], #viewBoard th[data-k="fp"] { grid-column: -2 / -1; grid-row: 1; }
+  #viewBoard td.val { font-size: 1.02rem; font-weight: 800; }
+  /* line 2: the categories, small and coloured */
+  #viewBoard td.cat { font-size: .78rem; border-radius: 6px; padding: 5px 0; font-variant-numeric: tabular-nums; }
+  #viewBoard th[data-k] { cursor: pointer; }
+  #viewBoard td.name .nc { gap: 6px; }
+  #viewBoard td.name .avatar { width: 30px; height: 30px; }
+  #viewBoard td.name .nmeta { min-width: 0; }
+  #viewBoard td.name .nline { display: flex; flex-wrap: wrap; align-items: center; gap: 0 6px; white-space: normal; }
+  #viewBoard td.name .nline .n { font-size: .95rem; }
+  #viewBoard td.name .nline .t { font-size: .74rem; }
+  .showseg { width: 100%; display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .showseg button { font-size: .8rem; padding: 6px 2px; line-height: 1.15; }
+  #viewBoard .actpick summary { padding: 4px 6px; font-size: .74rem; min-height: 34px; display: grid; place-items: center; white-space: nowrap; }
+  #viewBoard .actmenu { inset-inline-end: 0; inset-inline-start: auto; }
+}
+
+/* phone: the draft room */
+.dcpick { display: none; }
+@media (max-width: 700px) {
+  .dadvice .dadv-name { display: flex; flex-wrap: wrap; align-items: center; gap: 4px 8px; }
+  .dcpick { display: inline-grid; place-items: center; margin-inline-start: auto; min-height: 36px; padding: 0 16px; border: 0; border-radius: 10px;
+    background: var(--accent); color: #fff; font: inherit; font-weight: 800; font-size: .9rem; cursor: pointer; }
+  .dadvice .dadv-stats small { font-family: var(--font-num); font-weight: 700; letter-spacing: .03em; direction: ltr; unicode-bidi: isolate; }
+  /* pick bar: the search on its own line; team, "בחר" and undo under it; reset alone at the far end */
+  .pickbar { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1.3fr) minmax(0, 1fr); gap: 8px; }
+  .pickbar #pickInput { grid-column: 1 / -1; }
+  .pickbar #pickTeam { grid-column: 1; }
+  .pickbar #pickBtn { grid-column: 2; }
+  .pickbar #undoBtn { grid-column: 3; font-size: .78rem; padding: 4px 6px; min-height: 44px; }
+  .pickbar #draftResetBtn { grid-column: 1; justify-self: start; font-size: .78rem; min-height: 36px; }
+  .dadvice .dadv-tiers { display: flex; flex-wrap: wrap; gap: 6px; }
+  .dadvice .dadv-tiers b { flex: 1 1 100%; }
+  .dadvice .dadv-tiers button { flex: 1 1 0; min-height: 38px; }
+  .clock { font-size: .95rem; }
+  table.dboard th, table.dboard td { font-size: .76rem; padding: 4px 6px; }
+}
+
+/* phone: cards over the tab bar, advanced table with the name pinned, pickup rows, tips */
+@media (max-width: 700px) {
+  .gmodal { z-index: 100; }
+  .ghead { padding-inline-start: 56px; }
+  .phead { padding-inline-start: 12px; }
+  #viewAdv .tbl-wrap { max-height: none; overflow-x: auto; overflow-y: visible; overscroll-behavior-x: contain; }
+  #viewAdv td.name, #viewAdv th[data-ak="name"] { position: sticky; right: 0; z-index: 1; background: var(--surface); }
+  #viewAdv td.name { max-width: 11em; }
+  .mupicks .mwho { overflow: hidden; }
+  .mupicks .mline { flex-wrap: wrap; row-gap: 0; }
+  .mupicks .mline .mdays { white-space: normal; margin-inline-start: 0; flex-basis: 100%; }
+  .mupicks .mfit { min-width: 3.2em; }
+  .tipbox { z-index: 120; font-size: .9rem; padding: 10px 12px; }
+}
+
+/* phone: a signed-in header stays one row (the picture without the name); fewer notes over the board */
+@media (max-width: 700px) {
+  .who .viewer { gap: 4px; font-size: .8rem; }
+  .who #viewerName { display: none; }
+  .who .viewer img { width: 26px; height: 26px; }
+  .who .signout { padding: 4px 8px; font-size: .74rem; }
+  #viewBoard .legend > span:has(.rk), #viewBoard .legend > span:has(.inj) { display: none; }
+  #viewBoard .legend { gap: 4px 12px; font-size: .8rem; }
+}
 </style>
 
 <script>
@@ -1112,8 +1338,10 @@ table.cmpt td.lbl { min-width: 5.5em; }
     <div class="ticker" id="ticker" hidden></div>
   </header>
 
+  <div class="mscrim" id="mScrim"></div>
   <div class="layout">
-    <aside>
+    <aside id="sidePanel">
+      <div class="msheethead"><b>הגדרות וסינון</b><button type="button" class="mclose" id="mSheetClose" aria-label="סגירה">✕</button></div>
       <section class="panel lcard">
       <details class="lpanel" id="leaguePanel">
         <summary><h2 id="hLeague">הליגה שלי</h2><span class="lsum" id="leagueSum"></span></summary>
@@ -1281,11 +1509,12 @@ table.cmpt td.lbl { min-width: 5.5em; }
           </div>
           <p class="vsnote" id="vsNote" hidden></p>
           <div class="tabs" role="tablist">
-            <button role="tab" id="tabBoard" data-tab="board" aria-selected="true" aria-controls="viewBoard">נתונים כלליים</button>
-            <button role="tab" id="tabAdv" data-tab="adv" aria-selected="false" aria-controls="viewAdv">נתונים מתקדמים</button>
-            <button role="tab" id="tabDraft" data-tab="draft" aria-selected="false" aria-controls="viewDraft">חדר דראפט</button>
-            <button role="tab" id="tabCmp" data-tab="cmp" aria-selected="false" aria-controls="viewCmp">השוואה</button>
-            <button role="tab" id="tabMu" data-tab="mu" aria-selected="false" aria-controls="viewMu">מצ'אפ שבועי</button>
+            <button role="tab" id="tabBoard" data-short="שחקנים" data-tab="board" aria-selected="true" aria-controls="viewBoard">נתונים כלליים</button>
+            <button role="tab" id="tabAdv" data-short="מתקדם" data-tab="adv" aria-selected="false" aria-controls="viewAdv">נתונים מתקדמים</button>
+            <button role="tab" id="tabDraft" data-short="דראפט" data-tab="draft" aria-selected="false" aria-controls="viewDraft">חדר דראפט</button>
+            <button role="tab" id="tabCmp" data-short="השוואה" data-tab="cmp" aria-selected="false" aria-controls="viewCmp">השוואה</button>
+            <button role="tab" id="tabMu" data-short="מצ'אפ" data-tab="mu" aria-selected="false" aria-controls="viewMu">מצ'אפ שבועי</button>
+            <button type="button" class="msetbtn" id="mSet" data-short="הגדרות" aria-label="הגדרות וסינון" aria-expanded="false"><span class="msetn" id="mSetN" hidden></span></button>
           </div>
         </div>
       </div>
@@ -1439,6 +1668,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
 
 <script>
 const D = /*__DATA__*/null;
+const PHONE = matchMedia("(max-width: 700px)");  // phone layout: tab bar at the bottom, settings in a sheet
 const S = D.stats;
 const ix = Object.fromEntries(S.map((s, i) => [s, i]));
 // Every category a league can play with; a league picks its own (st.cats), the standard 9 by default
@@ -1980,6 +2210,7 @@ function render() {
   const posR = positionRank();
 
   // header
+  $("viewBoard").dataset.fmt = st.fmt; $("viewBoard").style.setProperty("--nc", Math.max(CATS.length, 5));
   $("head").innerHTML = (statRank ? `<th class="nosort" scope="col">${esc(statLabel)} Rank</th>` : "") + COLS.map((c) => {
     const label = c.k === "rank" ? (m === "g" ? "Rank" : "Rank 36 MIN") : c.l;
     const cls = [st.sort === c.k ? "sorted" : "", st.sort === c.k && st.asc ? "asc" : "", c.nosort ? "nosort" : "", c.k === "act" ? "acts" : "",
@@ -2001,7 +2232,7 @@ function render() {
       ${statRank ? `<td class="rank" style="color:var(--accent)">${statRank(best({ p, z }))}</td>` : ""}
       ${posR ? posTd(posR, p) : `<td class="rank${rank <= 3 ? " top" : ""}">${rank}</td>`}
       ${nameCell(p)}
-      <td>${p.age ?? "–"}</td><td>${p.gp}</td>${availCell(p)}<td>${fmt1(p.L.g.MIN)}</td>${cats}
+      <td class="c-age">${p.age ?? "–"}</td><td class="c-gp">${p.gp}</td>${availCell(p)}<td class="c-min">${fmt1(p.L.g.MIN)}</td>${cats}
       <td class="val"${z.w < 1 ? ` title="${p.gp} משחקים בלבד: הציון שלו העונה ${shownVal(z.raw).toFixed(2)}, ונלקח בזהירות לכיוון ${z.proven ? "הרמה שלו בעונה הקודמת" : "הרמה של שחקן חופשי"} (${shownVal(z.target).toFixed(2)})"` : ""}>${shownVal(z.total).toFixed(2)}${z.w < 0.97 ? `<i class="fewg">*</i>` : ""}</td><td class="val">${fmt1(p.F[m])}</td>
       <td class="acts">${actions(p)}</td></tr>`;
   };
@@ -2057,13 +2288,13 @@ function availPct(p) {
 }
 function availCell(p) {
   const pct = availPct(p);
-  if (pct == null) return `<td class="alt" title="אין לו משחקים ב־NBA בעונות שנבחרו">–</td>`;
+  if (pct == null) return `<td class="alt c-av" title="אין לו משחקים ב־NBA בעונות שנבחרו">–</td>`;
   const detail = (p.avail || []).map((v, i) => v == null || !st.availSeasons.includes(i) ? null : `${AVAIL_LABELS[i]}: ${v}`).filter(Boolean).join(" · ");
   const seasons = (p.avail || []).filter((v, i) => v != null && st.availSeasons.includes(i)).length;
   // green from 85% up, red below 65%
   const style = pct >= 0.85 ? `background:color-mix(in srgb, var(--pos) ${Math.round((pct - 0.85) / 0.15 * 35 + 8)}%, transparent)`
     : pct < 0.65 ? `background:color-mix(in srgb, var(--neg) ${Math.round(Math.min((0.65 - pct) / 0.4, 1) * 35 + 8)}%, transparent)` : "";
-  return `<td style="${style}" title="משחקים לפי עונה: ${detail}${seasons < st.availSeasons.length ? ` (בליגה רק ב־${seasons === 1 ? "עונה אחת" : seasons + " עונות"} מאלה שנבחרו)` : ""}">${Math.round(pct * 100)}%</td>`;
+  return `<td class="c-av" style="${style}" title="משחקים לפי עונה: ${detail}${seasons < st.availSeasons.length ? ` (בליגה רק ב־${seasons === 1 ? "עונה אחת" : seasons + " עונות"} מאלה שנבחרו)` : ""}">${Math.round(pct * 100)}%</td>`;
 }
 
 // Rank of each value among all values, 1 = best (higher is better; pass already-flipped values)
@@ -2884,6 +3115,7 @@ function syncLeaguePanel() {
   const n = activeFilters();
   $("filtCount").hidden = !n; $("filtCount").textContent = n;
   $("filtClear").hidden = !n;
+  $("mSetN").hidden = !n; $("mSetN").textContent = n;
 }
 // Trade: players change teams to match a trade made in the real league. Pairs swap board cells (the board keeps
 // its shape); the extra players of an uneven trade move to the other team.
@@ -3123,11 +3355,11 @@ function renderDraftAdvice() {
     ${checkBlock()}
     <b class="dadv-h" title="${focus.length ? "השחקנים הזמינים הכי חזקים בקטגוריות שבחרת יחד" : "בעיקר הדירוג הכללי, וההתאמה לפרופיל שלך מכריעה בין שחקנים קרובים"}">${focus.length ? `${full ? "השחקנים החופשיים " : ""}הכי חזקים ב${list(focus).replace(/, ([^,]*)$/, " וב$1").replace(/, /g, ", ב")}` : full ? "שחקנים חופשיים שמתאימים לך" : "מומלץ לבחירה הבאה"}</b>
     <div class="dadv-cards">${best.map((x, i) => `<div class="dadv-card${i ? "" : " top"}${PICK_PREVIEW === x.p.id ? " sel" : ""}" data-advpick="${x.p.id}">
-      <div class="dadv-name"><span class="rk">${i + 1}</span><bdi class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</bdi>${x.p.hurt?.s === "OUT" ? injuryPill(x.p) : ""}<small>${esc(x.p.pos || "")} · ${esc(x.p.team26 || "FA")}</small></div>
+      <div class="dadv-name"><span class="rk">${i + 1}</span><bdi class="pn" data-pcard="${x.p.id}">${esc(x.p.name)}</bdi>${x.p.hurt?.s === "OUT" ? injuryPill(x.p) : ""}<small>${esc(x.p.pos || "")} · ${esc(x.p.team26 || "FA")}</small><button type="button" class="dcpick" data-draftpick="${x.p.id}">בחר</button></div>
       <div class="dadv-stats">${(() => {
         // his weakest of the categories shown (lowest score) in red; the best of the three in each category in green
         const zp = zAll.get(x.p.id).z, weak = showCats.length > 1 ? showCats.reduce((a, c) => (zp[c.k] < zp[a.k] ? c : a)).k : null;
-        return showCats.map((c) => `<span><small>${heb(c.k)}</small><b class="${bestIn[c.k] === x.p.id ? "lead" : c.k === weak ? "weak" : ""}">${statTxt(x.p, c.k)}</b></span>`).join("");
+        return showCats.map((c) => `<span><small>${PHONE.matches ? c.l : heb(c.k)}</small><b class="${bestIn[c.k] === x.p.id ? "lead" : c.k === weak ? "weak" : ""}">${statTxt(x.p, c.k)}</b></span>`).join("");
       })()}</div>
     </div>`).join("") || `<p class="dadv-none">אין שחקנים זמינים שעומדים בסינונים</p>`}</div>
     ${nFilt ? `<p class="dadv-note">סינוני השחקנים מהסרגל פועלים על ההמלצות (${nFilt})</p>` : ""}`;
@@ -4438,7 +4670,7 @@ function renderMatchup() {
   };
   const score = st.fmt === "pts"
     ? `<div class="mnum"><span class="num${odds.fa > odds.fb ? " lead" : ""}">${Math.round(odds.fa)}</span><span class="sep">:</span><span class="num${odds.fb > odds.fa ? " lead" : ""}">${Math.round(odds.fb)}</span><small>FPTS · תחזית סוף השבוע</small></div>`
-    : `<div class="mnum"><span class="num${wins > 9 - wins ? " lead" : ""}">${wins}</span><span class="sep">:</span><span class="num${9 - wins > wins ? " lead" : ""}">${9 - wins}</span><small>תחזית סוף השבוע</small></div>`;
+    : `<div class="mnum"><span class="num${wins > cats.length - wins ? " lead" : ""}">${wins}</span><span class="sep">:</span><span class="num${cats.length - wins > wins ? " lead" : ""}">${cats.length - wins}</span><small>תחזית סוף השבוע</small></div>`;
   out.innerHTML = `
     <div class="muscore">
       <div class="mside">${faces(mineP, ilA)}<b>${esc(myName)}</b><span title="משחקים בהרכב: שוחקו מתוך סך הכול השבוע"><b class="gcount" dir="ltr">${A.played}/${A.played + A.gamesAll}</b></span></div>
@@ -4600,8 +4832,10 @@ $("muOut").addEventListener("click", (e) => {
 // ---------- header explanations on hover / keyboard focus ----------
 const tipBox = Object.assign(document.createElement("div"), { className: "tipbox", hidden: true, role: "tooltip" });
 document.body.append(tipBox);
-function showTip(el) {
-  tipBox.textContent = el.dataset.tip;
+let tipAt = 0;
+function showTip(el, text = el.dataset.tip) {
+  tipAt = Date.now();
+  tipBox.textContent = text;
   tipBox.hidden = false;
   const r = el.getBoundingClientRect(), w = tipBox.offsetWidth, h = tipBox.offsetHeight;
   const left = Math.min(Math.max(8, r.left + r.width / 2 - w / 2), innerWidth - w - 8);
@@ -4613,6 +4847,17 @@ document.addEventListener("mouseover", (e) => { const el = e.target.closest("[da
 document.addEventListener("focusin", (e) => { const el = e.target.closest("[data-tip]"); if (el) showTip(el); });
 document.addEventListener("focusout", hideTip);
 addEventListener("scroll", hideTip, true);
+// A touch screen has no hover: a tap shows the explanation (a data-tip, or the title of a plain label or number),
+// a second tap on it hides it. Titles on buttons and links stay as they are (the tap does what the button does).
+const TOUCH = matchMedia("(hover: none)");
+document.addEventListener("click", (e) => {
+  if (!TOUCH.matches) return;
+  const el = e.target.closest("[data-tip], [title]");
+  const text = el && (el.dataset.tip || el.getAttribute("title"));
+  if (!text || (!el.dataset.tip && el.closest("button, a, input, select, summary, label, [data-k], [data-pcard], [data-gid], [data-tab]"))) { hideTip(); return; }
+  if (!tipBox.hidden && tipBox.textContent === text && Date.now() - tipAt > 400) hideTip();
+  else showTip(el, text);
+}, true);
 
 // ---------- editing a board cell ----------
 function renderPickEdit(byTeam) {
@@ -5210,7 +5455,7 @@ document.addEventListener("click", (e) => {
   if (t.dataset.distteam) { toggleTeam(t.dataset.distteam); return update(false); }
   if (t.dataset.inj) { st.inj = t.dataset.inj; return update(false); }
   if (t.dataset.rk) { st.rookies = t.dataset.rk; return update(false); }
-  if (t.dataset.tab) { st.tab = t.dataset.tab; return update(false); }
+  if (t.dataset.tab) { st.tab = t.dataset.tab; update(false); if (PHONE.matches) scrollTo(0, 0); return; }  // a new tab starts at its top
   if (t.dataset.ak) {
     const col = ADV_COLS.find((c) => c.k === t.dataset.ak);
     if (st.advSort === col.k) st.advAsc = !st.advAsc; else { st.advSort = col.k; st.advAsc = col.asc; }
@@ -5400,6 +5645,14 @@ $("pickBtn").addEventListener("click", () => {
 });
 $("pickInput").addEventListener("keydown", (e) => { if (e.key === "Enter") { e.preventDefault(); $("pickBtn").click(); } });
 $("draftAdvice").addEventListener("click", (e) => {
+  // phone: "בחר" on a recommendation card makes the pick at once, for the team on the clock
+  const quick = e.target.closest("[data-draftpick]");
+  if (quick) {
+    makePick(Number(quick.dataset.draftpick), Number($("pickTeam").value));
+    $("pickInput").value = ""; PICK_PREVIEW = null; renderMine(); renderDraftAdvice();
+    navigator.vibrate?.(12);
+    return;
+  }
   const card = e.target.closest("[data-advpick]");
   if (card && !e.target.closest("[data-pcard], .injpill")) {
     // the player goes into the pick box (with his preview on my team); "בחר" makes the pick
@@ -5479,8 +5732,20 @@ $("filtClear").addEventListener("click", () => { Object.assign(st, FILTER_DEFAUL
 $("openLeague").addEventListener("click", () => {
   const lp = $("leaguePanel");
   lp.open = true;
+  if (PHONE.matches) setSheet(true);  // on a phone the settings live in the sheet
   lp.scrollIntoView({ behavior: "smooth", block: "start" });
 });
+// ---------- phone: the settings sheet ----------
+function setSheet(on) {
+  document.body.classList.toggle("msheet", on);
+  $("mSet").setAttribute("aria-expanded", on);
+  if (on) $("sidePanel").scrollTop = 0;
+}
+$("mSet").addEventListener("click", () => setSheet(!document.body.classList.contains("msheet")));
+$("mScrim").addEventListener("click", () => setSheet(false));
+$("mSheetClose").addEventListener("click", () => setSheet(false));
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && document.body.classList.contains("msheet")) setSheet(false); });
+PHONE.addEventListener("change", () => { if (!PHONE.matches) setSheet(false); render(); });
 $("snake").addEventListener("change", (e) => { st.snake = e.target.checked; update(false); });
 $("undoBtn").addEventListener("click", () => {
   if (!picks.length) return;
