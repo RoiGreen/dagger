@@ -63,7 +63,9 @@ def main() -> None:
         log("no new data")
     else:
         run("commit", ["git", "commit", "-q", "-m", f"Daily data update {datetime.now():%Y-%m-%d %H:%M}"])
-        run("sync", ["git", "pull", "-q", "--rebase", "--autostash"])
+        # the cloud may have pushed meanwhile: where both changed the same file (the built page, injuries), this run's
+        # version wins, since it was pulled and built just now (-X theirs keeps the commit being replayed = ours)
+        run("sync", ["git", "pull", "-q", "--rebase", "-X", "theirs", "--autostash"])
         run("push", ["git", "push", "-q"])
         log("pushed")
     log("done")
