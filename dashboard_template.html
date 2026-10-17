@@ -1910,8 +1910,12 @@ function fillZHelp(list, now) {
   const top = byR[0], pool = LAST_POOL.length ? LAST_POOL : byR.slice(0, size);
   if (!top) return;
   const z = now.z.get(top.id), nm = `<bdi>${esc(top.name)}</bdi>`;
-  // his strongest counting category, every step of it
-  const c = CATS.filter((k) => !k.k.endsWith("_PCT") && k.k !== "TOV" && !st.punts.has(k.k)).sort((a, b) => z.z[b.k] - z.z[a.k])[0];
+  // his strongest counting category, every step of it (all of them punted: the strongest one anyway)
+  const counting = CATS.filter((k) => !k.k.endsWith("_PCT") && k.k !== "TOV");
+  const open = counting.filter((k) => !st.punts.has(k.k));
+  const c = (open.length ? open : counting).sort((a, b) => z.z[b.k] - z.z[a.k])[0];
+  if (!c) { $("zStep1").innerHTML = ""; $("zStep2").innerHTML = ""; }  // a league of percentages only: no counting example
+  else {
   const [mu, sd] = meanStd(pool.map((p) => p.L[mode][c.k]));
   const wk = st.scoring === "roto" ? 0 : Math.sqrt(poolNoise(pool, mode)[TAU_IX[c.k]] || 0), den = Math.sqrt(sd * sd + 1.04 * wk * wk);
   const x = top.L[mode][c.k], raw = (x - mu) / den, scaled = raw * SCALE, name = HEB_CAT[c.k];
@@ -1919,9 +1923,10 @@ function fillZHelp(list, now) {
   const st1 = (v) => v.toFixed(1);
   $("zStep1").innerHTML = `<b>1. כמה הוא מעל הממוצע:</b> בכל קטגוריה משווים את השחקן לשחקן ממוצע בליגה. ל${nm} יש ${st1(x)} ${name} למשחק, והממוצע הוא ${st1(mu)}, לכן ${nm} יקבל ציון גבוה בקטגוריה הזאת`;
   $("zStep2").innerHTML = `<b>2. כמה זה נדיר:</b> 6 אסיסטים מעל הממוצע יש לעשרות שחקנים, אבל 2 חסימות מעל הממוצע יש רק לבודדים. לכן כל קטגוריה מקבלת ציון לפי כמה נדיר להגיע לרמה כזאת: 0 ממוצע, 1 טוב, 2 מהטובים בליגה, 3 יוצא דופן. ${nm} ב${name}: <b>${fx(z.z[c.k])}</b>`;
+  }
   // once players are taken, the market is weaker: every score rises by the same amount (the order stays)
   const shift = Math.abs(AVAIL_LEVEL) >= 0.05;
-  $("zStep3").innerHTML = `<b>3. מחברים:</b> סכום ${CATS.length} הקטגוריות הוא ציון ה־Z. באיבודים, פחות זה טוב. ${nm}: <b>${fx(z.total)}</b>`;
+  $("zStep3").innerHTML = `<b>3. מחברים:</b> סכום ${CATS.length - CATS.filter((k) => st.punts.has(k.k)).length} הקטגוריות${st.punts.size ? " (בלי ה־Punt)" : ""} הוא ציון ה־Z.${CATS.some((k) => k.k === "TOV") ? " באיבודים, פחות זה טוב." : ""} ${nm}: <b>${fx(z.total)}</b>`;
   $("zMarket").innerHTML = shift
     ? `<b>בזמן הדראפט:</b> השחקנים שנבחרו יצאו מהשוק, אז כל הציונים עולים ב־${fx(-AVAIL_LEVEL)}. הסדר לא משתנה` : "";
 }
