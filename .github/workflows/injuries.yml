@@ -1,7 +1,10 @@
-# Refreshes the injury badges from ESPN's injury list during the day and republishes the site.
+# Refreshes the injury badges from ESPN's injury list during the day, fills last night's final scores from ESPN's
+# scoreboard in the morning (scores_espn.py), and republishes the site.
 # Game logs come from stats.nba.com, which blocks GitHub's servers, so those stay on the daily
 # run on Roi's computer (run_daily.py). Times are UTC: 16:00 / 19:00 / 23:00 =
 # 18:00 / 21:00 / 01:00 Israel winter time (19:00 / 22:00 / 02:00 until the clocks change on Oct 25).
+# Scores: 03:30 / 05:00 / 08:00 UTC, after the early games, the late ones and any very late finish
+# (away from 06:00-07:00 UTC, when the computer's 09:00 run usually pushes).
 name: Injury update
 
 on:
@@ -9,6 +12,9 @@ on:
     - cron: "0 16 * * *"
     - cron: "0 19 * * *"
     - cron: "0 23 * * *"
+    - cron: "30 3 * * *"
+    - cron: "0 5 * * *"
+    - cron: "0 8 * * *"
   workflow_dispatch:
   push:
     paths:
@@ -42,11 +48,12 @@ jobs:
             git fetch -q origin main
             git reset -q --hard origin/main
             python injuries.py
+            python scores_espn.py
             python positions.py
             python build_dashboard.py
-            git add nba_2026_27 docs draft_dashboard.html
+            git add nba_2026_27 docs draft_dashboard.html nba_2025_26/schedule_2026_27.csv
             if git diff --cached --quiet; then echo "Nothing new"; exit 0; fi
-            git commit -q -m "Injury update"
+            git commit -q -m "Injury and score update"
             if git push -q origin HEAD:main; then echo "Published (attempt $attempt)"; exit 0; fi
             echo "Push lost a race, trying again"
             sleep $((attempt * 15))
