@@ -1,5 +1,5 @@
 # Refreshes the injury badges from ESPN's injury list during the day, fills last night's final scores from ESPN's
-# scoreboard in the morning (scores_espn.py), and republishes the site.
+# scoreboard in the morning (scores_espn.py) with their box scores (boxscores_espn.py), and republishes the site.
 # Game logs come from stats.nba.com, which blocks GitHub's servers, so those stay on the daily
 # run on Roi's computer (run_daily.py). Times are UTC: 16:00 / 19:00 / 23:00 =
 # 18:00 / 21:00 / 01:00 Israel winter time (19:00 / 22:00 / 02:00 until the clocks change on Oct 25).
@@ -49,6 +49,7 @@ jobs:
             git reset -q --hard origin/main
             python injuries.py
             python scores_espn.py
+            python boxscores_espn.py
             python positions.py
             python build_dashboard.py
             git add nba_2026_27 docs draft_dashboard.html nba_2025_26/schedule_2026_27.csv

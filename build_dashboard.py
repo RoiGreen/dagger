@@ -12,6 +12,8 @@ so rankings, the advanced tab, the team table and the importance panel all follo
 import base64
 import json
 import re
+import shutil
+import tempfile
 import unicodedata
 from pathlib import Path
 
@@ -89,6 +91,36 @@ HEADSHOTS = DATA / "headshots_hd"  # 120x120 WebP headshots from headshots.py
 # Head-to-head: the last N regular-season games against each opponent, 2025-26 and 2026-27
 VS_GAMES = 4
 GAME_LOG_FILES = [DATA / "player_game_logs_regular.csv", CURRENT_LOGS]
+# Box scores from ESPN (boxscores_espn.py, run in the cloud) for games the NBA logs do not have yet
+ESPN_LOGS = HERE / "nba_2026_27" / "game_logs_espn.csv"
+ESPN_STARTERS = HERE / "nba_2026_27" / "starters_espn.json"
+
+
+def with_espn_logs() -> str:
+    """Games in the ESPN file that the NBA logs lack are added to a merged copy of the preseason / regular-season
+    logs (in a temp folder), and the whole build reads that copy: box scores, last games, form, the 2026-27 lines.
+    The NBA logs themselves are not touched; once they have a game, its ESPN rows are ignored."""
+    global CURRENT_LOGS, PRESEASON_LOGS, GAME_LOG_FILES
+    if not ESPN_LOGS.exists() or ESPN_LOGS.stat().st_size < 200:
+        return "ESPN box scores: none waiting"
+    es = pd.read_csv(ESPN_LOGS, dtype={"GAME_ID": str})
+    es["GAME_ID"] = es["GAME_ID"].str.zfill(10)
+    tmp, added = Path(tempfile.mkdtemp()), 0
+    for name, tag in [("PRESEASON_LOGS", "1"), ("CURRENT_LOGS", "2")]:
+        path = globals()[name]
+        nba = pd.read_csv(path, dtype={"GAME_ID": str}) if path.exists() and path.stat().st_size > 200 else pd.DataFrame(columns=es.columns)
+        add = es[(es["GAME_ID"].str[2] == tag) & ~es["GAME_ID"].isin(set(nba["GAME_ID"].astype(str).str.zfill(10)))]
+        if add.empty:
+            continue
+        out = tmp / path.name
+        pd.concat([nba, add], ignore_index=True).to_csv(out, index=False, encoding="utf-8-sig")
+        adv = path.with_name(path.name.replace("game_logs_", "advanced_"))  # log_lines reads it next to the logs
+        if adv.exists():
+            shutil.copy(adv, tmp / adv.name)
+        globals()[name] = out
+        added += add["GAME_ID"].nunique()
+    GAME_LOG_FILES = [DATA / "player_game_logs_regular.csv", CURRENT_LOGS]
+    return f"ESPN box scores: {added} games added to the NBA logs"
 # the NBA's per-game advanced lines for the same games (USG%, pace, offensive rating, possessions)
 ADV_GAME_FILES = [DATA / "player_game_logs_advanced_regular.csv", HERE / "nba_2026_27" / "game_logs_advanced_regular.csv",
                   HERE / "nba_2026_27" / "game_logs_advanced_preseason.csv"]
@@ -286,6 +318,9 @@ def box_scores() -> dict:
     Starters first (in the box-score order), then the bench by minutes. Regular season: the last BOX_DAYS days."""
     out = {}
     starters = json.loads(STARTERS.read_text(encoding="utf-8")) if STARTERS.exists() else {}
+    if ESPN_STARTERS.exists():  # games boxed from ESPN: their starters, where the NBA list has none
+        for gid, five in json.loads(ESPN_STARTERS.read_text(encoding="utf-8")).items():
+            starters.setdefault(gid, five)
     for f, recent_only in [(PRESEASON_LOGS, False), (CURRENT_LOGS, True)]:
         if not f.exists() or f.stat().st_size < 200:
             continue
@@ -537,6 +572,7 @@ def season_players(roster: pd.DataFrame) -> list[dict]:
 
 
 def main() -> None:
+    print(with_espn_logs())
     current = read_base(DATA / "players_base_pergame_regular.csv")
     roster = pd.read_csv(DATA / "player_index_2026_27.csv").set_index("PERSON_ID")
 
