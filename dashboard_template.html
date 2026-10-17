@@ -1218,7 +1218,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
   #viewBoard th, #viewBoard td { padding: 7px 7px; font-size: .84rem; white-space: nowrap; }
   #viewBoard thead th { font-size: .74rem; }
   /* the stat-rank column (sorting by a stat) gives way on a phone, so the pinned columns stay two */
-  #viewBoard td.rank:has(+ td.rank), #viewBoard th.nosort:has(+ th[data-k="rank"]) { display: none; }
+  #viewBoard td.rank + td.rank, #viewBoard th.nosort + th[data-k="rank"] { display: none; }
   #viewBoard td.rank, #viewBoard th[data-k="rank"], #viewBoard thead th:first-child { position: sticky; right: 0; z-index: 2;
     width: 34px; min-width: 34px; max-width: 34px; padding-inline: 2px; background: var(--surface); }
   #viewBoard td.name, #viewBoard th[data-k="name"] { position: sticky; right: 34px; z-index: 2; background: var(--surface);
@@ -1265,9 +1265,6 @@ table.cmpt td.lbl { min-width: 5.5em; }
   .gmodal { z-index: 100; }
   .ghead { padding-inline-start: 56px; }
   .phead { padding-inline-start: 12px; }
-  #viewAdv .tbl-wrap { max-height: none; overflow-x: auto; overflow-y: visible; overscroll-behavior-x: contain; }
-  #viewAdv td.name, #viewAdv th[data-ak="name"] { position: sticky; right: 0; z-index: 1; background: var(--surface); }
-  #viewAdv td.name { max-width: 11em; }
   .mupicks .mwho { overflow: hidden; }
   .mupicks .mline { flex-wrap: wrap; row-gap: 0; }
   .mupicks .mline .mdays { white-space: normal; margin-inline-start: 0; flex-basis: 100%; }
@@ -1283,6 +1280,35 @@ table.cmpt td.lbl { min-width: 5.5em; }
   .who .signout { padding: 4px 8px; font-size: .74rem; }
   #viewBoard .legend > span:has(.rk), #viewBoard .legend > span:has(.inj) { display: none; }
   #viewBoard .legend { gap: 4px 12px; font-size: .8rem; }
+}
+
+/* phone: the advanced tables like the player board: scroll sideways, header on top, rank + player (or team) pinned on the right */
+@media (max-width: 700px) {
+  #viewAdv .tbl-wrap { max-height: calc(100dvh - 96px); overflow: auto; -webkit-overflow-scrolling: touch; }
+  #viewAdv th, #viewAdv td { padding: 7px 7px; font-size: .84rem; white-space: nowrap; }
+  #viewAdv thead th { font-size: .74rem; }
+  #viewAdv td.rank + td.rank, #viewAdv th.nosort + th[data-ak="rank"] { display: none; }
+  #viewAdv td.rank, #viewAdv th[data-ak="rank"], #viewAdv thead th:first-child { position: sticky; right: 0; z-index: 2; width: 34px; min-width: 34px; max-width: 34px; padding-inline: 2px; background: var(--surface); }
+  #viewAdv td.name, #viewAdv th[data-ak="name"] { position: sticky; right: 34px; z-index: 2; background: var(--surface);
+    min-width: 150px; max-width: 160px; box-shadow: -6px 0 8px -6px rgba(0, 0, 0, .25); }
+  #viewAdv thead th[data-ak="rank"], #viewAdv thead th[data-ak="name"], #viewAdv thead th:first-child { z-index: 4; background: var(--sunk); }
+  #viewAdv thead th:first-child + th { position: sticky; right: 34px; z-index: 4; background: var(--sunk); }
+  #viewAdv td.name .nc { gap: 6px; }
+  #viewAdv td.name .avatar { width: 28px; height: 28px; }
+  #viewAdv td.name .nmeta { min-width: 0; overflow: hidden; }
+  #viewAdv td.name .nline { flex-wrap: wrap; white-space: nowrap; gap: 0 5px; min-width: 0; }
+  #viewAdv td.name .nline .n { flex-basis: 100%; min-width: 0; font-size: .88rem; overflow: hidden; text-overflow: ellipsis;
+    direction: ltr; unicode-bidi: isolate; text-align: right; }
+  #viewAdv td.name .nline .t { font-size: .7rem; overflow: hidden; text-overflow: ellipsis; min-width: 0; }
+  #viewAdv td.name .nline .injpill, #viewAdv td.name .nline .inj, #viewAdv td.name .nline .rk { font-size: .62rem; padding: 0 4px; }
+  #viewAdv td.name .sched { font-size: .68rem; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+  #viewAdv td.name.tteam { min-width: 84px; max-width: 96px; }
+  #viewAdv td.name.tteam .t { display: none; }  /* the logo and the code (CHI); the full name is on the desktop */
+}
+
+/* phone: the rank column's title ("USG% Rank") wraps inside its narrow column */
+@media (max-width: 700px) {
+  #viewBoard thead th:first-child, #viewAdv thead th:first-child { white-space: normal; font-size: .6rem; line-height: 1.1; overflow-wrap: anywhere; }
 }
 </style>
 
