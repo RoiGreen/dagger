@@ -4924,8 +4924,9 @@ async function connectSite() {
     $("saveState").textContent = "הבחירות נשמרות בחשבון שלך";
     if (!same || !cached) { syncControls(); compute(); render(); }
     if (!cached) done();
-    logVisit(user.id);
-    countEntry();
+    // A visit counts only when the page is on screen: a browser that reopens or preloads the site in a background
+    // tab is not someone visiting (when that tab is shown later, the visibilitychange listeners count it then)
+    if (document.visibilityState === "visible") { logVisit(user.id); countEntry(); }
     // the statistics button: only the site owner's account gets rows back (checked on the server)
     sb.rpc("admin_stats").then(({ data: rows, error: e4 }) => { $("statsBtn").hidden = !!e4 || !rows?.length; });
   }
