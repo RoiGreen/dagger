@@ -1,13 +1,14 @@
 """
-Box scores from ESPN for games that have ended but are not in the NBA game logs yet, into
+Box scores from ESPN for games that have ended but are not in the NBA game logs yet, or whose NBA lines do not add
+up to the final score (the NBA sometimes saves a game with its last minutes missing), into
 ./nba_2026_27/game_logs_espn.csv (same columns as the NBA logs) and ./nba_2026_27/starters_espn.json.
 
     python boxscores_espn.py
 
 Run by the GitHub Actions workflow after scores_espn.py, so last night's box scores, the player card's last games and
 the matchup's "so far" reach the site even when Roi's computer is off (stats.nba.com blocks GitHub's servers; ESPN
-does not). build_dashboard.py uses these rows only for games the NBA logs do not have, so once the daily run on this
-computer brings the official logs, they take over. ESPN players are matched to NBA player ids by name and team;
+does not). build_dashboard.py uses these rows only for games the NBA logs do not have or have short of the final
+score, so once the NBA has a full game, its own lines take over. ESPN players are matched to NBA player ids by name and team;
 a player that cannot be matched is left out (and named in the output).
 """
 
@@ -110,16 +111,29 @@ def game_rows(gid: str, sched_row, event_id: str, players) -> tuple[list[dict], 
     return rows, starters, missed
 
 
+def complete_games(sched: pd.DataFrame) -> set[str]:
+    """Game ids whose NBA lines add up to the final score on both sides."""
+    finals = {str(g).zfill(10): {h: int(hs), a: int(as_)} for g, h, a, hs, as_, st in
+              zip(sched["gameId"], sched["homeTeam_teamTricode"], sched["awayTeam_teamTricode"], sched["homeTeam_score"],
+                  sched["awayTeam_score"], sched["gameStatus"]) if st == "3" and hs and as_}
+    out = set()
+    for f in NBA_LOGS:
+        if f.exists() and f.stat().st_size > 200:
+            g = pd.read_csv(f, usecols=["GAME_ID", "TEAM_ABBREVIATION", "PTS"], dtype={"GAME_ID": str})
+            g["GAME_ID"] = g["GAME_ID"].str.zfill(10)
+            for gid, pts in g.groupby("GAME_ID"):
+                if gid not in finals or pts.groupby("TEAM_ABBREVIATION")["PTS"].sum().to_dict() == finals[gid]:
+                    out.add(gid)
+    return out
+
+
 def fill_boxscores() -> str:
     sched = pd.read_csv(SCHEDULE, dtype=str, keep_default_na=False, encoding="utf-8-sig")
     now = datetime.now(timezone.utc)
     tip = pd.to_datetime(sched["gameDateTimeUTC"], utc=True, errors="coerce")
-    logged = set()
-    for f in NBA_LOGS:
-        if f.exists() and f.stat().st_size > 200:
-            logged |= set(pd.read_csv(f, usecols=["GAME_ID"], dtype=str)["GAME_ID"].str.zfill(10))
     final = sched[(sched["gameStatus"] == "3") & (tip > now - LOOKBACK)]
-    missing = {str(g).zfill(10): i for g, i in zip(final["gameId"], final.index) if str(g).zfill(10) not in logged}
+    full = complete_games(sched)
+    missing = {str(g).zfill(10): i for g, i in zip(final["gameId"], final.index) if str(g).zfill(10) not in full}
     # rows kept from earlier runs: only games still missing from the NBA logs
     old = pd.read_csv(OUT, dtype={"GAME_ID": str}) if OUT.exists() and OUT.stat().st_size > 0 else pd.DataFrame(columns=COLS)
     old = old[old["GAME_ID"].isin(missing)]
@@ -149,7 +163,7 @@ def fill_boxscores() -> str:
     out = pd.concat([old, pd.DataFrame(new_rows, columns=COLS)], ignore_index=True) if new_rows else old
     out[COLS].to_csv(OUT, index=False, encoding="utf-8-sig")
     OUT_STARTERS.write_text(json.dumps(starters, ensure_ascii=False), encoding="utf-8")
-    msg = f"Box scores (ESPN): {done} new, {out['GAME_ID'].nunique()} games waiting for the NBA logs"
+    msg = f"Box scores (ESPN): {done} new, {out['GAME_ID'].nunique()} games missing or short in the NBA logs"
     return msg + (f"; not matched: {', '.join(missed)}" if missed else "")
 
 

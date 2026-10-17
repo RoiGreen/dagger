@@ -97,21 +97,33 @@ ESPN_STARTERS = HERE / "nba_2026_27" / "starters_espn.json"
 
 
 def with_espn_logs() -> str:
-    """Games in the ESPN file that the NBA logs lack are added to a merged copy of the preseason / regular-season
-    logs (in a temp folder), and the whole build reads that copy: box scores, last games, form, the 2026-27 lines.
-    The NBA logs themselves are not touched; once they have a game, its ESPN rows are ignored."""
+    """Games in the ESPN file that the NBA logs lack, or have short of the final score while ESPN's lines add up to it,
+    go into a merged copy of the preseason / regular-season logs (in a temp folder), and the whole build reads that
+    copy: box scores, last games, form, the 2026-27 lines. The NBA logs themselves are not touched; once they have a
+    full game, its ESPN rows are ignored."""
     global CURRENT_LOGS, PRESEASON_LOGS, GAME_LOG_FILES
     if not ESPN_LOGS.exists() or ESPN_LOGS.stat().st_size < 200:
         return "ESPN box scores: none waiting"
     es = pd.read_csv(ESPN_LOGS, dtype={"GAME_ID": str})
     es["GAME_ID"] = es["GAME_ID"].str.zfill(10)
+    sch = pd.read_csv(DATA / "schedule_2026_27.csv", low_memory=False, dtype={"gameId": str},
+                      usecols=["gameId", "homeTeam_teamTricode", "awayTeam_teamTricode", "gameStatus", "homeTeam_score", "awayTeam_score"])
+    finals = {str(r.gameId).zfill(10): {r.homeTeam_teamTricode: int(r.homeTeam_score), r.awayTeam_teamTricode: int(r.awayTeam_score)}
+              for r in sch.itertuples() if r.gameStatus == 3}
+    adds_up = lambda df: {g: grp.groupby("TEAM_ABBREVIATION")["PTS"].sum().to_dict() == finals.get(g)  # noqa: E731
+                          for g, grp in df.groupby("GAME_ID")}
+    es_ok = adds_up(es)
     tmp, added = Path(tempfile.mkdtemp()), 0
     for name, tag in [("PRESEASON_LOGS", "1"), ("CURRENT_LOGS", "2")]:
         path = globals()[name]
         nba = pd.read_csv(path, dtype={"GAME_ID": str}) if path.exists() and path.stat().st_size > 200 else pd.DataFrame(columns=es.columns)
-        add = es[(es["GAME_ID"].str[2] == tag) & ~es["GAME_ID"].isin(set(nba["GAME_ID"].astype(str).str.zfill(10)))]
-        if add.empty:
+        nba["GAME_ID"] = nba["GAME_ID"].astype(str).str.zfill(10)
+        nba_ok = adds_up(nba)
+        use = {g for g in es["GAME_ID"].unique() if g[2] == tag and (g not in nba_ok or (not nba_ok[g] and es_ok[g]))}
+        if not use:
             continue
+        add = es[es["GAME_ID"].isin(use)]
+        nba = nba[~nba["GAME_ID"].isin(use)]  # a short NBA game gives way to ESPN's full one
         out = tmp / path.name
         pd.concat([nba, add], ignore_index=True).to_csv(out, index=False, encoding="utf-8-sig")
         adv = path.with_name(path.name.replace("game_logs_", "advanced_"))  # log_lines reads it next to the logs
@@ -120,7 +132,7 @@ def with_espn_logs() -> str:
         globals()[name] = out
         added += add["GAME_ID"].nunique()
     GAME_LOG_FILES = [DATA / "player_game_logs_regular.csv", CURRENT_LOGS]
-    return f"ESPN box scores: {added} games added to the NBA logs"
+    return f"ESPN box scores: {added} games used (missing or short in the NBA logs)"
 # the NBA's per-game advanced lines for the same games (USG%, pace, offensive rating, possessions)
 ADV_GAME_FILES = [DATA / "player_game_logs_advanced_regular.csv", HERE / "nba_2026_27" / "game_logs_advanced_regular.csv",
                   HERE / "nba_2026_27" / "game_logs_advanced_preseason.csv"]
@@ -320,7 +332,8 @@ def box_scores() -> dict:
     starters = json.loads(STARTERS.read_text(encoding="utf-8")) if STARTERS.exists() else {}
     if ESPN_STARTERS.exists():  # games boxed from ESPN: their starters, where the NBA list has none
         for gid, five in json.loads(ESPN_STARTERS.read_text(encoding="utf-8")).items():
-            starters.setdefault(gid, five)
+            if five:
+                starters.setdefault(gid, five)
     for f, recent_only in [(PRESEASON_LOGS, False), (CURRENT_LOGS, True)]:
         if not f.exists() or f.stat().st_size < 200:
             continue

@@ -52,6 +52,8 @@ def main() -> None:
     log("start")
     run("sync", ["git", "pull", "-q", "--rebase", "--autostash"])  # the cloud refreshes injuries during the day
     run("pull data", [PY, "daily_update.py"])
+    # ESPN's box score for a game the NBA saved short of its final score (a failure here never stops the update)
+    subprocess.run([PY, "boxscores_espn.py"], cwd=HERE, env=ENV, creationflags=NO_WINDOW)
     run("build", [PY, "build_dashboard.py"])
     # the schedule (results), rosters, new photos and logos go up too: the cloud update rebuilds the site from them
     subprocess.run(["git", "add", "-A", "--", "nba_2026_27", "docs", "draft_dashboard.html", "nba_2025_26/schedule_2026_27.csv",
