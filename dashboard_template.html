@@ -1550,8 +1550,7 @@ table.box.titab tr.punted td { opacity: .4; }
           <details class="multi" id="seasonPick">
             <summary id="seasonSummary">2025-26</summary>
             <div class="seasonlist" role="group" aria-label="העונות שמהן מחושבים כל הנתונים">
-              <button class="chip" type="button" data-avs="4" aria-pressed="false" hidden>2026-27</button>
-              <button class="chip" type="button" data-avs="3" aria-pressed="false">2026-27 (Pre Season)</button>
+              <button class="chip" type="button" data-avs="4" aria-pressed="false">2026-27</button>
               <button class="chip" type="button" data-avs="2" aria-pressed="true">2025-26</button>
               <button class="chip" type="button" data-avs="1" aria-pressed="false">2024-25</button>
               <button class="chip" type="button" data-avs="0" aria-pressed="false">2023-24</button>
@@ -1902,14 +1901,16 @@ const regStarted = () => !!D.formEnd && GAMES.some((g) => !g.pre && g.d <= D.for
 const liveSeason = () => (regStarted() ? D.current : D.preseason);
 const formAllowed = () => { const ys = chosenSeasons(); return ys.length === 1 && ys[0] === liveSeason() && !!(regStarted() ? D.formEnd : D.formEndPre); };
 const formFromPre = () => !regStarted();
+// 2026-27 chosen on its own before its first game: the season's numbers are all still zero
+const seasonNotStarted = () => { const ys = chosenSeasons(); return ys.length > 0 && ys.every((y) => y === D.current) && !(D.curMaxGp > 0); };
 function applySeasons() {
-  const ys = chosenSeasons();
+  const ys = chosenSeasons(), noneYet = seasonNotStarted();
   for (const p of players) {
     p.noWin = false;
     if (p.rookie && !ys.some((y) => p.seasons?.[y]?.gp >= seasonMinGames(y))) {
       p.s = p.proj; p.gp = p.projGp; p.gpTotal = p.projGp; p.adv = null; p.team25 = null; p.srcSeason = null;
       // a games minimum applies to his projected games too (my team and favorites stay)
-      setLines(p); p.has = !st.minGp || p.projGp >= st.minGp || mine.has(p.id) || fav.has(p.id); continue;
+      setLines(p); p.has = !noneYet && (!st.minGp || p.projGp >= st.minGp || mine.has(p.id) || fav.has(p.id)); continue;
     }
     // A season counts only when he reached the games minimum in it (the minimum is per season)
     // The preseason is ~5 games a team, so one game is enough there
@@ -1925,7 +1926,7 @@ function applySeasons() {
     // Missed the chosen season(s) through injury (the "24-25" badge): he still shows, with his latest earlier
     // full regular season, so a rostered star does not vanish from the tables. With a games minimum set, the
     // minimum decides, except for my team and favorites (they stay, as in the recent-form view)
-    if (!p.has && p.team26 && (!st.minGp || mine.has(p.id) || fav.has(p.id))) {
+    if (!noneYet && !p.has && p.team26 && (!st.minGp || mine.has(p.id) || fav.has(p.id))) {
       const real = Object.keys(p.seasons).map(Number).filter((y) => y !== D.preseason && p.seasons[y].gp > 0).sort();
       const inChosen = real.filter((y) => ys.includes(y));
       const back = real.filter((y) => y < Math.min(...ys)), fwd = real.filter((y) => y > Math.max(...ys));
@@ -2946,7 +2947,9 @@ function scheduleLine(p) {
   return `<span class="sched" title="משחקים השבוע (שני עד ראשון): ${e.played} שוחקו מתוך ${e.total}">${when} (${e.played}/${e.total})</span>`;
 }
 
-const EMPTY_ROW = (n) => `<tr><td colspan="${n}" class="name" style="padding:24px;color:var(--muted)">אין שחקנים שמתאימים לסינון. נסה להוריד את מינימום המשחקים או לנקות את החיפוש.</td></tr>`;
+const EMPTY_ROW = (n) => seasonNotStarted()
+  ? `<tr><td colspan="${n}" class="name" style="padding:24px;color:var(--muted)">עונת 26-27 מתחילה ב־20.10. הנתונים יופיעו אחרי המשחק הראשון</td></tr>`
+  : `<tr><td colspan="${n}" class="name" style="padding:24px;color:var(--muted)">אין שחקנים שמתאימים לסינון. נסה להוריד את מינימום המשחקים או לנקות את החיפוש.</td></tr>`;
 
 // One small dropdown per player with three ticks: favorites, taken, mine. Taken and mine exclude each other.
 let openActId = null;  // keep a player's menu open while ticking several boxes
@@ -6259,7 +6262,8 @@ $("showSeg").addEventListener("click", (e) => {
 });
 for (const id of ["onlyMoved", "noHurt"]) $(id).addEventListener("change", (e) => { st[id] = e.target.checked; update(false); });
 
-if (D.seasons.includes(D.current)) document.querySelector('[data-avs="4"]').hidden = false;
+st.availSeasons = st.availSeasons.filter((i) => SEASONS[i] !== D.preseason);  // the preseason is no longer a choice
+if (!st.availSeasons.length) st.availSeasons = [SEASONS.indexOf(2025)];
 st.availSeasons = st.availSeasons.filter((i) => SEASONS[i] != null);
 if (!st.availSeasons.length) st.availSeasons = [2];
 

@@ -602,7 +602,9 @@ def main() -> None:
         if p.get("rookie") and p["id"] in current:
             p["seasons"][str(CURRENT)] = current[p["id"]]["line"]
     cur_max_gp = max((ln["line"]["gp"] for ln in current.values()), default=0)
-    seasons = AVAIL_SEASONS + [PRESEASON] + ([CURRENT] if current else [])  # 2026-27 shows up after its first game
+    # 2026-27 is always offered (empty until its first game); the preseason stays in the data (recent form, matchup
+    # projections) but is no longer a season to choose
+    seasons = AVAIL_SEASONS + [PRESEASON] + [CURRENT]
     # Free agents are left out; once one signs, the daily roster refresh gives him a team
     free_agents = [p for p in players if not p.get("team26") and not p.get("rookie")]
     players = [p for p in players if p.get("team26") or p.get("rookie")]
