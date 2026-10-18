@@ -1901,18 +1901,18 @@ const regStarted = () => !!D.formEnd && GAMES.some((g) => !g.pre && g.d <= D.for
 const liveSeason = () => (regStarted() ? D.current : D.preseason);
 const formAllowed = () => { const ys = chosenSeasons(); return ys.length === 1 && ys[0] === liveSeason() && !!(regStarted() ? D.formEnd : D.formEndPre); };
 const formFromPre = () => !regStarted();
-// 2026-27 chosen on its own: only its own games count (no earlier season, no rookie projection, no prior-season prior)
+// Only the chosen seasons count: no earlier-season fallback, no rookie projection, no prior-season shrink target
 const onlyCurrent = () => { const ys = chosenSeasons(); return ys.length > 0 && ys.every((y) => y === D.current); };
 // ...and before its first game the season's numbers are all still zero
 const seasonNotStarted = () => onlyCurrent() && !(D.curMaxGp > 0);
 function applySeasons() {
-  const ys = chosenSeasons(), noneYet = onlyCurrent();
+  const ys = chosenSeasons();
   for (const p of players) {
     p.noWin = false;
     if (p.rookie && !ys.some((y) => p.seasons?.[y]?.gp >= seasonMinGames(y))) {
       p.s = p.proj; p.gp = p.projGp; p.gpTotal = p.projGp; p.adv = null; p.team25 = null; p.srcSeason = null;
       // a games minimum applies to his projected games too (my team and favorites stay)
-      setLines(p); p.has = !noneYet && (!st.minGp || p.projGp >= st.minGp || mine.has(p.id) || fav.has(p.id)); continue;
+      setLines(p); p.has = false; continue;  // no games in the chosen seasons: off the board
     }
     // A season counts only when he reached the games minimum in it (the minimum is per season)
     // The preseason is ~5 games a team, so one game is enough there
@@ -1925,18 +1925,6 @@ function applySeasons() {
     // No qualifying season: off the board, but keep numbers for his favorites / my-team entries
     p.has = chosen.length > 0 && !short;
     let lines = p.has ? chosen : Object.keys(p.seasons).map(Number).sort().map((y) => ({ y, ...p.seasons[y] }));
-    // Missed the chosen season(s) through injury (the "24-25" badge): he still shows, with his latest earlier
-    // full regular season, so a rostered star does not vanish from the tables. With a games minimum set, the
-    // minimum decides, except for my team and favorites (they stay, as in the recent-form view)
-    if (!noneYet && !p.has && p.team26 && (!st.minGp || mine.has(p.id) || fav.has(p.id))) {
-      const real = Object.keys(p.seasons).map(Number).filter((y) => y !== D.preseason && p.seasons[y].gp > 0).sort();
-      const inChosen = real.filter((y) => ys.includes(y));
-      const back = real.filter((y) => y < Math.min(...ys)), fwd = real.filter((y) => y > Math.max(...ys));
-      // the chosen seasons he did play; else his nearest season; else (only preseason games) the preseason
-      const use = inChosen.length ? inChosen : back.length ? [back[back.length - 1]] : fwd.length ? [fwd[0]]
-        : p.seasons[D.preseason]?.gp > 0 ? [D.preseason] : [];
-      if (use.length) { lines = use.map((y) => ({ y, ...p.seasons[y] })); p.has = true; }
-    }
     const games = lines.reduce((a, l) => a + l.gp, 0);
     p.s = S.map((_, i) => lines.reduce((a, l) => a + l.s[i] * l.gp, 0) / games);
     p.gp = Math.round(games / lines.length);  // games per season he played
@@ -2177,7 +2165,7 @@ function sampleWeight(p) {
   return Math.min(1, (g / (g + k)) / (full / (full + k)));
 }
 // The season before the chosen ones: a player with 40+ games in it is "proven"
-const priorSeason = () => { if (onlyCurrent()) return null; const ys = chosenSeasons().filter((y) => y !== D.preseason); return ys.length ? Math.min(...ys) - 1 : null; };
+const priorSeason = () => null;  // only the chosen seasons count
 const sdOf = (xs) => meanStd(xs)[1];
 let REPL_LEVEL = -1.5;
 // What the tables show: the score against the best players still on the market right now (the average of the
