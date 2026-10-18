@@ -4067,6 +4067,8 @@ const PCT_COV = { FG_PCT: "covFG", FT_PCT: "covFT", FG3_PCT: "covF3" };
 const LINEUP = [["PG", ["PG"]], ["SG", ["SG"]], ["G", ["PG", "SG"]], ["SF", ["SF"]], ["PF", ["PF"]], ["F", ["SF", "PF"]],
   ["C", ["C"]], ["C", ["C"]], ["UTIL", null], ["UTIL", null]];
 const IL_SLOTS = 2;
+// who can go to IL: any player on the injury list, OUT or GTD (IL+ in the league apps takes day-to-day players too)
+const ilOk = (p) => !!p.hurt;
 // The best lineup of one day: the most valuable players first, each one placed if the slots can still hold everyone
 // placed so far (moving earlier players between slots when needed). Greedy is exact here (a transversal matroid).
 const SLOT_CAP = LINEUP.reduce((m, [n]) => ({ ...m, [n]: (m[n] || 0) + 1 }), {});
@@ -4538,7 +4540,7 @@ function renderMatchup() {
     }
     const active = mineP.filter((p) => !ilA.has(p.id));
     const opts = [...(active.length < st.roster ? [["|", "יש מקום פנוי בסגל"]] : []),
-      ...active.filter((p) => p.hurt?.s === "OUT" && ilA.size < IL_SLOTS).map((p) => [`${p.id}|il`, `${p.name} ל־IL`]),
+      ...active.filter((p) => ilOk(p) && ilA.size < IL_SLOTS).map((p) => [`${p.id}|il`, `${p.name} ל־IL`]),
       ...active.map((p) => [`${p.id}|drop`, `משחרר: ${p.name}`])];
     const cur = `${x.drop?.id ?? ""}|${x.kind ?? ""}`;
     const dropSel = `<select class="mdropsel" data-mudropsel="${x0.X.id}" aria-label="את מי לשחרר">${opts.map(([v, l]) => `<option value="${v}"${v === cur ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
@@ -4668,7 +4670,7 @@ function renderMatchup() {
       const slotSel = `<select class="mslot${manual ? " set" : ""}" data-muslot="${t}|${p.id}" aria-label="עמדה בהרכב" title="איפה הוא משובץ בהרכב">
         ${[...can, "BN"].filter((n) => !full(n)).map((n) => `<option value="${n}"${n === cur ? " selected" : ""}>${n}</option>`).join("")}</select>`;
       const acts = onIL ? `<button type="button" class="mact" data-muback="${t}|${p.id}">חזרה מ־IL</button>`
-        : `${p.hurt?.s === "OUT" && il.size < IL_SLOTS ? `<button type="button" class="mact" data-muil="${t}|${p.id}">IL</button>` : ""}<button type="button" class="mact" data-mudrop="${t}|${p.id}" title="שחרור">שחרר</button>`;
+        : `${ilOk(p) && il.size < IL_SLOTS ? `<button type="button" class="mact" data-muil="${t}|${p.id}">IL</button>` : ""}<button type="button" class="mact" data-mudrop="${t}|${p.id}" title="שחרור">שחרר</button>`;
       const role = onIL ? "ilrow" : cur === "BN" ? "benchrow" : "startrow";
       return `<tr class="${role}"><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span></span><small class="ppos">${esc(p.pos || "")}</small>${onIL ? "" : (() => { const c = T.cell.get(`${p.id}|${d}`);
         return c?.out ? `<small class="pday out">OUT</small>` : c ? `<small class="pday">${esc(c.gm ? `${c.gm.g.h === p.team26 ? "" : "@"}${c.gm.opp}` : c.r ? `${c.r[2] ? "" : "@"}${c.r[1]}` : "")}</small>` : `<small class="pday none">אין משחק</small>`; })()}${p.hurt ? injuryPill(p) : ""}</td>
