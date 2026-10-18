@@ -3493,7 +3493,7 @@ function renderDraftAdvice() {
 const CMP_MODES = {
   players: { a: "שחקן א", b: "שחקן ב", max: 15 },
   teams: { a: "קבוצה א", b: "קבוצה ב", team: true },
-  trade: { a: "אני נותן", b: "אני מקבל", max: 15 },
+  trade: { a: "אני נותן", b: "אני מקבל", max: 15, out: { a: "לפני הטרייד", b: "אחרי הטרייד" } },  // out: the sides' names in the comparison
   pickup: { a: "מוריד", b: "מוסיף", max: 15, pickup: true },
   league: { league: true },
 };
@@ -3883,7 +3883,7 @@ function renderCmp() {
   const avg = teamish && c.agg === "avg";
   const A = cmpTotals(LA, avg), B = cmpTotals(LB, avg);
   const name = (side, L) => M.pickup ? `${teamName(c.pt)} ${side === "a" ? "Before" : "After"}`
-    : M.team ? teamName(side === "a" ? c.ta : c.tb) : L.length === 1 ? L[0].name : c.mode === "players" ? (L.length === 2 ? `${L[0].name}, ${L[1].name}` : `${L[0].name}, ${L[1].name} ועוד ${L.length - 2}`) : M[side];
+    : M.team ? teamName(side === "a" ? c.ta : c.tb) : L.length === 1 ? L[0].name : c.mode === "players" ? (L.length === 2 ? `${L[0].name}, ${L[1].name}` : `${L[0].name}, ${L[1].name} ועוד ${L.length - 2}`) : M.out?.[side] ?? M[side];
   const nA = name("a", LA), nB = name("b", LB);
   const per = st.mode === "g" ? "למשחק" : "ל־36 דקות";
   const several = LA.length > 1 || LB.length > 1;
