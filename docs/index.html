@@ -1434,6 +1434,20 @@ table.box.titab tr.punted td { opacity: .4; }
   .vsboard .wh { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; unicode-bidi: plaintext; }  /* a long English name is cut at its end */
   table.cmpt th.ha, table.cmpt th.hb { unicode-bidi: plaintext; }
 }
+
+/* phone header, signed in: "סטטיסטיקות" beside the theme button, "התנתקות" small under them; the title keeps its room */
+@media (max-width: 700px) {
+  .who { display: grid; grid-template-columns: auto auto; justify-content: end; align-items: center; gap: 4px 6px; flex: none; }
+  .who .viewer { display: contents; }
+  .who .viewer img { display: none !important; }
+  .who #statsBtn { order: 1; font-size: .68rem; padding: 4px 6px; }
+  .who > .iconbtn { order: 2; width: 32px; height: 32px; }
+  .jumbo-in { padding-inline: 10px; gap: 8px; }
+  .who #signOutBtn { order: 3; grid-column: 1 / -1; text-align: center; padding: 2px 6px; font-size: .66rem; }
+  .who > .iconbtn { grid-row: auto; grid-column: auto; }
+  .brand { flex: 1 1 auto; min-width: 0; }
+  header.top h1 { font-size: 1rem; }
+}
 </style></head><body>
 
 <script>
