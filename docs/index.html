@@ -1401,6 +1401,21 @@ table.box.titab tr.punted td { opacity: .4; }
   #viewBoard th, #viewBoard td { padding: 6px 5px; font-size: .8rem; }
   #viewBoard td.val { font-size: .86rem; }
 }
+
+/* phone: a game's box score opens at its start (the player column on the left, names in full), faces in one column */
+@media (max-width: 700px) {
+  .gcard .gbox .tbl-wrap { direction: ltr; overscroll-behavior-x: contain; }
+  .gcard .gbox table.box td.pn, .gcard .gbox table.box th:first-child { position: sticky; left: 0; z-index: 2; background: var(--surface);
+    min-width: 9.8em; width: 9.8em; max-width: 9.8em; text-align: left; white-space: normal; padding-inline: 6px; box-shadow: 6px 0 8px -6px rgba(0, 0, 0, .25); }
+  .gcard .gbox table.box thead th:first-child { z-index: 3; background: var(--sunk); }
+  .gcard .gbox table.box td.pn .pw { display: grid; grid-template-columns: 26px minmax(0, 1fr); align-items: center; gap: 6px; text-align: left; }
+  .gcard .gbox table.box td.pn .bimg { width: 26px; height: 26px; }
+  .gcard .gbox table.box td.pn .pw > :not(.bimg) { grid-column: 2; }   /* name and position beside the face */
+  .gcard .gbox table.box td.pn .pw > span:first-child:not(.bimg) { grid-column: 1 / -1; }  /* a row with no face (totals) */
+  .gcard .gbox table.box td.pn .pw > small { font-size: .66rem; margin-top: -4px; }
+  .gcard .gbox table.box td.pn .pw > span { line-height: 1.15; font-size: .82rem; overflow-wrap: anywhere; }
+  .gcard .gbox table.box tr.star td.pn { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
+}
 </style></head><body>
 
 <script>
