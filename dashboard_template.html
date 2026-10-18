@@ -1132,6 +1132,21 @@ table.box.murt th.sorted .rsort { color: var(--accent); }
   .cmpsheet .cs-none { color: var(--muted); text-align: center; }
   body.cssheet { overflow: hidden; }
 }
+
+/* trade: the effect on each team */
+.tigrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
+.ticard { border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: grid; gap: 8px; background: var(--surface-2); }
+.ticard .tih { display: flex; align-items: baseline; justify-content: space-between; }
+.ticard .tih b { font-size: 1.05rem; } .ticard .tih small { color: var(--muted); }
+.ticard .tisum { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .9rem; }
+.ticard .tisum b { font-family: var(--font-num); direction: ltr; unicode-bidi: isolate; }
+.ticard .tisum i { font-style: normal; font-family: var(--font-num); font-weight: 800; direction: ltr; unicode-bidi: isolate; }
+table.box.titab { width: 100%; direction: rtl; }
+table.box.titab th, table.box.titab td { text-align: center; white-space: nowrap; }
+table.box.titab td.lbl { font-family: var(--font-num); font-weight: 800; }
+table.box.titab .up, .ticard .up { color: var(--pos); font-weight: 800; }
+table.box.titab .dn, .ticard .dn { color: var(--neg); font-weight: 800; }
+table.box.titab tr.punted td { opacity: .4; }
 /* ================= Phone (up to 700px wide) =================
    Everything for phones lives in these blocks. A wider screen never reads them, so the desktop stays exactly as it is. */
 @media (max-width: 700px) {
@@ -3956,13 +3971,68 @@ function renderCmp() {
         ${chart === "fp" ? cmpBars(fpParts().map((x) => ({ k: x.k, l: x.l, tip: x.tip })), A, B, "fp") : cmpBars(catRows, A, B, chart)}
       </div>
     </section>
-    <section class="cmpsec">
+    ${c.mode === "trade" ? tradeImpact() : `<section class="cmpsec">
       <h3>נתונים מתקדמים</h3>
       <div class="cmpgrid">
         <div class="tbl-wrap short">${adv.html}</div>
         ${cmpBars(advRows, A, B, "val")}
       </div>
-    </section>`;
+    </section>`}`;
+}
+// A trade, team by team: each team's categories before and after (per-game totals of the active roster), its place in
+// the league in each one, and its league points (like "כל הליגה": first in a category = as many points as teams).
+// The giving team loses the players given (and the ones released to make room) and gets the ones received (and the
+// free agents added); the other team the other way round. Teams not in the trade stay as they are.
+function tradeImpact() {
+  const c = st.cmp, n = Math.max(st.teams, 1);
+  const ta = c.tta != null && c.tta !== "" && !isNaN(Number(c.tta)) ? Number(c.tta) : null;
+  const tb = c.ttb != null && c.ttb !== "" && !isNaN(Number(c.ttb)) ? Number(c.ttb) : null;
+  if (ta == null && tb == null) return "";
+  const give = cmpBase("a"), get = cmpBase("b"), dropped = tradeExtras("a"), added = tradeExtras("b");
+  const ids = (L) => new Set(L.map((p) => p.id));
+  const active = (t) => rosterOf(t).filter((p) => !ilOf(t).has(p.id));
+  const after = (t) => {
+    const out = t === ta ? new Set([...give.map((p) => p.id), ...(c.drops || []).map((d) => d.id)]) : ids(get);  // released or moved to IL to make room
+    const inn = t === ta ? [...get, ...added] : give;
+    const seen = new Set();
+    return [...active(t).filter((p) => !out.has(p.id)), ...inn].filter((p) => !seen.has(p.id) && seen.add(p.id));
+  };
+  const teamsNow = Array.from({ length: n }, (_, t) => ({ t, list: active(t) }));
+  const teamsAfter = teamsNow.map((x) => (x.t === ta || x.t === tb ? { t: x.t, list: after(x.t) } : x));
+  const score = (teams) => {
+    for (const x of teams) x.T = cmpTotals(x.list);
+    for (const ct of CATS) {
+      const sign = ct.k === "TOV" ? -1 : 1, val = (x) => (x.list.length ? sign * (x.T[ct.k] ?? 0) : -Infinity);
+      for (const x of teams) {
+        const better = teams.filter((y) => val(y) > val(x)).length, same = teams.filter((y) => val(y) === val(x)).length;
+        x[`r_${ct.k}`] = better + 1; x[`p_${ct.k}`] = n - better - (same - 1) / 2;
+      }
+    }
+    for (const x of teams) x.pts = CATS.filter((ct) => !st.punts.has(ct.k)).reduce((a, ct) => a + x[`p_${ct.k}`], 0);
+    return teams;
+  };
+  score(teamsNow); score(teamsAfter);
+  const num = (v) => (Number.isInteger(v) ? String(v) : v.toFixed(1));
+  const card = (t, who) => {
+    const B = teamsNow[t], A2 = teamsAfter[t];
+    const dP = A2.pts - B.pts, dZ = A2.T.Z - B.T.Z;
+    const rows = CATS.map((ct) => {
+      const v0 = B.T[ct.k] ?? 0, v1 = A2.T[ct.k] ?? 0, d = v1 - v0, good = ct.k === "TOV" ? d < 0 : d > 0;
+      const r0 = B[`r_${ct.k}`], r1 = A2[`r_${ct.k}`];
+      const f = catFmt(ct.k), tiny = Math.abs(d) < (ct.k.endsWith("_PCT") ? 0.0005 : 0.05);
+      return `<tr class="${st.punts.has(ct.k) ? "punted" : ""}"><td class="lbl">${ct.l}</td><td>${f(v0)}</td><td><b>${f(v1)}</b></td>
+        <td class="${tiny ? "" : good ? "up" : "dn"}">${tiny ? "–" : `${d > 0 ? "+" : "−"}${f(Math.abs(d))}`}</td>
+        <td class="${r1 < r0 ? "up" : r1 > r0 ? "dn" : ""}">#${r0}${r1 !== r0 ? ` → #${r1}` : ""}</td></tr>`;
+    }).join("");
+    return `<div class="ticard"><div class="tih"><b>${esc(teamName(t))}</b><small>${who}</small></div>
+      <div class="tisum"><span>נקודות ליגה <b dir="ltr">${num(B.pts)} → ${num(A2.pts)}</b> <i dir="ltr" class="${dP > 0 ? "up" : dP < 0 ? "dn" : ""}">${dP > 0 ? "+" : dP < 0 ? "−" : ""}${num(Math.abs(dP))}</i></span>
+        <span>Z <b dir="ltr">${B.T.Z.toFixed(1)} → ${A2.T.Z.toFixed(1)}</b> <i dir="ltr" class="${dZ > 0.05 ? "up" : dZ < -0.05 ? "dn" : ""}">${dZ >= 0 ? "+" : "−"}${Math.abs(dZ).toFixed(1)}</i></span></div>
+      <div class="tbl-wrap short"><table class="box titab"><thead><tr><th class="nosort">קטגוריה</th><th class="nosort">לפני</th><th class="nosort">אחרי</th><th class="nosort">שינוי</th><th class="nosort">מקום בליגה</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
+  };
+  return `<section class="cmpsec"><h3>השפעה על הקבוצות</h3>
+    <div class="tigrid">${ta != null ? card(ta, "נותנת") : ""}${tb != null && tb !== ta ? card(tb, "מקבלת") : ""}</div>
+    <p class="munote ctrnote">סכום הממוצעים למשחק של הסגל הפעיל (בלי IL), לפני הטרייד ואחריו. נקודות ליגה: מקום ראשון בקטגוריה = ${n} נקודות.</p>
+  </section>`;
 }
 
 // Every team of the league in every category: the team's per-game total (FG% / FT% as team percentages), its place in
