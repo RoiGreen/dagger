@@ -1108,6 +1108,30 @@ table.box.murt th.sorted .rsort { color: var(--accent); }
 .cmproll .ri:hover, .cmproll .ri.on { background: color-mix(in srgb, var(--accent) 12%, var(--surface)); }
 .cmproll .rnone { padding: 10px; color: var(--muted); }
 @media (max-width: 700px) { .cmproll .ri { padding: 11px 10px; } }
+
+.cmpsheet { display: none; }
+@media (max-width: 700px) {
+  /* the picker row: team boxes side by side, "בחר שחקן" across the whole width under them */
+  .cmppick { display: grid; grid-template-columns: minmax(0, 1fr) minmax(0, 1fr); gap: 8px; }
+  .cmppick select[hidden] { display: none; }
+  .cmppick select:only-of-type, .cmppick select:has(+ select[hidden]) { grid-column: 1 / -1; }
+  .cmppick input[data-cmptp] { grid-column: 1 / -1; min-height: 44px; caret-color: transparent; }
+  .cmpsheet:not([hidden]) { display: flex; flex-direction: column; position: fixed; inset: 0; z-index: 130; background: var(--bg);
+    padding: calc(10px + env(safe-area-inset-top, 0px)) 12px calc(10px + env(safe-area-inset-bottom, 0px)); gap: 10px; }
+  .cmpsheet .cs-head { display: flex; align-items: center; justify-content: space-between; }
+  .cmpsheet .cs-head b { font-size: 1.1rem; }
+  .cmpsheet .cs-x { width: 40px; height: 40px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); font-size: 1rem; }
+  .cmpsheet .cs-q { font: inherit; font-size: 16px; padding: 11px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface); color: var(--ink); }
+  .cmpsheet .cs-list { flex: 1; min-height: 0; overflow-y: auto; overscroll-behavior: contain; -webkit-overflow-scrolling: touch;
+    display: grid; align-content: start; gap: 6px; }
+  .cmpsheet .cs-i { display: flex; align-items: baseline; justify-content: space-between; gap: 10px; width: 100%; padding: 13px 12px; border-radius: 12px;
+    border: 1px solid var(--line); background: var(--surface); color: var(--ink); font: inherit; text-align: start; cursor: pointer; }
+  .cmpsheet .cs-i b { direction: ltr; unicode-bidi: isolate; font-weight: 700; }
+  .cmpsheet .cs-i small { color: var(--muted); font-family: var(--font-num); white-space: nowrap; direction: ltr; unicode-bidi: isolate; }
+  .cmpsheet .cs-i:active { background: color-mix(in srgb, var(--accent) 14%, var(--surface)); }
+  .cmpsheet .cs-none { color: var(--muted); text-align: center; }
+  body.cssheet { overflow: hidden; }
+}
 /* ================= Phone (up to 700px wide) =================
    Everything for phones lives in these blocks. A wider screen never reads them, so the desktop stays exactly as it is. */
 @media (max-width: 700px) {
@@ -4078,6 +4102,8 @@ function rollItems() {
 }
 function openRoll(inp) {
   if (inp.disabled) return;
+  if (PHONE.matches) { inp.blur(); return; }  // phones use the full-screen list
+  inp.readOnly = false;
   rollFor = inp; rollAt = -1;
   const items = rollItems();
   cmpRoll.innerHTML = items.length ? items.map((l, i) => {
@@ -4144,6 +4170,74 @@ addEventListener("resize", keepRoll);
 window.visualViewport?.addEventListener("resize", keepRoll);
 $("viewCmp").addEventListener("focusout", (e) => { if (e.target === rollFor) setTimeout(() => { if (rollFor && document.activeElement !== rollFor) closeRoll(); }, 120); });
 document.addEventListener("scroll", (e) => { if (!cmpRoll.hidden && !e.target.closest?.(".cmproll")) placeRoll(); }, true);
+
+// ---------- phone: picking a player in the comparison opens a full-screen list ----------
+// A dropdown under a small box breaks on phones (the keyboard, the page scrolling under it). On a phone a tap on the
+// box opens a sheet over the page instead: a search line on top and every player under it. The keyboard opens only
+// when the search line is tapped, so the list can be scrolled at once. A tap on a name picks him.
+const cmpSheet = Object.assign(document.createElement("div"), { className: "cmpsheet", hidden: true });
+cmpSheet.innerHTML = `<div class="cs-head"><b>בחר שחקן</b><button type="button" class="cs-x" aria-label="סגירה">✕</button></div>
+  <input class="cs-q" type="search" placeholder="חיפוש שחקן…" autocomplete="off" aria-label="חיפוש שחקן"><div class="cs-list" role="listbox"></div>`;
+document.body.append(cmpSheet);
+let sheetFor = null, sheetMap = null;
+function sheetFill() {
+  const q = cmpSheet.querySelector(".cs-q").value.trim().toLowerCase();
+  const labels = [...sheetMap.keys()].filter((l) => !q || l.toLowerCase().includes(q)).slice(0, 400);
+  cmpSheet.querySelector(".cs-list").innerHTML = labels.length ? labels.map((l, i) => {
+    const [nm, ...meta] = l.split(" · ");
+    return `<button type="button" class="cs-i" data-csi="${i}"><b>${esc(nm)}</b><small>${esc(meta.join(" · "))}</small></button>`;
+  }).join("") : `<p class="cs-none">אין שחקן בשם הזה</p>`;
+  cmpSheet.dataset.labels = JSON.stringify(labels);
+  cmpSheet.querySelector(".cs-list").scrollTop = 0;  // a new search starts at the top of its results
+}
+function openSheetPick(inp, map = CMP_TP[inp.dataset.cmptp]) {
+  if (inp.disabled || !map) return;
+  sheetFor = inp; sheetMap = map;
+  cmpSheet.querySelector(".cs-q").value = "";
+  sheetFill();
+  cmpSheet.hidden = false; document.body.classList.add("cssheet");
+  cmpSheet.querySelector(".cs-list").scrollTop = 0;
+}
+function closeSheetPick() { cmpSheet.hidden = true; document.body.classList.remove("cssheet"); sheetFor = null; }
+cmpSheet.querySelector(".cs-q").addEventListener("input", sheetFill);
+cmpSheet.querySelector(".cs-x").addEventListener("click", closeSheetPick);
+cmpSheet.querySelector(".cs-list").addEventListener("click", (e) => {
+  const it = e.target.closest("[data-csi]");
+  if (!it || !sheetFor) return;
+  const label = JSON.parse(cmpSheet.dataset.labels || "[]")[Number(it.dataset.csi)], inp = sheetFor;
+  closeSheetPick();
+  if (!label) return;
+  inp.value = label;
+  inp.dispatchEvent(new Event("input", { bubbles: true }));  // the box's own handler adds him to the side
+  inp.dispatchEvent(new Event("change", { bubbles: true }));
+});
+document.addEventListener("keydown", (e) => { if (e.key === "Escape" && !cmpSheet.hidden) closeSheetPick(); });
+// a tap on a player box on a phone: no keyboard, no dropdown; the sheet opens when the tap ends (opening it on the
+// touch itself would let the lifting finger "click" a name of the new list)
+$("viewCmp").addEventListener("pointerdown", (e) => {
+  const inp = e.target.closest("[data-cmptp]");
+  if (!inp || !PHONE.matches) return;
+  inp.readOnly = true;  // iPhone: a read-only box never brings up the keyboard
+  e.preventDefault();
+}, true);
+$("viewCmp").addEventListener("click", (e) => {
+  const inp = e.target.closest("[data-cmptp]");
+  if (!inp || !PHONE.matches) return;
+  e.preventDefault(); e.stopPropagation();
+  openSheetPick(inp);
+}, true);
+// the matchup's free-agent boxes (pickup search, "הוספת שחקן חופשי") open the same sheet on a phone
+$("muOut").addEventListener("pointerdown", (e) => {
+  const inp = e.target.closest("#muSearch, [data-muaddin]");
+  if (!inp || !PHONE.matches) return;
+  inp.readOnly = true; e.preventDefault();
+}, true);
+$("muOut").addEventListener("click", (e) => {
+  const inp = e.target.closest("#muSearch, [data-muaddin]");
+  if (!inp || !PHONE.matches) return;
+  e.preventDefault(); e.stopPropagation();
+  openSheetPick(inp, MU.freeLookup);
+}, true);
 // Picking a replacement from the list makes the swap right away
 $("viewCmp").addEventListener("input", (e) => {
   const tp = e.target.closest("[data-cmptp]");
