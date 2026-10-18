@@ -1389,17 +1389,18 @@ table.box.titab tr.punted td { opacity: .4; }
 
 /* phone: a narrow player column (no photo, short lines), so most of the screen shows numbers */
 @media (max-width: 700px) {
-  #viewBoard td.name, #viewBoard th[data-k="name"], #viewAdv td.name, #viewAdv th[data-ak="name"] { min-width: 112px; max-width: 118px; padding-inline: 4px; }
+  #viewBoard td.name, #viewBoard th[data-k="name"], #viewAdv td.name, #viewAdv th[data-ak="name"] { min-width: 122px; max-width: 128px; padding-inline: 4px; }
   #viewBoard td.rank, #viewBoard th[data-k="rank"], #viewBoard thead th:first-child { width: 28px; min-width: 28px; max-width: 28px; }
   #viewBoard td.name, #viewBoard th[data-k="name"] { right: 28px; }
   #viewBoard td.name .avatar, #viewAdv td.name .avatar { display: none; }
-  #viewBoard td.name .nline .n, #viewAdv td.name .nline .n { font-size: .82rem; }
-  #viewBoard td.name .nline .t, #viewAdv td.name .nline .t { font-size: .64rem; }
-  #viewBoard td.name .sched, #viewAdv td.name .sched { font-size: .64rem; }
+  #viewBoard td.name .nline .n, #viewAdv td.name .nline .n { font-size: .9rem; }
+  #viewBoard td.name .nline .t, #viewAdv td.name .nline .t { font-size: .7rem; }
+  #viewBoard td.name .sched, #viewAdv td.name .sched { font-size: .7rem; }
   .sched .sha, .sched .sht, .sched .snog { display: none; }
   .sched b[data-away]::before { content: "@"; }
-  #viewBoard th, #viewBoard td { padding: 6px 5px; font-size: .8rem; }
-  #viewBoard td.val { font-size: .86rem; }
+  #viewBoard th, #viewBoard td { padding: 7px 6px; font-size: .9rem; }
+  #viewBoard thead th { font-size: .8rem; }
+  #viewBoard td.val { font-size: .96rem; }
 }
 
 /* phone: a game's box score opens at its start (the player column on the left, names in full), faces in one column */
@@ -2338,12 +2339,7 @@ function render() {
 
   // header
   $("viewBoard").dataset.fmt = st.fmt; $("viewBoard").style.setProperty("--nc", Math.max(CATS.length, 5));
-  // phone: rank, player, his value (Z, or FPTS in a points league), the categories, then the rest
-  const valK = st.fmt === "pts" ? "fp" : "zTotal";
-  const order = PHONE.matches
-    ? [...["rank", "name", valK].map((k) => COLS.find((c) => c.k === k)), ...COLS.filter((c) => c.cat),
-       ...["zTotal", "fp", "MIN", "gp", "age", "avail", "act"].filter((k) => k !== valK).map((k) => COLS.find((c) => c.k === k))].filter(Boolean)
-    : COLS;
+  const order = COLS;  // the same columns, in the same order, on a phone and on the desktop
   $("head").innerHTML = (statRank ? `<th class="nosort" scope="col">${esc(statLabel)} Rank</th>` : "") + order.map((c) => {
     const label = c.k === "rank" ? (m === "g" ? "Rank" : "Rank 36 MIN") : c.l;
     const cls = [st.sort === c.k ? "sorted" : "", st.sort === c.k && st.asc ? "asc" : "", c.nosort ? "nosort" : "", c.k === "act" ? "acts" : "",
