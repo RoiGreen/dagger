@@ -1136,7 +1136,7 @@ table.box.murt th.sorted .rsort { color: var(--accent); }
 /* trade: the effect on each team */
 .tigrid { display: grid; grid-template-columns: repeat(auto-fit, minmax(300px, 1fr)); gap: 12px; }
 .ticard { border: 1px solid var(--line); border-radius: 12px; padding: 10px; display: grid; gap: 8px; background: var(--surface-2); }
-.ticard .tih { display: flex; align-items: baseline; justify-content: space-between; }
+.ticard .tih { display: flex; align-items: baseline; justify-content: center; }
 .ticard .tih b { font-size: 1.05rem; } .ticard .tih small { color: var(--muted); }
 .ticard .tisum { display: flex; flex-wrap: wrap; gap: 6px 18px; font-size: .9rem; }
 .ticard .tisum b { font-family: var(--font-num); direction: ltr; unicode-bidi: isolate; }
@@ -4052,7 +4052,7 @@ function tradeImpact() {
     return `<div class="ticard"><div class="tih"><b>${esc(teamName(t))}</b></div>
       <div class="tbl-wrap short"><table class="box titab"><thead><tr><th class="nosort">קטגוריה</th><th class="nosort">לפני</th><th class="nosort">אחרי</th><th class="nosort">שינוי</th><th class="nosort">מקום בליגה</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   };
-  return `<section class="cmpsec"><h3>השפעה על הקבוצות</h3>
+  return `<section class="cmpsec"><h3 class="ctr">השפעה על הקבוצות</h3>
     <div class="tigrid">${ta != null ? card(ta, "נותנת") : ""}${tb != null && tb !== ta ? card(tb, "מקבלת") : ""}</div>
   </section>`;
 }
