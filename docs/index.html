@@ -4085,16 +4085,25 @@ function openRoll(inp) {
     return `<div class="ri" role="option" data-ri="${i}"><b>${esc(nm)}</b><small>${esc(meta.join(" · "))}</small></div>`;
   }).join("") : `<div class="rnone">אין שחקן בשם הזה</div>`;
   cmpRoll.dataset.labels = JSON.stringify(items);
-  const r = inp.getBoundingClientRect(), w = Math.min(Math.max(r.width, 280), innerWidth - 16);
+  cmpRoll.hidden = false; cmpRoll.scrollTop = 0;
+  placeRoll();
+  inp.setAttribute("aria-expanded", "true");
+}
+// under its box (or over it when there is more room above); on a phone it stops above the tab bar.
+// The box scrolled out of sight closes the list.
+function placeRoll() {
+  if (!rollFor || cmpRoll.hidden) return;
+  const r = rollFor.getBoundingClientRect(), vh = (window.visualViewport?.height || innerHeight);
+  const bar = PHONE.matches ? 72 : 0;
+  if (r.bottom < 0 || r.top > vh - bar) return closeRoll();
+  const w = Math.min(Math.max(r.width, PHONE.matches ? innerWidth - 16 : 300), innerWidth - 16);
   cmpRoll.style.width = `${w}px`;
   cmpRoll.style.left = `${Math.min(Math.max(8, r.right - w), innerWidth - w - 8)}px`;
-  const below = innerHeight - r.bottom - 12, above = r.top - 12;
-  const up = below < 220 && above > below;
-  cmpRoll.style.maxHeight = `${Math.max(160, Math.min(340, up ? above : below))}px`;
+  const below = vh - bar - r.bottom - 10, above = r.top - 10;
+  const up = below < 200 && above > below;
+  cmpRoll.style.maxHeight = `${Math.max(150, Math.min(360, up ? above : below))}px`;
   cmpRoll.style.top = up ? "" : `${r.bottom + 4}px`;
   cmpRoll.style.bottom = up ? `${innerHeight - r.top + 4}px` : "";
-  cmpRoll.hidden = false; cmpRoll.scrollTop = 0;
-  inp.setAttribute("aria-expanded", "true");
 }
 function closeRoll() {
   if (rollFor) rollFor.setAttribute("aria-expanded", "false");
@@ -4124,9 +4133,17 @@ $("viewCmp").addEventListener("keydown", (e) => {
 // pointerdown, so the pick happens before the box loses its focus
 cmpRoll.addEventListener("pointerdown", (e) => { const it = e.target.closest("[data-ri]"); if (it) { e.preventDefault(); pickRoll(Number(it.dataset.ri)); } });
 document.addEventListener("pointerdown", (e) => { if (!cmpRoll.hidden && !e.target.closest(".cmproll, [data-cmptp]")) closeRoll(); });
-addEventListener("resize", closeRoll);
+// a phone keyboard opening makes the screen shorter: the box being typed in is brought into view and the list stays
+function keepRoll() {
+  if (!rollFor || cmpRoll.hidden) return;
+  const r = rollFor.getBoundingClientRect(), vh = (window.visualViewport?.height || innerHeight), bar = PHONE.matches ? 72 : 0;
+  if (document.activeElement === rollFor && (r.bottom > vh - bar - 120 || r.top < 0)) rollFor.scrollIntoView({ block: "start" });
+  placeRoll();
+}
+addEventListener("resize", keepRoll);
+window.visualViewport?.addEventListener("resize", keepRoll);
 $("viewCmp").addEventListener("focusout", (e) => { if (e.target === rollFor) setTimeout(() => { if (rollFor && document.activeElement !== rollFor) closeRoll(); }, 120); });
-document.addEventListener("scroll", (e) => { if (!cmpRoll.hidden && !e.target.closest?.(".cmproll")) closeRoll(); }, true);
+document.addEventListener("scroll", (e) => { if (!cmpRoll.hidden && !e.target.closest?.(".cmproll")) placeRoll(); }, true);
 // Picking a replacement from the list makes the swap right away
 $("viewCmp").addEventListener("input", (e) => {
   const tp = e.target.closest("[data-cmptp]");
