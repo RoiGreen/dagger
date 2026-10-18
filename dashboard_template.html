@@ -1092,6 +1092,9 @@ table.box.lgtab .punted { opacity: .4; }
 table.box.pwtab .up { color: var(--pos); font-weight: 800; }
 table.box.pwtab .dn { color: var(--neg); font-weight: 800; }
 table.box.pwtab .pwsame { color: var(--muted); }
+table.box.pwtab .pwodds { font-family: var(--font-num); font-weight: 800; }
+table.box.pwtab .pwodds.win, table.box.pwtab .pwodds.lean-w { color: var(--pos); }
+table.box.pwtab .pwodds.lose, table.box.pwtab .pwodds.lean-l { color: var(--neg); }
 table.box.pwtab b { font-family: var(--font-num); }
 .lgsec + .lgsec { margin-top: 14px; }
 table.box.lgtab .lsort { border: 0; background: none; font: inherit; color: inherit; cursor: pointer; padding: 0; }
@@ -4153,14 +4156,22 @@ function rosterStrength(lists) {
     }, 0) / CATS.length;
   });
 }
-// The ranking after k finished weeks: the category record (wins + half the draws) weighs more as weeks go by
-// (k / (k + 4): half after 4 weeks, 75% after 12), the roster strength the rest
+// The ranking after k finished weeks. Besides the record against the scheduled opponent, the All-Play record: every
+// week against all the other teams, so the luck of who you met drops out. The All-Play record (wins + half the draws)
+// weighs more as weeks go by (k / (k + 4): half after 4 weeks, 75% after 12), the roster strength the rest.
 function powerAfter(weeks, k) {
   const n = Math.max(st.teams, 1);
-  const rec = Array.from({ length: n }, () => ({ w: 0, d: 0, l: 0 }));
+  const rec = Array.from({ length: n }, () => ({ w: 0, d: 0, l: 0 })), all = Array.from({ length: n }, () => ({ w: 0, d: 0, l: 0 }));
   for (const f of weeks.slice(0, k)) {
     const tot = Array.from({ length: n }, (_, t) => weekTotals(t, f));
+    const live = tot.map((_, t) => weekIds(t, f).length > 0);
     for (let t = 0; t < n; t++) {
+      if (!live[t]) continue;
+      for (let o = 0; o < n; o++) {
+        if (o === t || !live[o]) continue;
+        const r = weekRecord(tot[t], tot[o]);
+        all[t].w += r.w; all[t].d += r.d; all[t].l += r.l;
+      }
       const o = oppOf(t, f);
       if (o == null || o < 0 || o >= n) continue;
       const r = weekRecord(tot[t], tot[o]);
@@ -4170,13 +4181,34 @@ function powerAfter(weeks, k) {
   // strength from the rosters of the last week counted (now, before any week)
   const lists = Array.from({ length: n }, (_, t) => (k ? weekIds(t, weeks[k - 1]) : activeIds(t)).map((id) => PLAYER_BY_ID.get(id)).filter((p) => p && p.L));
   const str = rosterStrength(lists), wr = k / (k + 4);
+  const pctOf = (r) => { const g = r.w + r.d + r.l; return g ? (r.w + r.d / 2) / g : 0.5; };
   const rows = rec.map((r, t) => {
-    const g = r.w + r.d + r.l, pct = g ? (r.w + r.d / 2) / g : 0.5;
-    return { t, ...r, pct, str: str[t], score: wr * pct + (1 - wr) * str[t] };
+    const pct = pctOf(r), ap = pctOf(all[t]);
+    return { t, ...r, pct, all: all[t], ap, str: str[t], score: wr * ap + (1 - wr) * str[t] };
   });
-  rows.sort((a, b) => b.score - a.score || b.pct - a.pct || a.t - b.t);
+  rows.sort((a, b) => b.score - a.score || b.ap - a.ap || a.t - b.t);
   rows.forEach((x, i) => (x.rank = i + 1));
   return rows;
+}
+// Each team's chance to win this week's matchup (the week to plan: this one, or the next once it is over), from
+// the matchup tab's model: the games played so far plus the projection of the games left
+function weekOdds() {
+  const n = Math.max(st.teams, 1), keepW = WEEK, keepMU = MU;
+  const out = new Map();
+  try {
+    WEEK = weekRange();
+    MU = { model: new Map(), games: new Map(), w: null };
+    for (const g of GAMES) if (!g.pre) { MU.games.set(`${g.h}|${g.d}`, g); MU.games.set(`${g.a}|${g.d}`, g); }
+    const plan = new Map();
+    const planOf = (t) => plan.get(t) || plan.set(t, planWeek(rosterOf(t), ilOf(t), t)).get(t);
+    for (let t = 0; t < n; t++) {
+      const o = oppOf(t, WEEK.from);
+      if (o == null || o < 0 || o >= n || !rosterOf(t).length || !rosterOf(o).length) continue;
+      out.set(t, { opp: o, q: muOdds(planOf(t), planOf(o)).win });
+    }
+    out.next = WEEK.next;
+  } finally { WEEK = keepW; MU = keepMU; }
+  return out;
 }
 function powerTable() {
   const n = Math.max(st.teams, 1);
@@ -4184,20 +4216,30 @@ function powerTable() {
   const weeks = doneWeeks(), k = weeks.length;
   const now = powerAfter(weeks, k);
   const prev = k ? new Map(powerAfter(weeks, k - 1).map((x) => [x.t, x.rank])) : null;
+  const odds = weekOdds();
   const pc = (v) => `${Math.round(v * 100)}%`;
+  const rec = (r, p) => `<b dir="ltr">${r.w}-${r.d}-${r.l}</b>${r.w + r.d + r.l ? `<small>${pc(p)}</small>` : ""}`;
   const body = now.map((x) => {
     const d = prev ? prev.get(x.t) - x.rank : 0;
     const ch = !prev || !d ? `<span class="pwsame">–</span>` : `<span class="${d > 0 ? "up" : "dn"}">${d > 0 ? "▲" : "▼"}${Math.abs(d)}</span>`;
+    // luck: the record against the scheduled opponents above / below the All-Play record
+    const lk = Math.round((x.pct - x.ap) * 100), played = x.w + x.d + x.l > 0;
+    const luck = !played || !lk ? `<span class="pwsame">–</span>` : `<span class="${lk > 0 ? "up" : "dn"}">${lk > 0 ? "+" : "−"}${Math.abs(lk)}%</span>`;
+    const o = odds.get(x.t);
+    const wk = o ? `<span class="pwodds ${oddsKey(o.q)}">${pctTxt(o.q)}</span><small>מול ${esc(teamName(o.opp))}</small>` : `<span class="pwsame">–</span>`;
     return `<tr class="${x.t === myIdx() ? "me" : ""}"><td class="rank">${x.rank}</td><td class="tn">${esc(teamName(x.t))}</td>
-      <td><b dir="ltr">${x.w}-${x.d}-${x.l}</b>${x.w + x.d + x.l ? `<small>${pc(x.pct)}</small>` : ""}</td><td>${pc(x.str)}</td><td dir="ltr">${ch}</td></tr>`;
+      <td>${rec(x, x.pct)}</td><td>${rec(x.all, x.ap)}</td><td dir="ltr">${luck}</td><td>${pc(x.str)}</td><td>${wk}</td><td dir="ltr">${ch}</td></tr>`;
   }).join("");
   const note = k
-    ? `${k} ${k === 1 ? "שבוע" : "שבועות"} שהסתיימו. W-D-L = קטגוריות שנוצחו, בתיקו והופסדו מול היריב של כל שבוע (מהנתונים האמיתיים של השחקנים בסגל, בלי IL). המיקום משקלל את המאזן (${Math.round(k / (k + 4) * 100)}%) ואת חוזק הסגל. השינוי: לעומת סוף השבוע הקודם.`
+    ? `${k} ${k === 1 ? "שבוע" : "שבועות"} שהסתיימו, מהנתונים האמיתיים של השחקנים בסגל (בלי IL). המיקום משקלל את מאזן ה־All-Play (${Math.round(k / (k + 4) * 100)}%) ואת חוזק הסגל. השינוי: לעומת סוף השבוע הקודם.`
     : `התוצאות ייספרו מסוף השבוע הראשון של העונה. עד אז המיקום לפי חוזק הסגל בלבד.`;
   return `<section class="cmpsec lgsec"><h3 class="ctr">דירוג עוצמה</h3>
     <div class="tbl-wrap short"><table class="box lgtab pwtab"><thead><tr><th class="nosort">#</th><th class="nosort">קבוצה</th>
-      <th class="nosort" data-tip="ניצחונות-תיקו-הפסדים בקטגוריות, כל השבועות שהסתיימו">W-D-L</th>
+      <th class="nosort" data-tip="ניצחונות-תיקו-הפסדים בקטגוריות מול היריב של כל שבוע">W-D-L</th>
+      <th class="nosort" data-tip="המאזן אם כל שבוע הייתה משחקת מול כל הקבוצות בליגה. מראה את הרמה האמיתית, בלי המזל של מי נפלה מולה">All-Play</th>
+      <th class="nosort" data-tip="המאזן מול היריבים פחות מאזן ה־All-Play: פלוס = נפלה על יריבים חלשים מהממוצע (מזל), מינוס = על חזקים">מזל</th>
       <th class="nosort" data-tip="סיכוי ממוצע לנצח קטגוריה מול קבוצה אקראית, לפי הסגל הנוכחי">חוזק סגל</th>
+      <th class="nosort" data-tip="הסיכוי לנצח את המצ'אפ ${odds.next ? "של השבוע הבא" : "השבוע"}, לפי התחזית של לשונית המצ'אפ">${odds.next ? "שבוע הבא" : "השבוע"}</th>
       <th class="nosort">שינוי</th></tr></thead><tbody>${body}</tbody></table></div>
     <p class="munote ctrnote">${note}</p>
   </section>`;
