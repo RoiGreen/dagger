@@ -1705,6 +1705,7 @@ table.box.titab tr.punted td { opacity: .4; }
             <span id="zMarket"></span>
           </div>
         </details>
+        <span><span class="rk">R #3</span> תחזית נתוני מחזור הרוקיז</span>
       </div>
       <div class="tbl-wrap">
         <table>
@@ -1909,8 +1910,8 @@ function applySeasons() {
     p.noWin = false;
     if (p.rookie && !ys.some((y) => p.seasons?.[y]?.gp >= seasonMinGames(y))) {
       p.s = p.proj; p.gp = p.projGp; p.gpTotal = p.projGp; p.adv = null; p.team25 = null; p.srcSeason = null;
-      // a games minimum applies to his projected games too (my team and favorites stay)
-      setLines(p); p.has = false; continue;  // no games in the chosen seasons: off the board
+      // a games minimum applies to his projected games too (my team and favorites stay); not in 2026-27 alone (its own games only)
+      setLines(p); p.has = !onlyCurrent() && (!st.minGp || p.projGp >= st.minGp || mine.has(p.id) || fav.has(p.id)); continue;
     }
     // A season counts only when he reached the games minimum in it (the minimum is per season)
     // The preseason is ~5 games a team, so one game is enough there
