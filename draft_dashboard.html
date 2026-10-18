@@ -3378,7 +3378,7 @@ function renderDraft() {
   const zAll = last.now.z, m = st.mode;
   const value = (id) => { const pl = byId.get(id); if (!pl) return 0; return st.fmt === "cat" ? (zAll.has(id) ? shownVal(zAll.get(id).total) : 0) : (pl.F?.[m] ?? 0); };  // the Z the tables show
   $("dbFoot").innerHTML = `<td>${st.fmt === "cat" ? "סה״כ Z" : "סה״כ FPTS"}</td>` +
-    byTeam.map((t, i) => `<td class="${i === me ? "me" : ""}">${t.reduce((a, x) => a + value(x.id), 0).toFixed(1)}</td>`).join("");
+    byTeam.map((t, i) => { const il = ilOf(i); return `<td class="${i === me ? "me" : ""}">${t.filter((x) => !il.has(x.id)).reduce((a, x) => a + value(x.id), 0).toFixed(1)}</td>`; }).join("");  // IL / IL+ do not count
   $("undoBtn").disabled = !picks.length;
   renderPickEdit(byTeam);
   renderDraftAdvice();
@@ -3422,13 +3422,13 @@ const TIER_LABEL = { 1: "פלייאוף", 2: "פליי אין", 3: "טנקינג
 const DRAFT_TIERS = new Set();  // empty = all teams  // how far a team's weekly total in one category swings against an average team, in score units
 function renderDraftAdvice() {
   const box = $("draftAdvice"), me = myIdx();
-  const mineIds = picks.filter((x) => x.team === me).map((x) => x.id);
+  const mineIds = picks.filter((x) => x.team === me && !ilOf(me).has(x.id)).map((x) => x.id);  // available players only (no IL / IL+)
   if (st.fmt !== "cat" || !mineIds.length) { box.hidden = true; return; }
   const full = mineIds.length >= st.roster;  // roster full (draft over): the same advice, for free agents
   const zAll = last.now.z, cats = CATS.filter((c) => !st.punts.has(c.k));
   // the other teams of my league so far: their average per player, scaled to my number of players (0 before they pick)
   const others = Array.from({ length: Math.max(st.teams, 1) }, (_, t) => t).filter((t) => t !== me)
-    .map((t) => picks.filter((x) => x.team === t).map((x) => x.id)).filter((ids) => ids.length);
+    .map((t) => { const il = ilOf(t); return picks.filter((x) => x.team === t && !il.has(x.id)).map((x) => x.id); }).filter((ids) => ids.length);
   const per = Object.fromEntries(cats.map((c) => [c.k, others.length
     ? others.reduce((a, ids) => a + ids.reduce((b, id) => b + (zAll.get(id)?.z[c.k] ?? 0), 0) / ids.length, 0) / others.length : 0]));
   const L = Object.fromEntries(cats.map((c) => [c.k, per[c.k] * mineIds.length]));
@@ -5479,8 +5479,9 @@ function renderMine() {
     return;
   }
   const pz = pv ? zAll.get(pv.id) : null;
+  const ilMine = ilOf(myIdx());
   const sums = CATS.map((c) => {
-    const v = mp.reduce((a, p) => a + (zAll.get(p.id)?.z[c.k] ?? 0), 0), d = pz ? pz.z[c.k] : 0;
+    const v = mp.filter((p) => !ilMine.has(p.id)).reduce((a, p) => a + (zAll.get(p.id)?.z[c.k] ?? 0), 0), d = pz ? pz.z[c.k] : 0;  // IL / IL+ do not count
     return { c, v, d };
   });
   const maxAbs = Math.max(3, ...sums.map((s) => Math.max(Math.abs(s.v), Math.abs(s.v + s.d))));
