@@ -1386,6 +1386,21 @@ table.box.titab tr.punted td { opacity: .4; }
 @media (max-width: 700px) {
   #viewBoard thead th:first-child, #viewAdv thead th:first-child { white-space: normal; font-size: .6rem; line-height: 1.1; overflow-wrap: anywhere; }
 }
+
+/* phone: a narrow player column (no photo, short lines), so most of the screen shows numbers */
+@media (max-width: 700px) {
+  #viewBoard td.name, #viewBoard th[data-k="name"], #viewAdv td.name, #viewAdv th[data-ak="name"] { min-width: 112px; max-width: 118px; padding-inline: 4px; }
+  #viewBoard td.rank, #viewBoard th[data-k="rank"], #viewBoard thead th:first-child { width: 28px; min-width: 28px; max-width: 28px; }
+  #viewBoard td.name, #viewBoard th[data-k="name"] { right: 28px; }
+  #viewBoard td.name .avatar, #viewAdv td.name .avatar { display: none; }
+  #viewBoard td.name .nline .n, #viewAdv td.name .nline .n { font-size: .82rem; }
+  #viewBoard td.name .nline .t, #viewAdv td.name .nline .t { font-size: .64rem; }
+  #viewBoard td.name .sched, #viewAdv td.name .sched { font-size: .64rem; }
+  .sched .sha, .sched .sht, .sched .snog { display: none; }
+  .sched b[data-away]::before { content: "@"; }
+  #viewBoard th, #viewBoard td { padding: 6px 5px; font-size: .8rem; }
+  #viewBoard td.val { font-size: .86rem; }
+}
 </style>
 
 <script>
@@ -2308,7 +2323,13 @@ function render() {
 
   // header
   $("viewBoard").dataset.fmt = st.fmt; $("viewBoard").style.setProperty("--nc", Math.max(CATS.length, 5));
-  $("head").innerHTML = (statRank ? `<th class="nosort" scope="col">${esc(statLabel)} Rank</th>` : "") + COLS.map((c) => {
+  // phone: rank, player, his value (Z, or FPTS in a points league), the categories, then the rest
+  const valK = st.fmt === "pts" ? "fp" : "zTotal";
+  const order = PHONE.matches
+    ? [...["rank", "name", valK].map((k) => COLS.find((c) => c.k === k)), ...COLS.filter((c) => c.cat),
+       ...["zTotal", "fp", "MIN", "gp", "age", "avail", "act"].filter((k) => k !== valK).map((k) => COLS.find((c) => c.k === k))].filter(Boolean)
+    : COLS;
+  $("head").innerHTML = (statRank ? `<th class="nosort" scope="col">${esc(statLabel)} Rank</th>` : "") + order.map((c) => {
     const label = c.k === "rank" ? (m === "g" ? "Rank" : "Rank 36 MIN") : c.l;
     const cls = [st.sort === c.k ? "sorted" : "", st.sort === c.k && st.asc ? "asc" : "", c.nosort ? "nosort" : "", c.k === "act" ? "acts" : "",
                  c.cat && st.punts.has(c.k) ? "punted" : ""].join(" ");
@@ -2320,18 +2341,21 @@ function render() {
   // body: the first rows at once, the rest in small batches after it, so the page scrolls while the table fills
   const rowHtml = ({ p, rank, z }) => {
     const o = p.L[m];
-    const cats = CATS.map((c) => {
+    const cell = {};
+    for (const c of CATS) {
       const v = catFmt(c.k)(o[c.k] || 0);
       const punted = st.punts.has(c.k) ? " punted" : "";
-      return `<td class="cat${punted}" style="${heat(z.z[c.k])}">${v}</td>`;
-    }).join("");
+      cell[c.k] = `<td class="cat${punted}" style="${heat(z.z[c.k])}">${v}</td>`;
+    }
+    cell.rank = posR ? posTd(posR, p) : `<td class="rank${rank <= 3 ? " top" : ""}">${rank}</td>`;
+    cell.name = nameCell(p);
+    cell.age = `<td class="c-age">${p.age ?? "–"}</td>`; cell.gp = `<td class="c-gp">${p.gp}</td>`; cell.avail = availCell(p);
+    cell.MIN = `<td class="c-min">${fmt1(p.L.g.MIN)}</td>`;
+    cell.zTotal = `<td class="val"${z.w < 1 ? ` title="${p.gp} משחקים בלבד: הציון שלו העונה ${shownVal(z.raw).toFixed(2)}, ונלקח בזהירות לכיוון ${z.proven ? "הרמה שלו בעונה הקודמת" : "הרמה של שחקן חופשי"} (${shownVal(z.target).toFixed(2)})"` : ""}>${shownVal(z.total).toFixed(2)}${z.w < 0.97 ? `<i class="fewg">*</i>` : ""}</td>`;
+    cell.fp = `<td class="val">${fmt1(p.F[m])}</td>`;
+    cell.act = `<td class="acts">${actions(p)}</td>`;
     return `<tr class="${mine.has(p.id) ? "is-mine" : ""} ${taken.has(p.id) ? "is-taken" : ""} ${fav.has(p.id) ? "is-fav" : ""}">
-      ${statRank ? `<td class="rank" style="color:var(--accent)">${statRank(best({ p, z }))}</td>` : ""}
-      ${posR ? posTd(posR, p) : `<td class="rank${rank <= 3 ? " top" : ""}">${rank}</td>`}
-      ${nameCell(p)}
-      <td class="c-age">${p.age ?? "–"}</td><td class="c-gp">${p.gp}</td>${availCell(p)}<td class="c-min">${fmt1(p.L.g.MIN)}</td>${cats}
-      <td class="val"${z.w < 1 ? ` title="${p.gp} משחקים בלבד: הציון שלו העונה ${shownVal(z.raw).toFixed(2)}, ונלקח בזהירות לכיוון ${z.proven ? "הרמה שלו בעונה הקודמת" : "הרמה של שחקן חופשי"} (${shownVal(z.target).toFixed(2)})"` : ""}>${shownVal(z.total).toFixed(2)}${z.w < 0.97 ? `<i class="fewg">*</i>` : ""}</td><td class="val">${fmt1(p.F[m])}</td>
-      <td class="acts">${actions(p)}</td></tr>`;
+      ${statRank ? `<td class="rank" style="color:var(--accent)">${statRank(best({ p, z }))}</td>` : ""}${order.map((c) => cell[c.k] || "").join("")}</tr>`;
   };
   const job = ++BODY_JOB, FIRST = 60, STEP = 80;
   $("body").innerHTML = rows.slice(0, FIRST).map(rowHtml).join("") || EMPTY_ROW(COLS.length + (statRank ? 1 : 0));
@@ -2875,8 +2899,8 @@ function scheduleLine(p) {
   if (!p.team26) return "";
   const e = TEAM_WEEK.get(p.team26) || { total: 0, played: 0, today: null };
   const when = e.today
-    ? `<b dir="ltr">${esc(e.today.opp)} (${e.today.home ? "Home" : "Away"})</b> | ${e.today.t.toLocaleString("he-IL", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" })}`
-    : "אין משחק היום";
+    ? `<b dir="ltr"${e.today.home ? "" : ` data-away="1"`}>${esc(e.today.opp)}<span class="sha"> (${e.today.home ? "Home" : "Away"})</span></b><span class="sht"> | ${e.today.t.toLocaleString("he-IL", { weekday: "short", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" })}</span>`
+    : `<span class="snog">אין משחק היום</span>`;
   return `<span class="sched" title="משחקים השבוע (שני עד ראשון): ${e.played} שוחקו מתוך ${e.total}">${when} (${e.played}/${e.total})</span>`;
 }
 
