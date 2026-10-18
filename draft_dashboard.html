@@ -1388,6 +1388,10 @@ table.cmpt td.lbl { min-width: 5.5em; }
           <div class="field"><label for="myTeam">הקבוצה שלי</label><select id="myTeam"></select></div>
           <div class="field"><label for="muAddsMax">פיק אפים בשבוע</label><input type="number" id="muAddsMax" min="0" max="14"></div>
         </div>
+        <div class="row2">
+          <div class="field"><label for="ilSlots">מקומות IL</label><input type="number" id="ilSlots" min="0" max="5"></div>
+          <div class="field"><label for="ilpSlots">מקומות IL+</label><input type="number" id="ilpSlots" min="0" max="5"></div>
+        </div>
         <label class="check"><input type="checkbox" id="snake" checked> סדר סנייק בדראפט</label>
         <details class="tnames"><summary>שמות הקבוצות (לפי סדר הבחירה בסיבוב הראשון)</summary><div class="teamnames" id="teamNames"></div></details>
         </div>
@@ -3128,6 +3132,7 @@ function syncLeaguePanel() {
   const punts = [...st.punts].map((k) => CATS.find((c) => c.k === k)?.l).filter(Boolean);
   $("leagueSum").textContent = [st.leagueName, fmtTxt, `${st.teams} קבוצות`, `${st.roster} בסגל`].filter(Boolean).join(" · ");  // Punt shows below anyway
   setField("muAddsMax", st.weekAdds ?? 3);
+  setField("ilSlots", st.ilSlots ?? 2); setField("ilpSlots", st.ilpSlots ?? 1);
   const n = activeFilters();
   $("filtCount").hidden = !n; $("filtCount").textContent = n;
   $("filtClear").hidden = !n;
@@ -3161,6 +3166,8 @@ function doTrade() {
   // IL lists and table marks follow the players
   st.il = st.il || {};
   for (const t of [A, B]) st.il[t] = (st.il[t] || []).filter((id) => !ga.includes(id) && !gb.includes(id));
+  st.ilp = st.ilp || {};
+  for (const t of [A, B]) st.ilp[t] = (st.ilp[t] || []).filter((id) => !ga.includes(id) && !gb.includes(id));
   for (const id of [...ga, ...gb]) if (st.tags[id]) delete st.tags[id];
   const names = (ids) => ids.map((id) => PLAYER_BY_ID.get(id)?.name).join(", ");
   showToast(`טרייד בוצע: ${names(ga)} ל${teamName(B)}, ${names(gb)} ל${teamName(A)}.`);
@@ -4066,9 +4073,14 @@ const PCT_COV = { FG_PCT: "covFG", FT_PCT: "covFT", FG3_PCT: "covF3" };
 // Active slots of the league (bench and IL do not count). A player fills a slot his positions allow; UTIL takes anyone
 const LINEUP = [["PG", ["PG"]], ["SG", ["SG"]], ["G", ["PG", "SG"]], ["SF", ["SF"]], ["PF", ["PF"]], ["F", ["SF", "PF"]],
   ["C", ["C"]], ["C", ["C"]], ["UTIL", null], ["UTIL", null]];
-const IL_SLOTS = 2;
-// who can go to IL: any player on the injury list, OUT or GTD (IL+ in the league apps takes day-to-day players too)
-const ilOk = (p) => !!p.hurt;
+// Two kinds of injured-list spots, each with its own count (league settings):
+// IL takes only players listed OUT; IL+ takes only players who may still play: GTD / Q (50%) and Doubtful (25%)
+const IL_OUT = new Set(["OUT", "OFS"]), IL_PLUS = new Set(["GTD", "QUESTIONABLE", "DOUBTFUL"]);
+const ilKind = (p) => (!p?.hurt ? null : IL_OUT.has(p.hurt.s) ? "il" : IL_PLUS.has(p.hurt.s) ? "ilp" : null);
+const ilSlots = (kind) => (kind === "il" ? st.ilSlots ?? 2 : st.ilpSlots ?? 1);
+const ilList = (kind, t) => ((kind === "il" ? st.il : st.ilp) || {})[t] || [];
+// a free spot of the kind this player fits, or null
+const ilRoom = (p, t) => { const k = ilKind(p); return k && ilList(k, t).filter((id) => ilOf(t).has(id)).length < ilSlots(k) ? k : null; };
 // The best lineup of one day: the most valuable players first, each one placed if the slots can still hold everyone
 // placed so far (moving earlier players between slots when needed). Greedy is exact here (a transversal matroid).
 const SLOT_CAP = LINEUP.reduce((m, [n]) => ({ ...m, [n]: (m[n] || 0) + 1 }), {});
@@ -4298,7 +4310,8 @@ const ODDS_LABEL = { win: "ניצחון בטוח", "lean-w": "יתרון", toss:
 const pctTxt = (q) => (q > 0.995 ? ">99%" : q < 0.005 ? "<1%" : `${Math.round(q * 100)}%`);
 
 // Roster state for the matchup: IL lists per team, pickups used this week
-const ilOf = (t) => new Set(((st.il || {})[t] || []).filter((id) => picks.some((x) => x.id === id && x.team === t) || (t === myIdx() && mine.has(id))));
+const ilOf = (t) => new Set([...((st.il || {})[t] || []), ...((st.ilp || {})[t] || [])].filter((id) => picks.some((x) => x.id === id && x.team === t) || (t === myIdx() && mine.has(id))));
+const onILPlus = (t, id) => ((st.ilp || {})[t] || []).includes(id);
 const rosterOf = (t) => (t === myIdx() ? players.filter((p) => mine.has(p.id)) : picks.filter((x) => x.team === t).map((x) => PLAYER_BY_ID.get(x.id)).filter(Boolean));
 const myRoster = () => rosterOf(myIdx());
 // The team managed in the weekly matchup: mine, unless another team is picked there. Its lineup, pickups, releases and
@@ -4335,7 +4348,7 @@ function bestMoves(me, opp, mineP, il, B, base) {
     .sort((a, b) => (muValue(b.p) + (st.fmt === "pts" ? 0 : 4)) * b.g - (muValue(a.p) + (st.fmt === "pts" ? 0 : 4)) * a.g).slice(0, 24);
   const active = mineP.filter((p) => !il.has(p.id));
   const open = active.length < st.roster;
-  const ilFree = il.size < IL_SLOTS;
+  const ilFree = ilList("il", me).filter((id) => il.has(id)).length < ilSlots("il");
   const margin = st.fmt === "pts" ? 3 : 0.75;
   const out = [];
   for (const { p: X } of pool) {
@@ -4364,8 +4377,10 @@ function muMove(team, addId, dropId, kind) {
   const me = myIdx(), added = addId;
   MU_DROP.clear();  // the roster changed: the suggested releases start over
   st.il = st.il || {};
-  if (dropId && kind === "il") {
-    st.il[team] = [...new Set([...(st.il[team] || []), dropId])];
+  st.ilp = st.ilp || {};
+  if (dropId && (kind === "il" || kind === "ilp")) {
+    const box = kind === "ilp" ? st.ilp : st.il;
+    box[team] = [...new Set([...(box[team] || []), dropId])];
   } else if (dropId) {
     // a release with an add takes the same board cell, so the draft board keeps its shape
     const i = picks.findIndex((x) => x.id === dropId && x.team === team);
@@ -4373,6 +4388,7 @@ function muMove(team, addId, dropId, kind) {
     else if (i >= 0) picks.splice(i, 1);
     if (team === me && st.tags[dropId] === "m") delete st.tags[dropId];
     st.il[team] = (st.il[team] || []).filter((id) => id !== dropId);
+    st.ilp[team] = (st.ilp[team] || []).filter((id) => id !== dropId);
   }
   if (addId) picks.push({ id: addId, team });
   if (added) {
@@ -4390,6 +4406,7 @@ function liveNote(p) {
 }
 function muFromIL(team, id) {
   st.il[team] = (st.il[team] || []).filter((x) => x !== id);
+  if (st.ilp) st.ilp[team] = (st.ilp[team] || []).filter((x) => x !== id);
   const over = rosterOf(team).filter((p) => !ilOf(team).has(p.id)).length - st.roster;
   if (over > 0) showToast(`הסגל מלא ב־${over}. במצ'אפ מופיעה המלצה את מי לשחרר.`);
   saveSettings(); render();
@@ -4540,7 +4557,7 @@ function renderMatchup() {
     }
     const active = mineP.filter((p) => !ilA.has(p.id));
     const opts = [...(active.length < st.roster ? [["|", "יש מקום פנוי בסגל"]] : []),
-      ...active.filter((p) => ilOk(p) && ilA.size < IL_SLOTS).map((p) => [`${p.id}|il`, `${p.name} ל־IL`]),
+      ...active.map((p) => [p, ilRoom(p, me)]).filter(([, k]) => k).map(([p, k]) => [`${p.id}|${k}`, `${p.name} ל־${k === "il" ? "IL" : "IL+"}`]),
       ...active.map((p) => [`${p.id}|drop`, `משחרר: ${p.name}`])];
     const cur = `${x.drop?.id ?? ""}|${x.kind ?? ""}`;
     const dropSel = `<select class="mdropsel" data-mudropsel="${x0.X.id}" aria-label="את מי לשחרר">${opts.map(([v, l]) => `<option value="${v}"${v === cur ? " selected" : ""}>${esc(l)}</option>`).join("")}</select>`;
@@ -4669,12 +4686,12 @@ function renderMatchup() {
       const full = (n) => n !== "BN" && n !== cur && (used[n] || 0) >= SLOT_CAP[n];
       const slotSel = `<select class="mslot${manual ? " set" : ""}" data-muslot="${t}|${p.id}" aria-label="עמדה בהרכב" title="איפה הוא משובץ בהרכב">
         ${[...can, "BN"].filter((n) => !full(n)).map((n) => `<option value="${n}"${n === cur ? " selected" : ""}>${n}</option>`).join("")}</select>`;
-      const acts = onIL ? `<button type="button" class="mact" data-muback="${t}|${p.id}">חזרה מ־IL</button>`
-        : `${ilOk(p) && il.size < IL_SLOTS ? `<button type="button" class="mact" data-muil="${t}|${p.id}">IL</button>` : ""}<button type="button" class="mact" data-mudrop="${t}|${p.id}" title="שחרור">שחרר</button>`;
+      const acts = onIL ? `<button type="button" class="mact" data-muback="${t}|${p.id}">חזרה מ־${onILPlus(t, p.id) ? "IL+" : "IL"}</button>`
+        : `${(() => { const k = ilRoom(p, t); return k ? `<button type="button" class="mact" data-muil="${t}|${p.id}|${k}">${k === "il" ? "IL" : "IL+"}</button>` : ""; })()}<button type="button" class="mact" data-mudrop="${t}|${p.id}" title="שחרור">שחרר</button>`;
       const role = onIL ? "ilrow" : cur === "BN" ? "benchrow" : "startrow";
       return `<tr class="${role}"><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span></span><small class="ppos">${esc(p.pos || "")}</small>${onIL ? "" : (() => { const c = T.cell.get(`${p.id}|${d}`);
         return c?.out ? `<small class="pday out">OUT</small>` : c ? `<small class="pday">${esc(c.gm ? `${c.gm.g.h === p.team26 ? "" : "@"}${c.gm.opp}` : c.r ? `${c.r[2] ? "" : "@"}${c.r[1]}` : "")}</small>` : `<small class="pday none">אין משחק</small>`; })()}${p.hurt ? injuryPill(p) : ""}</td>
-        <td>${onIL ? "IL" : `${g1(w.starts)}/${w.games}`}</td><td class="mslotc">${onIL ? "" : slotSel}</td>${CATS.map((c) => `<td>${onIL ? "" : cell9(w.o, c.k)}</td>`).join("")}<td class="macts">${acts}</td></tr>`;
+        <td>${onIL ? (onILPlus(t, p.id) ? "IL+" : "IL") : `${g1(w.starts)}/${w.games}`}</td><td class="mslotc">${onIL ? "" : slotSel}</td>${CATS.map((c) => `<td>${onIL ? "" : cell9(w.o, c.k)}</td>`).join("")}<td class="macts">${acts}</td></tr>`;
     }).join("");
     const full = active.length >= st.roster;
     return `<div class="muroster"><h4>${esc(title)}</h4>
@@ -4735,7 +4752,7 @@ function renderMatchup() {
     ${overBy > 0 ? `<section class="cmpsec over"><h3 class="ctr">הסגל מלא ב־${overBy}: צריך לשחרר</h3>
       <div class="mupickhead"><span>סיכוי לנצח במצ'אפ הקרוב</span></div><ol class="mupicks">${dropRows}</ol></section>` : ""}
     <section class="cmpsec"><h3 class="ctr">פיק אפ מומלץ לשבוע הזה</h3>
-      <p class="munote ctrnote">בסגל שלך ${activeMine.length} שחקנים פעילים מתוך ${st.roster}${ilA.size ? `, ועוד ${ilA.size} ב־IL` : ""}${activeMine.length < st.roster ? ": אפשר להוסיף בלי לשחרר" : ""}</p>
+      <p class="munote ctrnote">בסגל שלך ${activeMine.length} שחקנים פעילים מתוך ${st.roster}${ilA.size ? `, ועוד ${ilA.size} ב־IL / IL+` : ""}${activeMine.length < st.roster ? ": אפשר להוסיף בלי לשחרר" : ""}</p>
       ${overBy > 0 ? `<p class="munote">קודם לשחרר שחקן מהסגל (למעלה)</p>`
         : left === 0 ? `<p class="munote">ניצלת את כל ${maxAdds} הפיק אפים של השבוע</p>`
         : moves.length ? `<div class="mupickhead"><span>סיכוי לנצח במצ'אפ הקרוב</span></div><ol class="mupicks">${moves.map(moveRow).join("")}</ol>`
@@ -4770,6 +4787,8 @@ $("muTeam").addEventListener("change", (e) => {
 for (const [id, d] of [["muPrev", -1], ["muNext", 1], ["muNow", 0]]) {
   $(id).addEventListener("click", () => { st.muWeekOff = d ? (st.muWeekOff || 0) + d : 0; renderMatchup(); });
 }
+for (const [id, key] of [["ilSlots", "ilSlots"], ["ilpSlots", "ilpSlots"]])
+  $(id).addEventListener("input", (e) => { const v = Number(e.target.value); if (e.target.value !== "" && Number.isFinite(v)) { st[key] = Math.min(5, Math.max(0, v)); update(false); } });
 $("muAddsMax").addEventListener("input", (e) => { const v = Number(e.target.value); if (Number.isFinite(v)) { st.weekAdds = Math.min(14, Math.max(0, v)); update(false); } });
 $("muAddsUsed").addEventListener("input", (e) => { const v = Number(e.target.value); if (Number.isFinite(v)) { setAdds(muMe(), Math.min(14, Math.max(0, v))); saveSettings(); renderMatchup(); } });
 function pruneDays() {
@@ -4833,11 +4852,11 @@ $("muOut").addEventListener("click", (e) => {
     const [add, drop, kind] = b.dataset.mumove.split("|");
     const pa = PLAYER_BY_ID.get(Number(add)), pd = drop ? PLAYER_BY_ID.get(Number(drop)) : null;
     muMove(me, Number(add), drop ? Number(drop) : null, kind || null);
-    return showToast(liveNote(pa) || `${pa.name} נוסף לקבוצה${pd ? (kind === "il" ? `, ${pd.name} עבר ל־IL` : `, ${pd.name} שוחרר`) : ""}. זכור לבצע את זה גם באפליקציה של הליגה.`);
+    return showToast(liveNote(pa) || `${pa.name} נוסף לקבוצה${pd ? (kind === "il" || kind === "ilp" ? `, ${pd.name} עבר ל־${kind === "ilp" ? "IL+" : "IL"}` : `, ${pd.name} שוחרר`) : ""}. זכור לבצע את זה גם באפליקציה של הליגה.`);
   }
   const pair = (v) => v.split("|").map(Number);
   if (b.dataset.mudrop) { const [t, id] = pair(b.dataset.mudrop); return muMove(t, null, id, "drop"); }
-  if (b.dataset.muil) { const [t, id] = pair(b.dataset.muil); return muMove(t, null, id, "il"); }
+  if (b.dataset.muil) { const [t, id, k] = b.dataset.muil.split("|"); return muMove(Number(t), null, Number(id), k === "ilp" ? "ilp" : "il"); }
   if (b.dataset.muback) { const [t, id] = pair(b.dataset.muback); return muFromIL(t, id); }
   if (b.dataset.muday) { MU_DAY = b.dataset.muday; return renderMatchup(); }
   if (b.dataset.murost) { MU_ROSTER = b.dataset.murost; return renderMatchup(); }
