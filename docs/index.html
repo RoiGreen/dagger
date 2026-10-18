@@ -4606,6 +4606,7 @@ function bestMoves(me, opp, mineP, il, B, base, onlyId = null) {
       .sort((a, b) => (muValue(b.p) + (st.fmt === "pts" ? 0 : 4)) * b.g - (muValue(a.p) + (st.fmt === "pts" ? 0 : 4)) * a.g).slice(0, 24);
   const active = mineP.filter((p) => !il.has(p.id));
   const open = active.length < st.roster;
+  const weakest = new Set([...active].sort((a, b) => seasonValue(a) - seasonValue(b)).slice(0, 3).map((p) => p.id));  // the 3 least valued
   const ilFree = ilList("il", me).filter((id) => il.has(id)).length < ilSlots("il");
   const margin = st.fmt === "pts" ? 3 : 0.75;
   const out = [];
@@ -4615,6 +4616,9 @@ function bestMoves(me, opp, mineP, il, B, base, onlyId = null) {
     for (const Y of open ? [] : active) {
       const hurtLong = Y.hurt && Y.hurt.s === "OUT";
       if (hurtLong && ilFree) { opts.push({ drop: Y, kind: "il" }); continue; }
+      // a release is suggested only from the weakest of the roster (the usual pickup move); any other release can
+      // still be picked by hand in the row
+      if (!weakest.has(Y.id)) continue;
       const cheap = seasonValue(Y) <= seasonValue(X) + margin || (rank.get(Y.id) ?? 1e9) > size;
       if (cheap) opts.push({ drop: Y, kind: "drop" });
     }
