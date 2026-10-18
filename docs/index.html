@@ -1071,6 +1071,11 @@ table.cmpt td.lbl { min-width: 5.5em; }
 
 @media (prefers-reduced-motion: no-preference) { .seg button, .chip, .act button { transition: background-color .12s, color .12s; } }
 
+
+.musearch { display: flex; gap: 6px; align-items: center; max-width: 420px; margin: 4px auto 8px; }
+.musearch input { flex: 1; min-width: 0; font: inherit; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); }
+.mupicks li.msearched { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
+.mupicks .mfit small.neg { color: var(--neg); }
 /* ================= Phone (up to 700px wide) =================
    Everything for phones lives in these blocks. A wider screen never reads them, so the desktop stays exactly as it is. */
 @media (max-width: 700px) {
@@ -4122,7 +4127,8 @@ function lineupFor(cands, fixed = {}) {
 
 // Per-player model for the week: expected line per game (the blended form), its spread game to game, and lineup value
 let MU = null;  // per-render cache
-const MU_DROP = new Map();  // pickup row -> the release chosen by hand ("id|drop" / "id|il" / "|")
+const MU_DROP = new Map();
+let MU_SEARCH = null;  // a free agent looked up by name for a pickup  // pickup row -> the release chosen by hand ("id|drop" / "id|il" / "|")
 function muModel(p) {
   if (MU.model.has(p.id)) return MU.model.get(p.id);
   const b = blendRaw(p);
@@ -4338,14 +4344,15 @@ function pickupFrom() {
 // The best pickups for this matchup: each free agent with his best release (or IL move, or an open spot),
 // ranked by how much he raises the chance to win the week. Good players are protected from release:
 // only someone whose season value is close to the newcomer's, or below the league's rostered level, can go.
-function bestMoves(me, opp, mineP, il, B, base) {
+function bestMoves(me, opp, mineP, il, B, base, onlyId = null) {
   const from = pickupFrom();
   if (from > WEEK.to) return [];
   const rank = last.now.rank, size = Math.max(1, st.teams * st.roster);
   const free = players.filter((p) => p.team26 && p.L && !taken.has(p.id) && !mine.has(p.id) && !picks.some((x) => x.id === p.id));
   const gamesFrom = (p) => weekDays().filter((d) => d >= from).reduce((a, d) => { const gm = gameOn(p.team26, d); return a + (gm ? playChance(p, gm.g) : 0); }, 0);
-  const pool = free.map((p) => ({ p, g: gamesFrom(p) })).filter((x) => x.g > 0 && muModel(x.p))
-    .sort((a, b) => (muValue(b.p) + (st.fmt === "pts" ? 0 : 4)) * b.g - (muValue(a.p) + (st.fmt === "pts" ? 0 : 4)) * a.g).slice(0, 24);
+  const pool = onlyId != null ? free.filter((p) => p.id === onlyId && muModel(p)).map((p) => ({ p, g: gamesFrom(p) }))
+    : free.map((p) => ({ p, g: gamesFrom(p) })).filter((x) => x.g > 0 && muModel(x.p))
+      .sort((a, b) => (muValue(b.p) + (st.fmt === "pts" ? 0 : 4)) * b.g - (muValue(a.p) + (st.fmt === "pts" ? 0 : 4)) * a.g).slice(0, 24);
   const active = mineP.filter((p) => !il.has(p.id));
   const open = active.length < st.roster;
   const ilFree = ilList("il", me).filter((id) => il.has(id)).length < ilSlots("il");
@@ -4367,7 +4374,7 @@ function bestMoves(me, opp, mineP, il, B, base) {
       const gain = r.win - base.win + 0.08 * (r.exp - base.exp);
       if (!best || gain > best.gain) best = { X, ...o, r, gain, A2 };
     }
-    if (best && best.gain > 0.003) out.push(best);
+    if (best && (best.gain > 0.003 || onlyId != null)) out.push(best);
   }
   return out.sort((a, b) => b.gain - a.gain).slice(0, 8);
 }
@@ -4545,6 +4552,8 @@ function renderMatchup() {
   // pickups
   const left = Math.max(0, maxAdds - addsUsed());
   const moves = left > 0 ? bestMoves(me, st.muOpp, mineP, ilA, B, odds) : [];
+  if (MU_SEARCH != null && (picks.some((x) => x.id === MU_SEARCH) || mine.has(MU_SEARCH))) MU_SEARCH = null;  // he was added meanwhile
+  const searched = left > 0 && MU_SEARCH != null ? bestMoves(me, st.muOpp, mineP, ilA, B, odds, MU_SEARCH)[0] : null;
   const dayShort = (d) => new Date(d + "T12:00:00Z").toLocaleDateString("he-IL", { weekday: "narrow", timeZone: "UTC" });
   const moveRow = (x0, i) => {
     // the release can be changed per row: the odds are worked out again for the player chosen
@@ -4568,14 +4577,14 @@ function renderMatchup() {
     // releasing someone clearly better for the season: good for this week only
     const costly = x.drop && x.kind !== "il" && seasonValue(x.drop) > seasonValue(x.X) + (st.fmt === "pts" ? 3 : 0.75);
     const days = weekDays().filter((d) => x.A2.cell.get(`${x.X.id}|${d}`)?.slot);
-    return `<li><span class="rk">${i + 1}</span>${x.X.img ? `<img class="mimg" src="${x.X.img}" alt="" loading="lazy" decoding="async">` : `<span class="mimg"></span>`}
+    return `<li${i < 0 ? ` class="msearched"` : ""}><span class="rk">${i < 0 ? "🔍" : i + 1}</span>${x.X.img ? `<img class="mimg" src="${x.X.img}" alt="" loading="lazy" decoding="async">` : `<span class="mimg"></span>`}
       <span class="mwho"><span class="mline"><span class="pn" data-pcard="${x.X.id}">${esc(x.X.name)}</span>${teamLogo(x.X.team26)}${x.X.hurt ? injuryPill(x.X) : ""}
         <span class="mdays" title="הימים שבהם הוא נכנס להרכב">${days.map(dayShort).join(" ") || "–"}</span></span>
         <small class="mdrop">${dropSel}</small></span>
       <span class="mtags"><span class="trow">${ups.map((u) => `<i class="gain"><bdi>${u.l}</bdi> +${Math.round(u.d * 100)}%</i>`).join("")}</span>
         ${downs.length ? `<span class="trow">${downs.map((u) => `<i class="loss"><bdi>${u.l}</bdi> −${Math.round(-u.d * 100)}%</i>`).join("")}</span>` : ""}
         ${costly ? `<em class="mwarn" title="השבוע זה משפר את הסיכוי, אבל ${esc(x.drop.name)} שווה יותר לאורך העונה">${esc(x.drop.name)} שווה יותר לאורך העונה</em>` : ""}</span>
-      <b class="mfit" title="סיכוי לנצח את המצ'אפ אחרי המהלך">${pctTxt(x.r.win)}<small>+${Math.max(0, Math.round((x.r.win - odds.win) * 100))}%</small></b>
+      <b class="mfit" title="סיכוי לנצח את המצ'אפ אחרי המהלך">${pctTxt(x.r.win)}<small${x.r.win < odds.win - 0.005 ? ` class="neg"` : ""}>${x.r.win < odds.win - 0.005 ? "−" : "+"}${Math.abs(Math.round((x.r.win - odds.win) * 100))}%</small></b>
       <button type="button" class="mgo" data-mumove="${x.X.id}|${x.drop?.id ?? ""}|${x.kind ?? ""}">בצע</button></li>`;
   };
 
@@ -4755,8 +4764,11 @@ function renderMatchup() {
       <p class="munote ctrnote">בסגל שלך ${activeMine.length} שחקנים פעילים מתוך ${st.roster}${ilA.size ? `, ועוד ${ilA.size} ב־IL / IL+` : ""}${activeMine.length < st.roster ? ": אפשר להוסיף בלי לשחרר" : ""}</p>
       ${overBy > 0 ? `<p class="munote">קודם לשחרר שחקן מהסגל (למעלה)</p>`
         : left === 0 ? `<p class="munote">ניצלת את כל ${maxAdds} הפיק אפים של השבוע</p>`
-        : moves.length ? `<div class="mupickhead"><span>סיכוי לנצח במצ'אפ הקרוב</span></div><ol class="mupicks">${moves.map(moveRow).join("")}</ol>`
-        : `<p class="munote nopick">אין פיק אפ שמשפר את הסיכוי לנצח השבוע</p>`}
+        : `<div class="musearch"><input id="muSearch" list="muFree" placeholder="חיפוש שחקן לפיק אפ…" autocomplete="off" aria-label="חיפוש שחקן לפיק אפ"
+            value="${MU_SEARCH != null ? esc(`${PLAYER_BY_ID.get(MU_SEARCH)?.name} · ${PLAYER_BY_ID.get(MU_SEARCH)?.team26}`) : ""}">${MU_SEARCH != null ? `<button type="button" class="mact" data-musearchclear="1" aria-label="ניקוי החיפוש">✕</button>` : ""}</div>
+          ${MU_SEARCH != null && !searched ? `<p class="munote">אין לו משחקים שנשארו השבוע</p>` : ""}
+          ${moves.length || searched ? `<div class="mupickhead"><span>סיכוי לנצח במצ'אפ הקרוב</span></div><ol class="mupicks">${searched ? moveRow(searched, -1) : ""}${moves.filter((x) => x.X.id !== MU_SEARCH).map(moveRow).join("")}</ol>`
+          : `<p class="munote nopick">אין פיק אפ שמשפר את הסיכוי לנצח השבוע</p>`}`}
     </section>
     <section class="cmpsec mudaygrid"><div class="dghead"><h3>הרכב יומי</h3>
       <div class="seg" role="group"><button type="button" data-mugrid="a" aria-pressed="${gridSide === "a"}">${esc(myName)}</button><button type="button" data-mugrid="b" aria-pressed="${gridSide === "b"}">${esc(oppName)}</button></div></div>
@@ -4825,6 +4837,11 @@ $("muOut").addEventListener("click", (e) => {
   luSave();
 }, true);
 $("muOut").addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.closest("[data-lu]")) e.target.click(); });
+$("muOut").addEventListener("input", (e) => {
+  if (e.target.id !== "muSearch") return;
+  const id = MU.freeLookup.get(e.target.value);
+  if (id != null && id !== MU_SEARCH) { MU_SEARCH = id; renderMatchup(); }
+});
 $("muOut").addEventListener("change", (e) => {
   const ss = e.target.closest("[data-muslot]");
   if (ss) {
@@ -4838,6 +4855,11 @@ $("muOut").addEventListener("change", (e) => {
     st.daySlots[d][team][id] = ss.value;
     pruneDays(); saveSettings(); return renderMatchup();
   }
+  if (e.target.id === "muSearch") {
+    const id = MU.freeLookup.get(e.target.value);
+    if (id != null || !e.target.value) { MU_SEARCH = id ?? null; renderMatchup(); }
+    return;
+  }
   const sel = e.target.closest("[data-mudropsel]");
   if (!sel) return;
   MU_DROP.set(Number(sel.dataset.mudropsel), sel.value);
@@ -4848,6 +4870,7 @@ $("muOut").addEventListener("click", (e) => {
   if (!b) return;
   const me = muMe();
   if (b.dataset.mugrid) { st.muGrid = b.dataset.mugrid; saveSettings(); return renderMatchup(); }
+  if (b.dataset.musearchclear) { MU_SEARCH = null; return renderMatchup(); }
   if (b.dataset.mumove) {
     const [add, drop, kind] = b.dataset.mumove.split("|");
     const pa = PLAYER_BY_ID.get(Number(add)), pd = drop ? PLAYER_BY_ID.get(Number(drop)) : null;
