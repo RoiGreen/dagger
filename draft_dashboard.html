@@ -1072,8 +1072,11 @@ table.cmpt td.lbl { min-width: 5.5em; }
 @media (prefers-reduced-motion: no-preference) { .seg button, .chip, .act button { transition: background-color .12s, color .12s; } }
 
 
-.musearch { display: flex; gap: 6px; align-items: center; max-width: 420px; margin: 4px auto 8px; }
-.musearch input { flex: 1; min-width: 0; font: inherit; padding: 8px 12px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); }
+.mupksec { position: relative; }
+/* the pickup search: at the top right, on the title's row */
+.musearch { display: flex; gap: 6px; align-items: center; position: absolute; top: 10px; inset-inline-start: 14px; width: min(280px, 32%); margin: 0; }
+@media (max-width: 700px) { .musearch { position: static; width: auto; margin: 2px 0 8px; } }
+.musearch input { flex: 1; min-width: 0; font: inherit; padding: 6px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); }
 .mupicks li.msearched { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
 .mupicks .mfit small.neg { color: var(--neg); }
 /* ================= Phone (up to 700px wide) =================
@@ -4760,7 +4763,7 @@ function renderMatchup() {
     </div>
     ${overBy > 0 ? `<section class="cmpsec over"><h3 class="ctr">הסגל מלא ב־${overBy}: צריך לשחרר</h3>
       <div class="mupickhead"><span>סיכוי לנצח במצ'אפ הקרוב</span></div><ol class="mupicks">${dropRows}</ol></section>` : ""}
-    <section class="cmpsec"><h3 class="ctr">פיק אפ מומלץ לשבוע הזה</h3>
+    <section class="cmpsec mupksec"><h3 class="ctr">פיק אפ מומלץ לשבוע הזה</h3>
       <p class="munote ctrnote">בסגל שלך ${activeMine.length} שחקנים פעילים מתוך ${st.roster}${ilA.size ? `, ועוד ${ilA.size} ב־IL / IL+` : ""}${activeMine.length < st.roster ? ": אפשר להוסיף בלי לשחרר" : ""}</p>
       ${overBy > 0 ? `<p class="munote">קודם לשחרר שחקן מהסגל (למעלה)</p>`
         : left === 0 ? `<p class="munote">ניצלת את כל ${maxAdds} הפיק אפים של השבוע</p>`
