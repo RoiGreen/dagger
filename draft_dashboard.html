@@ -1648,6 +1648,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
 
       <section class="view" id="viewMu" role="tabpanel" aria-labelledby="tabMu" hidden>
         <div class="mubar">
+          <div class="mupick"><span>הקבוצה בניהול</span><select id="muTeam" aria-label="הקבוצה בניהול"></select></div>
           <div class="mupick"><span>היריב השבוע</span><select id="muOpp" aria-label="היריב השבוע"></select></div>
           <span class="muadds">פיק אפים השבוע: <input type="number" id="muAddsUsed" min="0" max="14" aria-label="פיק אפים שנוצלו"> מתוך <b id="muAddsMaxTxt"></b></span>
           <span class="muwnav">
@@ -1903,7 +1904,7 @@ function applySettings(s) {
   // Punt starts empty too. What the user built stays: league setup (format, teams, roster), draft settings, table marks
   // (favorites and draft picks are stored apart from the settings).
   for (const k of ["q", "minGp", "minMin", "catFilters", "pos", "teamSel", "maxAge", "hideTaken", "onlyMine", "show", "onlyMoved", "noHurt", "onlyFav",
-    "inj", "rookies", "roles", "weekGames", "formWin", "sort", "asc", "tab", "advSort", "advAsc", "teamSort", "teamAsc", "availSeasons", "vsOpp", "mode", "cmp", "muWeekOff", "muGrid", "onlyInj", "role", "team", "minAst", "minCat", "minVal", "punts"]) delete s[k];
+    "inj", "rookies", "roles", "weekGames", "formWin", "sort", "asc", "tab", "advSort", "advAsc", "teamSort", "teamAsc", "availSeasons", "vsOpp", "mode", "cmp", "muWeekOff", "muGrid", "muTeam", "onlyInj", "role", "team", "minAst", "minCat", "minVal", "punts"]) delete s[k];
   if (!Array.isArray(s.roles)) s.roles = s.role ? [s.role] : [];
   if (!Array.isArray(s.teamSel)) s.teamSel = s.team ? [s.team] : [];
   s.teamSel = s.teamSel.filter((x) => x !== "-");  // the free-agent option is gone
@@ -4212,7 +4213,7 @@ function planWeek(roster, il, team, swap = null) {
       }
     }
     // my own lineup: a player set "on" is placed first, one set "off" stays on the bench (my team only)
-    const mineDay = { ...(team === myIdx() ? (st.lineup?.[d] || {}) : {}) };
+    const mineDay = { ...((team === myIdx() ? st.lineup : st.lineupT?.[team])?.[d] || {}) };
     const daySet = st.daySlots?.[d]?.[team];
     const fixed = daySet ? Object.fromEntries(who.map((p) => [p.id, daySet[p.id] || "BN"])) : {};
     for (const [id, sl] of Object.entries(fixed)) if (sl === "BN" && !mineDay[id]) mineDay[id] = "off";  // BN: never in the lineup
@@ -4298,7 +4299,20 @@ const pctTxt = (q) => (q > 0.995 ? ">99%" : q < 0.005 ? "<1%" : `${Math.round(q 
 const ilOf = (t) => new Set(((st.il || {})[t] || []).filter((id) => picks.some((x) => x.id === id && x.team === t) || (t === myIdx() && mine.has(id))));
 const rosterOf = (t) => (t === myIdx() ? players.filter((p) => mine.has(p.id)) : picks.filter((x) => x.team === t).map((x) => PLAYER_BY_ID.get(x.id)).filter(Boolean));
 const myRoster = () => rosterOf(myIdx());
-const addsUsed = () => (st.muAdds && st.muAdds.week === WEEK.from ? st.muAdds.n : 0);
+// The team managed in the weekly matchup: mine, unless another team is picked there. Its lineup, pickups, releases and
+// IL are worked on as if it were mine (a league manager can run every team); "my team" in the league does not change.
+const muMe = () => (st.muTeam != null && st.muTeam < Math.max(st.teams, 1) ? st.muTeam : myIdx());
+// a team's own lineup choices per day (mine are kept where they always were)
+const lineupOf = (t) => (t === myIdx() ? (st.lineup = st.lineup || {}) : ((st.lineupT = st.lineupT || {})[t] = st.lineupT[t] || {}));
+// pickups used this week by the managed team
+const addsUsed = (t = muMe()) => {
+  const a = t === myIdx() ? st.muAdds : st.muAddsT?.[t];
+  return a && a.week === WEEK.from ? a.n : 0;
+};
+function setAdds(t, n) {
+  const v = { week: WEEK.from, n };
+  if (t === myIdx()) st.muAdds = v; else (st.muAddsT = st.muAddsT || {})[t] = v;
+}
 // The first day a player picked up now can play: today (US Eastern), or the first day of the week planned
 function pickupFrom() {
   const today = etDay(new Date());
@@ -4361,7 +4375,7 @@ function muMove(team, addId, dropId, kind) {
   if (addId) picks.push({ id: addId, team });
   if (added) {
     delete st.tags[added];  // a table mark of the newcomer would contradict his new team
-    if (team === me) st.muAdds = { week: WEEK.from, n: addsUsed() + 1 };
+    if (added) setAdds(team, addsUsed(team) + 1);
   }
   rebuildSets(); flushPicks(); saveSettings(); render();
 }
@@ -4438,8 +4452,8 @@ function seasonWeek(from) {
 }
 // my opponent in a week: a hand pick for that week, else the schedule
 function scheduledOpp(from) {
-  const n = Math.max(st.teams, 1), me = myIdx();
-  const hand = st.oppByWeek?.[from];
+  const n = Math.max(st.teams, 1), me = muMe();
+  const hand = me === myIdx() ? st.oppByWeek?.[from] : st.oppByWeekT?.[`${me}|${from}`];
   if (hand != null && hand < n && hand !== me) return hand;
   if (n < 2) return null;
   const rounds = schedRounds(n), R = rounds.length, w = seasonWeek(from);
@@ -4451,7 +4465,12 @@ function renderMatchup() {
   WEEK = muWeekRange();
   MU = { model: new Map(), games: new Map() };
   for (const g of GAMES) if (!g.pre) { MU.games.set(`${g.h}|${g.d}`, g); MU.games.set(`${g.a}|${g.d}`, g); }
-  const n = Math.max(st.teams, 1), me = myIdx();
+  const n = Math.max(st.teams, 1), me = muMe();
+  const ms = $("muTeam");
+  if (ms !== document.activeElement) {
+    ms.innerHTML = Array.from({ length: n }, (_, i) => `<option value="${i}">${esc(teamName(i))}${i === myIdx() ? " (שלי)" : ""}</option>`).join("");
+    ms.value = String(me);
+  }
   st.muOpp = scheduledOpp(WEEK.from);
   if (st.muOpp == null || st.muOpp >= n || st.muOpp === me) st.muOpp = (me + 1) % n;
   const sel = $("muOpp");
@@ -4468,7 +4487,7 @@ function renderMatchup() {
   const maxAdds = st.weekAdds ?? 3;
   $("muAddsMaxTxt").textContent = maxAdds; setField("muAddsUsed", addsUsed());
   const out = $("muOut");
-  const mineP = myRoster(), oppP = rosterOf(st.muOpp);
+  const mineP = rosterOf(me), oppP = rosterOf(st.muOpp);
   if (!mineP.length || !oppP.length) {
     out.innerHTML = `<p class="gnote">${!mineP.length ? "כדי לתכנן מצ'אפ צריך את הסגל שלך: בחר שחקנים לקבוצה שלך בחדר הדראפט או סמן אותם \"שלי\" בטבלה." : "לקבוצה הזו אין עדיין שחקנים בחדר הדראפט."}</p>`;
     return;
@@ -4735,45 +4754,53 @@ function renderMatchup() {
 // a hand pick holds for that week only; the other weeks keep the schedule
 $("muOpp").addEventListener("change", (e) => {
   st.muOpp = Number(e.target.value);
-  st.oppByWeek = { ...(st.oppByWeek || {}), [WEEK.from]: st.muOpp };
+  if (muMe() === myIdx()) st.oppByWeek = { ...(st.oppByWeek || {}), [WEEK.from]: st.muOpp };
+  else (st.oppByWeekT = st.oppByWeekT || {})[`${muMe()}|${WEEK.from}`] = st.muOpp;
+  saveSettings(); renderMatchup();
+});
+// the managed team: pick any team of the league to run its week
+$("muTeam").addEventListener("change", (e) => {
+  const t = Number(e.target.value);
+  st.muTeam = t === myIdx() ? null : t;
+  MU_DROP.clear();
   saveSettings(); renderMatchup();
 });
 for (const [id, d] of [["muPrev", -1], ["muNext", 1], ["muNow", 0]]) {
   $(id).addEventListener("click", () => { st.muWeekOff = d ? (st.muWeekOff || 0) + d : 0; renderMatchup(); });
 }
 $("muAddsMax").addEventListener("input", (e) => { const v = Number(e.target.value); if (Number.isFinite(v)) { st.weekAdds = Math.min(14, Math.max(0, v)); update(false); } });
-$("muAddsUsed").addEventListener("input", (e) => { const v = Number(e.target.value); if (Number.isFinite(v)) { st.muAdds = { week: WEEK.from, n: Math.min(14, Math.max(0, v)) }; saveSettings(); renderMatchup(); } });
+$("muAddsUsed").addEventListener("input", (e) => { const v = Number(e.target.value); if (Number.isFinite(v)) { setAdds(muMe(), Math.min(14, Math.max(0, v))); saveSettings(); renderMatchup(); } });
 function pruneDays() {
   const old = shiftDay(etDay(new Date()), -21);
   for (const d of Object.keys(st.daySlots || {})) if (d < old || !Object.keys(st.daySlots[d]).length) delete st.daySlots[d];
 }
 // my lineup: cycle a cell, copy yesterday, reset a day
 function luSave() {
-  st.lineup = st.lineup || {};
   const old = shiftDay(etDay(new Date()), -21);  // choices older than three weeks are no longer needed
-  for (const d of Object.keys(st.lineup)) if (!Object.keys(st.lineup[d]).length || d < old) delete st.lineup[d];
+  for (const lu of [st.lineup || {}, ...Object.values(st.lineupT || {})])
+    for (const d of Object.keys(lu)) if (!Object.keys(lu[d]).length || d < old) delete lu[d];
   saveSettings(); renderMatchup();
 }
 $("muOut").addEventListener("click", (e) => {
   const cell = e.target.closest("[data-lu]"), cp = e.target.closest("[data-lucopy]"), rs = e.target.closest("[data-lureset]");
   if (!cell && !cp && !rs) return;
   e.stopPropagation();
-  st.lineup = st.lineup || {};
+  const LU = lineupOf(muMe());
   if (cell) {
-    const [pid, d] = cell.dataset.lu.split("|"), day = (st.lineup[d] = st.lineup[d] || {});
+    const [pid, d] = cell.dataset.lu.split("|"), day = (LU[d] = LU[d] || {});
     const next = { undefined: "on", on: "off", off: undefined }[day[pid]];
     if (next) day[pid] = next; else delete day[pid];
   } else if (cp) {
     const d = cp.dataset.lucopy, days = weekDays(), prev = days[days.indexOf(d) - 1];
-    const me = myIdx(), T = planWeek(myRoster(), ilOf(me), me);
+    const me = muMe(), T = planWeek(rosterOf(me), ilOf(me), me);
     const day = {};
-    for (const p of myRoster()) {
+    for (const p of rosterOf(me)) {
       const was = T.cell.get(`${p.id}|${prev}`), now = T.cell.get(`${p.id}|${d}`);
       if (!now || now.out) continue;
       if (was && !was.out) day[p.id] = was.slot ? "on" : "off";
     }
-    st.lineup[d] = day;
-  } else delete st.lineup[rs.dataset.lureset];
+    LU[d] = day;
+  } else delete LU[rs.dataset.lureset];
   luSave();
 }, true);
 $("muOut").addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.closest("[data-lu]")) e.target.click(); });
@@ -4798,7 +4825,7 @@ $("muOut").addEventListener("change", (e) => {
 $("muOut").addEventListener("click", (e) => {
   const b = e.target.closest("button");
   if (!b) return;
-  const me = myIdx();
+  const me = muMe();
   if (b.dataset.mugrid) { st.muGrid = b.dataset.mugrid; saveSettings(); return renderMatchup(); }
   if (b.dataset.mumove) {
     const [add, drop, kind] = b.dataset.mumove.split("|");
