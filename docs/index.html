@@ -3637,14 +3637,15 @@ function renderCmpSide(side) {
     // Default: I give from my team and get from the next one
     if (c.mode === "trade" && (c[key] == null || c[key] === "")) {
       const t = side === "a" ? myIdx() : (myIdx() + 1) % n;
-      c[key] = picks.some((x) => x.team === t) ? String(t) : "all";  // before the draft: everyone
+      c[key] = String(t);
     }
+    if (c.mode === "trade" && (c[key] === "all" || c[key] === "free")) c[key] = String(side === "a" ? myIdx() : (myIdx() + 1) % n);  // a trade is between teams
     if (c[key] && c[key] !== "all" && c[key] !== "free" && Number(c[key]) >= n) c[key] = "all";
     const tsel = box.querySelector("[data-cmptt]"), psel = box.querySelector("[data-cmptp]");
     if (tsel !== document.activeElement) {
       tsel.innerHTML = (c[key] ? "" : `<option value="">בחר קבוצה</option>`) + Array.from({ length: n }, (_, i) =>
         `<option value="${i}">${esc(teamName(i))}</option>`).join("") +
-        `<option value="free">שוק השחקנים החופשי</option><option value="all">כל השחקנים</option>`;
+        (c.mode === "trade" ? "" : `<option value="free">שוק השחקנים החופשי</option><option value="all">כל השחקנים</option>`);
       tsel.value = c[key];
     }
     const added = new Set(c[side]);
@@ -3745,7 +3746,8 @@ function renderCmpSide(side) {
   // Trade: keep my roster at its size. I get more players -> drop or IL someone; I give more -> room for a free agent
   let rb = $("cmpRoster" + S2);
   if (!rb) { rb = document.createElement("div"); rb.id = "cmpRoster" + S2; rb.className = "rbal"; $("cmpChips" + S2).after(rb); }
-  rb.hidden = c.mode !== "trade";
+  rb.hidden = c.mode !== "trade" || side === "b";
+  if (c.mode === "trade" && (c.adds || []).length) c.adds = [];  // free-agent adds are the pickup tab's job
   if (c.mode === "trade") {
     const give = c.a.length, get = c.b.length, drops = c.drops || [], adds = c.adds || [];
     const need = get - give - drops.length + adds.length;  // > 0: spots I still have to clear
@@ -3767,7 +3769,7 @@ function renderCmpSide(side) {
         <ul class="cmpchips">${adds.map((id) => { const p = PLAYER_BY_ID.get(id); return p ? `<li><span class="nm">${esc(p.name)} <em class="rbt add">פיק אפ</em></span><button type="button" data-rbrmadd="${id}" aria-label="ביטול">✕</button></li>` : ""; }).join("")}</ul>`;
     }
     const msg = need > 0 ? `<b class="bad">צריך לפנות ${need === 1 ? "מקום אחד" : `${need} מקומות`} בסגל</b> (דרופ או IL)`
-      : need < 0 ? `<b class="ok">${-need === 1 ? "נשאר מקום פנוי אחד" : `נשארו ${-need} מקומות פנויים`}</b>: אפשר להוסיף שחקן חופשי`
+      : need < 0 ? `<b class="ok">${-need === 1 ? "נשאר מקום פנוי אחד" : `נשארו ${-need} מקומות פנויים`}</b>`
       : (give || get) ? `<b class="ok">הסגל מאוזן</b>` : "";
     if (side === "a") { let bal = $("rbBalance"); if (!bal) { bal = document.createElement("div"); bal.id = "rbBalance"; bal.className = "rbbal"; document.querySelector(".cmpsides").after(bal); } bal.innerHTML = msg; bal.hidden = !msg; }
   } else { const bal = $("rbBalance"); if (bal) bal.hidden = true; }
