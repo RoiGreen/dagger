@@ -277,6 +277,26 @@ def form_windows(players: list[dict], logs: pd.DataFrame, key: str) -> str | Non
     return f"{end:%Y-%m-%d}"
 
 
+def attach_weeks(players: list[dict]) -> None:
+    """2026-27 regular season, fantasy week by fantasy week (Monday to Sunday): p["wk"] = {"2026-10-19": [games,
+    [STATS totals]]}, for the league's weekly results in the power ranking."""
+    if not CURRENT_LOGS.exists() or CURRENT_LOGS.stat().st_size < 200:
+        return
+    d = with_doubles(pd.read_csv(CURRENT_LOGS))
+    d = d[d["MIN"] > 0].copy()
+    if d.empty:
+        return
+    day = pd.to_datetime(d["GAME_DATE"].astype(str).str[:10])
+    d["WEEK"] = (day - pd.to_timedelta(day.dt.weekday, unit="D")).dt.strftime("%Y-%m-%d")
+    g = d.groupby(["PLAYER_ID", "WEEK"])
+    sums, counts = g[STATS].sum(), g.size()
+    by_id = {p["id"]: p for p in players}
+    for (pid, wk), row in sums.iterrows():
+        if pid in by_id:
+            by_id[pid].setdefault("wk", {})[wk] = [int(counts[(pid, wk)]), [round(float(row[c]), 1) for c in STATS]]
+    print(f"Weekly totals for {sum(1 for p in players if 'wk' in p)} players")
+
+
 RECENT_GAMES = 30  # games in the player card
 
 
@@ -618,6 +638,7 @@ def main() -> None:
     pre_logs = with_doubles(pd.read_csv(PRESEASON_LOGS)) if PRESEASON_LOGS.exists() and PRESEASON_LOGS.stat().st_size > 200 else pd.DataFrame()
     form_end_pre = form_windows(players, pre_logs, "formPre")
     attach_week_noise(players)
+    attach_weeks(players)
     # Embedded, because claude.ai artifacts cannot load images from other sites
     with_img = 0
     for p in players:

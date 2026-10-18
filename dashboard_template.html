@@ -1089,6 +1089,11 @@ table.box.lgtab td.lpts { font-weight: 800; font-size: 1rem; }
 table.box.lgtab tr.me td { box-shadow: inset 0 0 0 9999px color-mix(in srgb, var(--mine) 10%, transparent); }
 table.box.lgtab tr.me td.tn { color: var(--mine); }
 table.box.lgtab .punted { opacity: .4; }
+table.box.pwtab .up { color: var(--pos); font-weight: 800; }
+table.box.pwtab .dn { color: var(--neg); font-weight: 800; }
+table.box.pwtab .pwsame { color: var(--muted); }
+table.box.pwtab b { font-family: var(--font-num); }
+.lgsec + .lgsec { margin-top: 14px; }
 table.box.lgtab .lsort { border: 0; background: none; font: inherit; color: inherit; cursor: pointer; padding: 0; }
 table.box.lgtab th.sorted .lsort { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 700px) {
@@ -1969,7 +1974,7 @@ const hasPos = (p, x) => (p.pos || "").split("/").includes(x);
 const st = {
   fmt: "cat", cats: [...STD_CATS], scoring: "h2h", mode: "g", teams: 8, roster: 13, punts: new Set(), settingsVersion: 5,
   q: "", minGp: 0, minMin: 0, catFilters: [{ cat: "PTS", val: 0 }], pos: new Set(), teamSel: [], maxAge: 42,
-  show: ["free"], onlyMoved: false, noHurt: false, weekGames: [], formWin: "", muOpp: null, schedSeed: null, oppByWeek: {}, weekAdds: 3, muAdds: null, il: {}, muGrid: "a", inj: "all", rookies: "all", myPos: 1, snake: true, roles: [], leagueName: "", teamNames: [], tags: {}, tagsMigrated: false,
+  show: ["free"], onlyMoved: false, noHurt: false, weekGames: [], formWin: "", muOpp: null, schedSeed: null, oppByWeek: {}, wkRoster: {}, weekAdds: 3, muAdds: null, il: {}, muGrid: "a", inj: "all", rookies: "all", myPos: 1, snake: true, roles: [], leagueName: "", teamNames: [], tags: {}, tagsMigrated: false,
   cmp: { mode: "players", a: [], b: [], ta: 0, tb: 1, tta: null, ttb: null, chart: "val", sw: { a: [], b: [] }, fold: { a: false, b: false }, drops: [], adds: [] },
   sort: "zTotal", asc: false, tab: "board", advSort: "USG", advAsc: false, teamSort: "PACE", teamAsc: false, availSeasons: [2], vsOpp: "",
 };
@@ -3901,7 +3906,7 @@ function renderCmp() {
   const c = st.cmp, M = CMP_MODES[c.mode];
   for (const b of document.querySelectorAll("[data-cmpmode]")) b.setAttribute("aria-pressed", b.dataset.cmpmode === c.mode);
   document.querySelector("#viewCmp .cmpsides").hidden = !!M.league;
-  if (M.league) { $("cmpOut").innerHTML = leagueTable(); return; }
+  if (M.league) { $("cmpOut").innerHTML = powerTable() + leagueTable(); return; }
   renderCmpSide("a"); renderCmpSide("b");
   $("cmpSwap").hidden = !!M.pickup;
   let LA = cmpPlayers("a"), LB = cmpPlayers("b");
@@ -4092,6 +4097,109 @@ function tradeImpact() {
   };
   return `<section class="cmpsec"><h3 class="ctr">השפעה על הקבוצות</h3>
     <div class="tigrid">${ta != null ? card(ta, "נותנת") : ""}${tb != null && tb !== ta ? card(tb, "מקבלת") : ""}</div>
+  </section>`;
+}
+
+// ---------- Power ranking ----------
+// The rosters of the week in progress are saved as they change, so a finished week keeps the rosters it was played
+// with (a later trade does not rewrite it). A week never seen on this device uses the closest later snapshot.
+const activeIds = (t) => { const il = ilOf(t); return rosterOf(t).filter((p) => !il.has(p.id)).map((p) => p.id); };
+function snapWeekRosters() {
+  const today = etDay(new Date());
+  if (today < weekOf(REG_START).from || !picks.length) return;
+  const n = Math.max(st.teams, 1), w = weekOf(today).from;
+  if (!st.wkRoster || typeof st.wkRoster !== "object") st.wkRoster = {};
+  st.wkRoster[w] = Object.fromEntries(Array.from({ length: n }, (_, t) => [t, activeIds(t)]));
+}
+function weekIds(t, from) {
+  const later = Object.keys(st.wkRoster || {}).filter((w) => w >= from).sort();
+  const snap = later.length ? st.wkRoster[later[0]][t] : null;
+  return Array.isArray(snap) ? snap : activeIds(t);
+}
+// finished fantasy weeks: every regular-season game of the week is in the game logs
+function doneWeeks() {
+  const weeks = [...new Set(SEASON_DAYS.map((d) => weekOf(d).from))].sort();
+  return weeks.filter((f) => { const to = weekOf(f).to; return SEASON_DAYS.some((d) => d >= f && d <= to) && !SEASON_DAYS.some((d) => d >= f && d <= to && d > LOG_END); });
+}
+// a team's real totals in a week (players' games that week), then category by category against the opponent
+function weekTotals(t, from) {
+  const o = { PTS: 0, REB: 0, AST: 0, STL: 0, BLK: 0, FG3M: 0, TOV: 0, FGM: 0, FGA: 0, FTM: 0, FTA: 0, FG3A: 0, OREB: 0, DD2: 0, TD3: 0 };
+  for (const id of weekIds(t, from)) {
+    const w = PLAYER_BY_ID.get(id)?.wk?.[from];
+    if (w) for (const k in o) o[k] += w[1][ix[k]] || 0;
+  }
+  o.FG_PCT = o.FGA ? o.FGM / o.FGA : 0; o.FT_PCT = o.FTA ? o.FTM / o.FTA : 0; o.FG3_PCT = o.FG3A ? o.FG3M / o.FG3A : 0;
+  return o;
+}
+function weekRecord(a, b) {
+  const r = { w: 0, d: 0, l: 0 };
+  for (const c of CATS) {
+    const s = c.k === "TOV" ? -1 : 1, x = s * (a[c.k] ?? 0), y = s * (b[c.k] ?? 0);
+    const eq = Math.abs(x - y) < (c.k.endsWith("_PCT") ? 1e-9 : 1e-6);
+    if (eq) r.d++; else if (x > y) r.w++; else r.l++;
+  }
+  return r;
+}
+// Roster strength: each category's place in the league, read as the chance to win it against a random team
+// (first = 100%, last = 0%), averaged over the categories
+function rosterStrength(lists) {
+  const n = lists.length, T = lists.map((l) => cmpTotals(l));
+  return T.map((x, i) => {
+    if (!lists[i].length || n < 2) return 0.5;
+    return CATS.reduce((a, c) => {
+      const s = c.k === "TOV" ? -1 : 1, v = (y) => s * (y[c.k] ?? 0);
+      const better = T.filter((y, j) => j !== i && lists[j].length && v(y) > v(x)).length, same = T.filter((y, j) => j !== i && lists[j].length && v(y) === v(x)).length;
+      return a + (n - 1 - better - same / 2) / (n - 1);
+    }, 0) / CATS.length;
+  });
+}
+// The ranking after k finished weeks: the category record (wins + half the draws) weighs more as weeks go by
+// (k / (k + 4): half after 4 weeks, 75% after 12), the roster strength the rest
+function powerAfter(weeks, k) {
+  const n = Math.max(st.teams, 1);
+  const rec = Array.from({ length: n }, () => ({ w: 0, d: 0, l: 0 }));
+  for (const f of weeks.slice(0, k)) {
+    const tot = Array.from({ length: n }, (_, t) => weekTotals(t, f));
+    for (let t = 0; t < n; t++) {
+      const o = oppOf(t, f);
+      if (o == null || o < 0 || o >= n) continue;
+      const r = weekRecord(tot[t], tot[o]);
+      rec[t].w += r.w; rec[t].d += r.d; rec[t].l += r.l;
+    }
+  }
+  // strength from the rosters of the last week counted (now, before any week)
+  const lists = Array.from({ length: n }, (_, t) => (k ? weekIds(t, weeks[k - 1]) : activeIds(t)).map((id) => PLAYER_BY_ID.get(id)).filter((p) => p && p.L));
+  const str = rosterStrength(lists), wr = k / (k + 4);
+  const rows = rec.map((r, t) => {
+    const g = r.w + r.d + r.l, pct = g ? (r.w + r.d / 2) / g : 0.5;
+    return { t, ...r, pct, str: str[t], score: wr * pct + (1 - wr) * str[t] };
+  });
+  rows.sort((a, b) => b.score - a.score || b.pct - a.pct || a.t - b.t);
+  rows.forEach((x, i) => (x.rank = i + 1));
+  return rows;
+}
+function powerTable() {
+  const n = Math.max(st.teams, 1);
+  if (!Array.from({ length: n }, (_, t) => rosterOf(t).length).some(Boolean)) return "";
+  const weeks = doneWeeks(), k = weeks.length;
+  const now = powerAfter(weeks, k);
+  const prev = k ? new Map(powerAfter(weeks, k - 1).map((x) => [x.t, x.rank])) : null;
+  const pc = (v) => `${Math.round(v * 100)}%`;
+  const body = now.map((x) => {
+    const d = prev ? prev.get(x.t) - x.rank : 0;
+    const ch = !prev || !d ? `<span class="pwsame">–</span>` : `<span class="${d > 0 ? "up" : "dn"}">${d > 0 ? "▲" : "▼"}${Math.abs(d)}</span>`;
+    return `<tr class="${x.t === myIdx() ? "me" : ""}"><td class="rank">${x.rank}</td><td class="tn">${esc(teamName(x.t))}</td>
+      <td><b dir="ltr">${x.w}-${x.d}-${x.l}</b>${x.w + x.d + x.l ? `<small>${pc(x.pct)}</small>` : ""}</td><td>${pc(x.str)}</td><td dir="ltr">${ch}</td></tr>`;
+  }).join("");
+  const note = k
+    ? `${k} ${k === 1 ? "שבוע" : "שבועות"} שהסתיימו. W-D-L = קטגוריות שנוצחו, בתיקו והופסדו מול היריב של כל שבוע (מהנתונים האמיתיים של השחקנים בסגל, בלי IL). המיקום משקלל את המאזן (${Math.round(k / (k + 4) * 100)}%) ואת חוזק הסגל. השינוי: לעומת סוף השבוע הקודם.`
+    : `התוצאות ייספרו מסוף השבוע הראשון של העונה. עד אז המיקום לפי חוזק הסגל בלבד.`;
+  return `<section class="cmpsec lgsec"><h3 class="ctr">דירוג עוצמה</h3>
+    <div class="tbl-wrap short"><table class="box lgtab pwtab"><thead><tr><th class="nosort">#</th><th class="nosort">קבוצה</th>
+      <th class="nosort" data-tip="ניצחונות-תיקו-הפסדים בקטגוריות, כל השבועות שהסתיימו">W-D-L</th>
+      <th class="nosort" data-tip="סיכוי ממוצע לנצח קטגוריה מול קבוצה אקראית, לפי הסגל הנוכחי">חוזק סגל</th>
+      <th class="nosort">שינוי</th></tr></thead><tbody>${body}</tbody></table></div>
+    <p class="munote ctrnote">${note}</p>
   </section>`;
 }
 
@@ -4862,14 +4970,17 @@ function seasonWeek(from) {
   return Math.max(0, Math.round((Date.parse(from + "T12:00:00Z") - Date.parse(first + "T12:00:00Z")) / (7 * 864e5)));
 }
 // my opponent in a week: a hand pick for that week, else the schedule
-function scheduledOpp(from) {
-  const n = Math.max(st.teams, 1), me = muMe();
+function scheduledOpp(from) { return oppOf(muMe(), from, true); }
+// a team's opponent in a week: a hand pick for that week, else the schedule. A bye week has none (-1), unless
+// fill is set (the matchup tab still wants a team to plan against)
+function oppOf(me, from, fill = false) {
+  const n = Math.max(st.teams, 1);
   const hand = me === myIdx() ? st.oppByWeek?.[from] : st.oppByWeekT?.[`${me}|${from}`];
   if (hand != null && hand < n && hand !== me) return hand;
   if (n < 2) return null;
   const rounds = schedRounds(n), R = rounds.length, w = seasonWeek(from);
   const o = rounds[cycleOrder(Math.floor(w / R), R)[w % R]].get(me);
-  return o != null && o >= 0 ? o : (me + 1) % n;  // a bye week: the next team, to still have a matchup to plan
+  return o != null && o >= 0 ? o : fill ? (me + 1) % n : -1;  // a bye week: the next team, to still have a matchup to plan
 }
 function renderMatchup() {
   if (st.tab !== "mu") return;
@@ -5882,6 +5993,7 @@ function syncControls() {
   $("onlyMoved").checked = st.onlyMoved; $("noHurt").checked = st.noHurt;
 }
 function update(recompute = true) {
+  snapWeekRosters();
   saveSettings(); syncControls();
   if (recompute) compute();
   render();
