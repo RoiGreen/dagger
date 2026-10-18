@@ -1417,6 +1417,23 @@ table.box.titab tr.punted td { opacity: .4; }
   .gcard .gbox table.box td.pn .pw > span { line-height: 1.15; font-size: .82rem; overflow-wrap: anywhere; }
   .gcard .gbox table.box tr.star td.pn { background: color-mix(in srgb, var(--accent) 10%, var(--surface)); }
 }
+
+/* phone: the comparison's two sides mirror each other: same card layout, same table column widths */
+@media (max-width: 700px) {
+  .face { align-content: start; grid-template-rows: auto minmax(2.5em, auto) auto auto; padding: 14px 8px 12px; gap: 4px; }
+  .face .ph { width: 84px; height: 84px; }
+  .face .ph.hurt { width: 96px; height: 96px; }
+  .face .fn { font-size: .98rem; line-height: 1.2; display: flex; align-items: center; justify-content: center; min-height: 2.5em; overflow-wrap: anywhere; }
+  .face .fs { gap: 10px; }
+  .face .fs b { font-size: 1.05rem; }
+  /* the table: equal columns for the two sides, the names cut short, the difference column always in view */
+  table.cmpt { width: 100%; table-layout: fixed; }
+  table.cmpt th, table.cmpt td { padding: 5px 3px; font-size: .84rem; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  table.cmpt th:first-child, table.cmpt td.lbl { width: 22%; }
+  table.cmpt th.ha, table.cmpt th.hb { max-width: none; font-size: .74rem; }
+  .vsboard .wh { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; unicode-bidi: plaintext; }  /* a long English name is cut at its end */
+  table.cmpt th.ha, table.cmpt th.hb { unicode-bidi: plaintext; }
+}
 </style>
 
 <script>
