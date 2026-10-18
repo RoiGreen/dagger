@@ -4804,7 +4804,7 @@ function renderMatchup() {
       const names = benched.map((p) => `<span class="pn" data-pcard="${p.id}">${esc(p.name)}</span>`).join(", ");
       const why = day.empty.length
         ? `המשבצות שמתאימות ${benched.length > 1 ? "להם" : "לו"} תפוסות, ופנויה רק ${day.empty.join(", ")}`
-        : `${day.playing} שחקנים משחקים ויש ${LINEUP.length} מקומות, ו${benched.length > 1 ? "הם" : "הוא"} התורם${benched.length > 1 ? "ים" : ""} הכי פחות לקטגוריות הפתוחות במצ'אפ הזה`;
+        : `${day.playing} שחקנים משחקים ויש ${LINEUP.length} מקומות, ו${benched.length > 1 ? "הם תורמים" : "הוא תורם"} הכי פחות לקטגוריות הפתוחות במצ'אפ הזה`;
       lines.push(`${esc(dayLabel(day.d))}: ${names} על הספסל. ${why}`);
     }
     return lines.length ? `<ul class="dgwhy">${lines.map((l) => `<li>${l}</li>`).join("")}</ul>` : "";
