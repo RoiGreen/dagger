@@ -3534,7 +3534,7 @@ function cmpBase(side) {
   const c = st.cmp;
   if (c.mode === "teams") {
     const t = side === "a" ? c.ta : c.tb;
-    return picks.filter((x) => x.team === t).map((x) => PLAYER_BY_ID.get(x.id)).filter(Boolean);
+    return rosterOf(t).filter((p) => !ilOf(t).has(p.id));  // the active roster: IL / IL+ players do not count
   }
   return c[side].map((id) => PLAYER_BY_ID.get(id)).filter(Boolean);
 }
@@ -3566,7 +3566,8 @@ let cmpOpen = { a: false, b: false };  // team lists opened in this visit (they 
 let CMP_SW_LOOKUP = new Map();
 let CMP_TP = { a: new Map(), b: new Map() };  // typed player box: list text -> player id
 function pickupRoster() {
-  return picks.filter((x) => x.team === st.cmp.pt).map((x) => PLAYER_BY_ID.get(x.id)).filter(Boolean);
+  const t = st.cmp.pt;
+  return rosterOf(t).filter((p) => !ilOf(t).has(p.id));  // the active roster: IL / IL+ players do not count
 }
 // avg: the team's numbers per player instead of its totals (percentages and rates stay as they are)
 // Fantasy points by source, with the league's weights; the parts add up to FPTS (punted parts drop out)
@@ -3636,8 +3637,10 @@ function renderCmpSide(side) {
     }
     const sel = box.querySelector("[data-cmpteam]"), addSel = box.querySelector("[data-cmpteamadd]");
     if (sel !== document.activeElement) { sel.innerHTML = opts; sel.value = String(side === "a" ? c.ta : c.tb); }
+    const fullTeam = cmpPlayers(side).length >= st.roster;  // a full active roster: swap a player instead
+    addSel.disabled = fullTeam;
     if (addSel !== document.activeElement) {
-      addSel.innerHTML = `<option value="">הוסף שחקן</option>` + cmpFreeForTeams().slice(0, 500).map((p) =>
+      addSel.innerHTML = fullTeam ? `<option value="">הסגל מלא (${cmpPlayers(side).length}/${st.roster})</option>` : `<option value="">הוסף שחקן</option>` + cmpFreeForTeams().slice(0, 500).map((p) =>
         `<option value="${p.id}">${rank.has(p.id) ? `#${rank.get(p.id)} ` : ""}${esc(p.name)} · ${esc(p.pos || "–")} · ${esc(p.team26 || "FA")}</option>`).join("");
     }
   } else if (c.mode === "trade" || c.mode === "players") {
