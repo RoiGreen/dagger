@@ -1079,6 +1079,22 @@ table.cmpt td.lbl { min-width: 5.5em; }
 .musearch input { flex: 1; min-width: 0; font: inherit; padding: 6px 10px; border: 1px solid var(--line); border-radius: 10px; background: var(--surface); color: var(--ink); }
 .mupicks li.msearched { border-color: var(--accent); box-shadow: 0 0 0 1px var(--accent) inset; }
 .mupicks .mfit small.neg { color: var(--neg); }
+
+/* comparison: the whole league */
+table.box.lgtab { width: 100%; direction: rtl; }
+table.box.lgtab th, table.box.lgtab td { text-align: center; white-space: nowrap; padding: 6px 8px; }
+table.box.lgtab td.tn { text-align: start; font-weight: 700; font-family: var(--font-body); direction: rtl; }
+table.box.lgtab td small { display: block; font-size: .66rem; color: var(--muted); line-height: 1; margin-top: 2px; }
+table.box.lgtab td.lpts { font-weight: 800; font-size: 1rem; }
+table.box.lgtab tr.me td { box-shadow: inset 0 0 0 9999px color-mix(in srgb, var(--mine) 10%, transparent); }
+table.box.lgtab tr.me td.tn { color: var(--mine); }
+table.box.lgtab .punted { opacity: .4; }
+table.box.lgtab .lsort { border: 0; background: none; font: inherit; color: inherit; cursor: pointer; padding: 0; }
+table.box.lgtab th.sorted .lsort { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
+@media (max-width: 700px) {
+  table.box.lgtab td.rank, table.box.lgtab th:first-child { position: sticky; right: 0; z-index: 2; background: var(--surface); }
+  table.box.lgtab td.tn, table.box.lgtab th:nth-child(2) { position: sticky; right: 28px; z-index: 2; background: var(--surface); max-width: 9em; overflow: hidden; text-overflow: ellipsis; }
+}
 /* ================= Phone (up to 700px wide) =================
    Everything for phones lives in these blocks. A wider screen never reads them, so the desktop stays exactly as it is. */
 @media (max-width: 700px) {
@@ -1635,6 +1651,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
           <button type="button" data-cmpmode="teams" aria-pressed="false">קבוצה מול קבוצה</button>
           <button type="button" data-cmpmode="trade" aria-pressed="false">טרייד</button>
           <button type="button" data-cmpmode="pickup" aria-pressed="false">פיק אפ</button>
+          <button type="button" data-cmpmode="league" aria-pressed="false">כל הליגה</button>
         </div>
         <div class="cmpsides">
           <div class="cmpside sa" id="cmpSideA">
@@ -1930,7 +1947,7 @@ function applySettings(s) {
   if (["rankAlt", "gap", "trend", "vers", "weak"].includes(s.sort)) { s.sort = "rank"; s.asc = true; }
   delete s.onlySleepers;
   const cm = s.cmp;
-  if (!cm || !["players", "teams", "trade", "pickup"].includes(cm.mode) || !Array.isArray(cm.a) || !Array.isArray(cm.b)) delete s.cmp;
+  if (!cm || !["players", "teams", "trade", "pickup", "league"].includes(cm.mode) || !Array.isArray(cm.a) || !Array.isArray(cm.b)) delete s.cmp;
   else {
     s.cmp = { ta: 0, tb: 1, tta: null, ttb: null, chart: "val", ...cm };
     if (!s.cmp.sw || !Array.isArray(s.cmp.sw.a) || !Array.isArray(s.cmp.sw.b)) s.cmp.sw = { a: [], b: [] };
@@ -3402,6 +3419,7 @@ const CMP_MODES = {
   teams: { a: "קבוצה א", b: "קבוצה ב", team: true },
   trade: { a: "אני נותן", b: "אני מקבל", max: 15 },
   pickup: { a: "מוריד", b: "מוסיף", max: 15, pickup: true },
+  league: { league: true },
 };
 // Advanced side of the comparison: role, pace and efficiency (several players: minutes-weighted)
 const CMP_ADV = [
@@ -3766,6 +3784,8 @@ function renderCmp() {
   if (st.tab !== "cmp") return;
   const c = st.cmp, M = CMP_MODES[c.mode];
   for (const b of document.querySelectorAll("[data-cmpmode]")) b.setAttribute("aria-pressed", b.dataset.cmpmode === c.mode);
+  document.querySelector("#viewCmp .cmpsides").hidden = !!M.league;
+  if (M.league) { $("cmpOut").innerHTML = leagueTable(); return; }
   renderCmpSide("a"); renderCmpSide("b");
   $("cmpSwap").hidden = !!M.pickup;
   let LA = cmpPlayers("a"), LB = cmpPlayers("b");
@@ -3908,6 +3928,46 @@ function renderCmp() {
     </section>`;
 }
 
+// Every team of the league in every category: the team's per-game total (FG% / FT% as team percentages), its place in
+// the league in that category, and Roto points: the best team in a category gets as many points as there are teams,
+// the last one 1 (punted categories do not count). Sorted by any column.
+function leagueTable() {
+  const n = Math.max(st.teams, 1);
+  const teams = Array.from({ length: n }, (_, t) => ({ t, list: rosterOf(t).filter((p) => !ilOf(t).has(p.id)) }));
+  if (teams.every((x) => !x.list.length)) return `<p class="munote nopick">אחרי הדראפט תופיע כאן ההשוואה בין כל הקבוצות</p>`;
+  for (const x of teams) x.T = cmpTotals(x.list);
+  const live = CATS.filter((c) => !st.punts.has(c.k));
+  // place in each category (1 = best; fewer turnovers is better), ties share the better place; Roto points from it
+  for (const c of CATS) {
+    const sign = c.k === "TOV" ? -1 : 1, val = (x) => (x.list.length ? sign * (x.T[c.k] ?? 0) : -Infinity);
+    for (const x of teams) {
+      const better = teams.filter((y) => val(y) > val(x)).length, same = teams.filter((y) => val(y) === val(x)).length;
+      x[`r_${c.k}`] = better + 1;
+      x[`p_${c.k}`] = n - better - (same - 1) / 2;  // a tie splits the points
+    }
+  }
+  for (const x of teams) x.pts = live.reduce((a, c) => a + x[`p_${c.k}`], 0);
+  const key = st.cmp.lsort || "pts";
+  const sortVal = (x) => (key === "pts" ? x.pts : key === "Z" ? x.T.Z : -x[`r_${key}`]);
+  teams.sort((a, b) => sortVal(b) - sortVal(a) || a.t - b.t);
+  const heat = Object.fromEntries(CATS.map((c) => [c.k, percentileHeat(teams.map((x) => (c.k === "TOV" ? -1 : 1) * (x.T[c.k] ?? 0)))]));
+  const head = (k, l, tip = "") => `<th class="nosort${key === k ? " sorted" : ""}${st.punts.has(k) ? " punted" : ""}"${tip ? ` data-tip="${esc(tip)}"` : ""}><button type="button" class="lsort" data-cmplsort="${k}">${l}</button></th>`;
+  return `<section class="cmpsec lgsec"><h3 class="ctr">כל הליגה</h3>
+    <div class="tbl-wrap short"><table class="box lgtab"><thead><tr><th class="nosort">#</th><th class="nosort">קבוצה</th>
+      ${head("pts", "נקודות", `סכום המקומות בכל הקטגוריות: מקום ראשון בקטגוריה = ${n} נקודות, אחרון = 1`)}
+      ${CATS.map((c) => head(c.k, c.l)).join("")}${head("Z", "Z", "סכום ציוני ה־Z של השחקנים")}</tr></thead><tbody>
+      ${teams.map((x, i) => `<tr class="${x.t === myIdx() ? "me" : ""}"><td class="rank">${i + 1}</td><td class="tn">${esc(teamName(x.t))}</td>
+        <td class="lpts">${x.list.length ? (Number.isInteger(x.pts) ? x.pts : x.pts.toFixed(1)) : "–"}</td>
+        ${CATS.map((c) => `<td class="${st.punts.has(c.k) ? "punted" : ""}" style="${x.list.length ? heat[c.k]((c.k === "TOV" ? -1 : 1) * (x.T[c.k] ?? 0)) : ""}">${x.list.length ? catFmt(c.k)(x.T[c.k] ?? 0) : "–"}<small>#${x[`r_${c.k}`]}</small></td>`).join("")}
+        <td>${x.list.length ? x.T.Z.toFixed(1) : "–"}</td></tr>`).join("")}
+    </tbody></table></div>
+    <p class="munote ctrnote">סכום הממוצעים למשחק של השחקנים בסגל (בלי IL). ${st.punts.size ? "קטגוריה ב־Punt לא נספרת בנקודות." : ""}</p>
+  </section>`;
+}
+$("viewCmp").addEventListener("click", (e) => {
+  const sortBtn = e.target.closest("[data-cmplsort]");
+  if (sortBtn) { st.cmp.lsort = sortBtn.dataset.cmplsort; return renderCmp(); }
+}, true);
 $("viewCmp").addEventListener("click", (e) => {
   const t = e.target.closest("button");
   if (!t) return;
