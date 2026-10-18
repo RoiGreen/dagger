@@ -1901,10 +1901,12 @@ const regStarted = () => !!D.formEnd && GAMES.some((g) => !g.pre && g.d <= D.for
 const liveSeason = () => (regStarted() ? D.current : D.preseason);
 const formAllowed = () => { const ys = chosenSeasons(); return ys.length === 1 && ys[0] === liveSeason() && !!(regStarted() ? D.formEnd : D.formEndPre); };
 const formFromPre = () => !regStarted();
-// 2026-27 chosen on its own before its first game: the season's numbers are all still zero
-const seasonNotStarted = () => { const ys = chosenSeasons(); return ys.length > 0 && ys.every((y) => y === D.current) && !(D.curMaxGp > 0); };
+// 2026-27 chosen on its own: only its own games count (no earlier season, no rookie projection, no prior-season prior)
+const onlyCurrent = () => { const ys = chosenSeasons(); return ys.length > 0 && ys.every((y) => y === D.current); };
+// ...and before its first game the season's numbers are all still zero
+const seasonNotStarted = () => onlyCurrent() && !(D.curMaxGp > 0);
 function applySeasons() {
-  const ys = chosenSeasons(), noneYet = seasonNotStarted();
+  const ys = chosenSeasons(), noneYet = onlyCurrent();
   for (const p of players) {
     p.noWin = false;
     if (p.rookie && !ys.some((y) => p.seasons?.[y]?.gp >= seasonMinGames(y))) {
@@ -2175,7 +2177,7 @@ function sampleWeight(p) {
   return Math.min(1, (g / (g + k)) / (full / (full + k)));
 }
 // The season before the chosen ones: a player with 40+ games in it is "proven"
-const priorSeason = () => { const ys = chosenSeasons().filter((y) => y !== D.preseason); return ys.length ? Math.min(...ys) - 1 : null; };
+const priorSeason = () => { if (onlyCurrent()) return null; const ys = chosenSeasons().filter((y) => y !== D.preseason); return ys.length ? Math.min(...ys) - 1 : null; };
 const sdOf = (xs) => meanStd(xs)[1];
 let REPL_LEVEL = -1.5;
 // What the tables show: the score against the best players still on the market right now (the average of the
