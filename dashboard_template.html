@@ -2164,7 +2164,8 @@ function sampleWeight(p) {
   return Math.min(1, (g / (g + k)) / (full / (full + k)));
 }
 // The season before the chosen ones: a player with 40+ games in it is "proven"
-const priorSeason = () => null;  // only the chosen seasons count
+// a few-games player is pulled toward his season before (not in 2026-27 alone: its own games only)
+const priorSeason = () => { if (onlyCurrent()) return null; const ys = chosenSeasons().filter((y) => y !== D.preseason); return ys.length ? Math.min(...ys) - 1 : null; };
 const sdOf = (xs) => meanStd(xs)[1];
 let REPL_LEVEL = -1.5;
 // What the tables show: the score against the best players still on the market right now (the average of the
