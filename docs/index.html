@@ -1095,6 +1095,9 @@ table.box.lgtab th.sorted .lsort { color: var(--accent); text-decoration: underl
   table.box.lgtab td.rank, table.box.lgtab th:first-child { position: sticky; right: 0; z-index: 2; background: var(--surface); }
   table.box.lgtab td.tn, table.box.lgtab th:nth-child(2) { position: sticky; right: 28px; z-index: 2; background: var(--surface); max-width: 9em; overflow: hidden; text-overflow: ellipsis; }
 }
+
+table.box.murt .rsort { border: 0; background: none; font: inherit; color: inherit; cursor: pointer; padding: 0; white-space: nowrap; }
+table.box.murt th.sorted .rsort { color: var(--accent); }
 /* ================= Phone (up to 700px wide) =================
    Everything for phones lives in these blocks. A wider screen never reads them, so the desktop stays exactly as it is. */
 @media (max-width: 700px) {
@@ -4191,7 +4194,8 @@ function lineupFor(cands, fixed = {}) {
 // Per-player model for the week: expected line per game (the blended form), its spread game to game, and lineup value
 let MU = null;  // per-render cache
 const MU_DROP = new Map();
-let MU_SEARCH = null;  // a free agent looked up by name for a pickup  // pickup row -> the release chosen by hand ("id|drop" / "id|il" / "|")
+let MU_SEARCH = null;  // a free agent looked up by name for a pickup
+let MU_RSORT = null;   // roster table sorted by a column: { k, asc }; null = lineup order  // pickup row -> the release chosen by hand ("id|drop" / "id|il" / "|")
 function muModel(p) {
   if (MU.model.has(p.id)) return MU.model.get(p.id);
   const b = blendRaw(p);
@@ -4738,6 +4742,8 @@ function renderMatchup() {
     return { o, starts, games };
   };
   const cell9 = (o, k) => { const pp = PCT_PARTS[k]; return pp ? (o[pp[1]] ? fmt3(o[pp[0]] / o[pp[1]]) : "–") : fmt1(o[k]); };
+  // a sortable header cell of the roster table; the arrow shows the order in use
+  const rsTh = (k, l, tip = "") => `<th class="nosort${MU_RSORT?.k === k ? " sorted" : ""}"${tip ? ` data-tip="${esc(tip)}"` : ""}><button type="button" class="rsort" data-murs="${k}">${l}${MU_RSORT?.k === k ? (MU_RSORT.asc ? " ▲" : " ▼") : ""}</button></th>`;
   const rosterTable = (side, t, roster, T, il, title) => {
     const active = roster.filter((p) => !il.has(p.id));
     // the lineup shown: the one I set, or the strongest one (each slot filled once, the rest on the bench)
@@ -4749,8 +4755,17 @@ function renderMatchup() {
     // in lineup order, like the league app: PG SG G SF PF F C C UTIL UTIL, then the bench, then IL
     const ORDER = ["PG", "SG", "G", "SF", "PF", "F", "C", "UTIL", "BN"];
     const at = (p) => (il.has(p.id) ? 99 : ORDER.indexOf(shown[p.id] || "BN"));
-    const rows = [...roster].sort((a, b) => at(a) - at(b) || muValue(b) - muValue(a)).map((p) => {
-      const w = playerWeek(p, T), onIL = il.has(p.id);
+    const W = new Map(roster.map((p) => [p.id, playerWeek(p, T)]));
+    const colVal = (p, k) => {
+      const w = W.get(p.id), pp = PCT_PARTS[k];
+      return k === "starts" ? w.starts : pp ? (w.o[pp[1]] ? w.o[pp[0]] / w.o[pp[1]] : -1) : w.o[k] ?? 0;
+    };
+    const rs = MU_RSORT;
+    const order = rs ? (a, b) => (il.has(a.id) - il.has(b.id)) || (rs.k === "name" ? a.name.localeCompare(b.name) * (rs.asc ? 1 : -1)
+      : (colVal(a, rs.k) - colVal(b, rs.k)) * (rs.asc ? 1 : -1))
+      : (a, b) => at(a) - at(b) || muValue(b) - muValue(a);
+    const rows = [...roster].sort(order).map((p) => {
+      const w = W.get(p.id), onIL = il.has(p.id);
       const cur = shown[p.id] || "BN";
       const cd = T.cell.get(`${p.id}|${d}`), plays = !!cd && !cd.out;  // no game that day: bench only
       const can = plays ? [...new Set(LINEUP.filter(([, pos]) => !pos || pos.some((x) => hasPos(p, x))).map(([n]) => n))] : [];
@@ -4758,16 +4773,16 @@ function renderMatchup() {
       const full = (n) => n !== "BN" && n !== cur && (used[n] || 0) >= SLOT_CAP[n];
       const slotSel = `<select class="mslot${manual ? " set" : ""}" data-muslot="${t}|${p.id}" aria-label="עמדה בהרכב" title="איפה הוא משובץ בהרכב">
         ${[...can, "BN"].filter((n) => !full(n)).map((n) => `<option value="${n}"${n === cur ? " selected" : ""}>${n}</option>`).join("")}</select>`;
-      const acts = onIL ? `<button type="button" class="mact" data-muback="${t}|${p.id}">חזרה מ־${onILPlus(t, p.id) ? "IL+" : "IL"}</button>`
+      const acts = onIL ? `<button type="button" class="mact" data-muback="${t}|${p.id}">חזרה מ־<bdi>${onILPlus(t, p.id) ? "IL+" : "IL"}</bdi></button>`
         : `${(() => { const k = ilRoom(p, t); return k ? `<button type="button" class="mact" data-muil="${t}|${p.id}|${k}">${k === "il" ? "IL" : "IL+"}</button>` : ""; })()}<button type="button" class="mact" data-mudrop="${t}|${p.id}" title="שחרור">שחרר</button>`;
       const role = onIL ? "ilrow" : cur === "BN" ? "benchrow" : "startrow";
       return `<tr class="${role}"><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span></span><small class="ppos">${esc(p.pos || "")}</small>${onIL ? "" : (() => { const c = T.cell.get(`${p.id}|${d}`);
         return c?.out ? `<small class="pday out">OUT</small>` : c ? `<small class="pday">${esc(c.gm ? `${c.gm.g.h === p.team26 ? "" : "@"}${c.gm.opp}` : c.r ? `${c.r[2] ? "" : "@"}${c.r[1]}` : "")}</small>` : `<small class="pday none">אין משחק</small>`; })()}${p.hurt ? injuryPill(p) : ""}</td>
-        <td>${onIL ? (onILPlus(t, p.id) ? "IL+" : "IL") : `${g1(w.starts)}/${w.games}`}</td><td class="mslotc">${onIL ? "" : slotSel}</td>${CATS.map((c) => `<td>${onIL ? "" : cell9(w.o, c.k)}</td>`).join("")}<td class="macts">${acts}</td></tr>`;
+        <td>${onIL ? `<bdi>${onILPlus(t, p.id) ? "IL+" : "IL"}</bdi>` : `${g1(w.starts)}/${w.games}`}</td><td class="mslotc">${onIL ? "" : slotSel}</td>${CATS.map((c) => `<td>${onIL ? "" : cell9(w.o, c.k)}</td>`).join("")}<td class="macts">${acts}</td></tr>`;
     }).join("");
     const full = active.length >= st.roster;
     return `<div class="muroster"><h4>${esc(title)}</h4>
-      <div class="muauto"><button type="button" class="mact" data-muclear="${t}" title="כל השחקנים לספסל, כדי לבנות את ההרכב מהתחלה">איפוס הרכב</button><button type="button" class="mact${manual ? "" : " on"}" data-muauto="${t}" title="משבץ את השחקנים החזקים ביותר בעמדות שמתאימות להם, כל יום מחדש">בחירה אוטומטית</button></div><table class="box murt"><thead><tr><th class="nosort">שחקן</th><th class="nosort" data-tip="משחקים בהרכב מתוך המשחקים שלו השבוע">הרכב</th><th class="nosort">עמדה</th>${CATS.map((c) => `<th class="nosort">${c.l}</th>`).join("")}<th class="nosort"></th></tr></thead><tbody>${rows}</tbody></table>
+      <div class="muauto"><button type="button" class="mact" data-muclear="${t}" title="כל השחקנים לספסל, כדי לבנות את ההרכב מהתחלה">איפוס הרכב</button><button type="button" class="mact${manual ? "" : " on"}" data-muauto="${t}" title="משבץ את השחקנים החזקים ביותר בעמדות שמתאימות להם, כל יום מחדש">בחירה אוטומטית</button></div><table class="box murt"><thead><tr>${rsTh("name", "שחקן")}${rsTh("starts", "הרכב", "משחקים בהרכב מתוך המשחקים שלו השבוע")}<th class="nosort">עמדה</th>${CATS.map((c) => rsTh(c.k, c.l)).join("")}<th class="nosort"></th></tr></thead><tbody>${rows}</tbody></table>
       <div class="muadd" data-muaddbox="${t}">
         <input list="muFree" placeholder="הוספת שחקן חופשי…" autocomplete="off" data-muaddin="${t}" aria-label="שחקן להוספה">
         <select data-muaddout="${t}" aria-label="במקום">${full ? "" : `<option value="">יש מקום בסגל (${active.length}/${st.roster})</option>`}${active.map((p) => `<option value="${p.id}">במקום ${esc(p.name)}</option>`).join("")}</select>
@@ -4934,6 +4949,13 @@ $("muOut").addEventListener("click", (e) => {
   const me = muMe();
   if (b.dataset.mugrid) { st.muGrid = b.dataset.mugrid; saveSettings(); return renderMatchup(); }
   if (b.dataset.musearchclear) { MU_SEARCH = null; return renderMatchup(); }
+  if (b.dataset.murs) {
+    const k = b.dataset.murs, cur = MU_RSORT;
+    // first tap: high to low (names A to Z), second: the other way, third: back to lineup order
+    const first = k === "name";
+    MU_RSORT = !cur || cur.k !== k ? { k, asc: first } : cur.asc === first ? { k, asc: !first } : null;
+    return renderMatchup();
+  }
   if (b.dataset.mumove) {
     const [add, drop, kind] = b.dataset.mumove.split("|");
     const pa = PLAYER_BY_ID.get(Number(add)), pd = drop ? PLAYER_BY_ID.get(Number(drop)) : null;
