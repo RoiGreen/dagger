@@ -170,6 +170,8 @@ td.acts { position: relative; }
 td.acts:has(details[open]) { z-index: 20; }
 .actmenu { position: absolute; top: calc(100% + 4px); left: 0; right: auto; z-index: 21; min-width: 9.5em; display: grid; gap: 2px; padding: 4px;
   background: var(--surface); border: 1px solid var(--line); border-radius: 8px; box-shadow: 0 8px 24px rgba(0,0,0,.28); }
+/* an open mark menu gets room under the table (a short list, or the last rows, would cut it off) */
+.tbl-wrap:has(details.actpick[open]) { padding-bottom: 130px; }
 .actmenu .amitem { display: flex; align-items: center; gap: 8px; padding: 5px 8px; border-radius: 6px; font-size: .85rem; cursor: pointer; color: var(--ink); }
 .actmenu .amitem:hover { background: var(--sunk); }
 .actmenu .amitem input { width: 16px; height: 16px; accent-color: var(--accent); cursor: pointer; margin: 0; }
