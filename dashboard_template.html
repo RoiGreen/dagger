@@ -4267,10 +4267,14 @@ function leagueTable() {
       const above = teams.filter((y) => y.list.length && val(y, c) > val(x, c)).map((y) => val(y, c));
       return above.length ? (Math.min(...above) - val(x, c)) / sd[c.k] : null;
     };
-    const g = cats.map((c) => ({ c, g: gap(c), r: x[`r_${c.k}`] })).filter((u) => u.g != null);
+    // last in 3+ categories: a punt build. Those categories are its choice, not a place to climb
+    const lastIn = cats.filter((c) => x[`r_${c.k}`] === n);
+    const punt = lastIn.length >= 3 ? new Set(lastIn.map((c) => c.k)) : new Set();
+    const g = cats.filter((c) => !punt.has(c.k)).map((c) => ({ c, g: gap(c), r: x[`r_${c.k}`] })).filter((u) => u.g != null);
     const climb = g.filter((u) => u.g < 0.6).sort((a, b) => a.g - b.g).slice(0, 2);
-    const drop = g.filter((u) => u.r === n && u.g > 1).sort((a, b) => b.g - a.g)[0];
+    const drop = punt.size ? null : g.filter((u) => u.r === n && u.g > 1).sort((a, b) => b.g - a.g)[0];
     const parts = [];
+    if (punt.size) parts.push(`Punt: <bdi>${lastIn.map((c) => c.l).join(", ")}</bdi>`);
     if (climb.length) parts.push(`לחזק <bdi>${climb.map((u) => u.c.l).join(", ")}</bdi>`);
     if (drop && !climb.some((u) => u.c.k === drop.c.k)) parts.push(`לוותר על <bdi>${drop.c.l}</bdi>`);
     return parts.length ? parts.join("<br>") : "קבוצה מאוזנת";
