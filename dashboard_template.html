@@ -636,6 +636,18 @@ table.box.daygrid td.dg small { display: block; font-size: .64rem; opacity: .8; 
 table.box.daygrid td.dg.on { background: color-mix(in srgb, var(--pos) 18%, transparent); font-weight: 700; }
 table.box.daygrid td.dg.on.gtd { background: color-mix(in srgb, var(--led) 22%, transparent); }
 table.box.daygrid td.dg.on.done { background: color-mix(in srgb, var(--muted) 16%, transparent); }
+table.box.daygrid td.dg.pvoff { background: repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--muted) 14%, transparent) 6px 8px); }
+table.box.daygrid tr.pvin td.pn { box-shadow: inset -3px 0 0 var(--pos); }
+table.box.daygrid tr.pvout td.pn { box-shadow: inset -3px 0 0 var(--neg); }
+table.box.daygrid tr.pvout td.pn .pw > span:not(.pvtag) { text-decoration: line-through; opacity: .7; }
+.pvtag { display: inline-block; margin-inline-start: 6px; padding: 1px 6px; border-radius: 999px; font-size: .64rem; font-weight: 800; white-space: nowrap; }
+.pvtag.in { color: var(--pos); background: color-mix(in srgb, var(--pos) 14%, transparent); }
+.pvtag.out { color: var(--neg); background: color-mix(in srgb, var(--neg) 14%, transparent); }
+.pvbar { display: flex; align-items: center; justify-content: space-between; gap: 10px; flex-wrap: wrap; margin: 8px 0; padding: 8px 12px; border-radius: 10px;
+  border: 1px solid color-mix(in srgb, var(--accent) 45%, transparent); background: color-mix(in srgb, var(--accent) 8%, transparent); font-size: .88rem; }
+.pvbar b[dir] { font-family: var(--font-num); }
+.mupicks li[data-mupv] { cursor: pointer; }
+.mupicks li.mpv { box-shadow: 0 0 0 2px var(--accent); }
 table.box.daygrid td.dg.bn { color: var(--muted); text-decoration: line-through; }
 table.box.daygrid td.dg.out { color: var(--neg); }
 table.box.daygrid .iltag { font-size: .66rem; font-weight: 800; color: var(--neg); margin-inline-start: 6px; }
@@ -1447,6 +1459,13 @@ table.box.titab tr.punted td { opacity: .4; }
   .who > .iconbtn { grid-row: auto; grid-column: auto; }
   .brand { flex: 1 1 auto; min-width: 0; }
   header.top h1 { font-size: 1rem; }
+}
+
+/* phone: the pickup tag under the name in the daily grid */
+@media (max-width: 700px) {
+  table.box.daygrid tr.pvin .pw, table.box.daygrid tr.pvout .pw { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 6px; row-gap: 1px; }
+  table.box.daygrid tr.pvin .pw > img, table.box.daygrid tr.pvout .pw > img { grid-row: span 2; }
+  table.box.daygrid .pvtag { grid-column: 2; margin: 0; width: max-content; font-size: .58rem; }
 }
 </style>
 
@@ -4509,6 +4528,8 @@ function lineupFor(cands, fixed = {}) {
 let MU = null;  // per-render cache
 const MU_DROP = new Map();
 let MU_SEARCH = null;  // a free agent looked up by name for a pickup
+// the pickup shown in the daily grid: null = the searched player (if any), -1 = none, an id = that row's player
+let MU_PREVIEW = null;
 let MU_RSORT = null;   // roster table sorted by a column: { k, asc }; null = lineup order  // pickup row -> the release chosen by hand ("id|drop" / "id|il" / "|")
 function muModel(p) {
   if (MU.model.has(p.id)) return MU.model.get(p.id);
@@ -4940,15 +4961,20 @@ function renderMatchup() {
   if (MU_SEARCH != null && (picks.some((x) => x.id === MU_SEARCH) || mine.has(MU_SEARCH))) MU_SEARCH = null;  // he was added meanwhile
   const searched = left > 0 && MU_SEARCH != null ? bestMoves(me, st.muOpp, mineP, ilA, B, odds, MU_SEARCH)[0] : null;
   const dayShort = (d) => new Date(d + "T12:00:00Z").toLocaleDateString("he-IL", { weekday: "narrow", timeZone: "UTC" });
-  const moveRow = (x0, i) => {
-    // the release can be changed per row: the odds are worked out again for the player chosen
-    let x = x0;
+  // the release can be changed per row: the odds are worked out again for the player chosen
+  const withDrop = (x0) => {
     const pick = MU_DROP.get(x0.X.id);
-    if (pick != null && pick !== `${x0.drop?.id ?? ""}|${x0.kind ?? ""}`) {
-      const [dId, kind] = pick.split("|"), drop = dId ? PLAYER_BY_ID.get(Number(dId)) : null;
-      const A2 = planWeek(mineP, ilA, me, { add: x0.X, drop: drop?.id, from: pickupFrom() });
-      x = { ...x0, drop, kind: kind || null, A2, r: muOdds(A2, B) };
-    }
+    if (pick == null || pick === `${x0.drop?.id ?? ""}|${x0.kind ?? ""}`) return x0;
+    const [dId, kind] = pick.split("|"), drop = dId ? PLAYER_BY_ID.get(Number(dId)) : null;
+    const A2 = planWeek(mineP, ilA, me, { add: x0.X, drop: drop?.id, from: pickupFrom() });
+    return { ...x0, drop, kind: kind || null, A2, r: muOdds(A2, B) };
+  };
+  // the pickup checked in the daily grid
+  const pvId = MU_PREVIEW === -1 ? null : MU_PREVIEW ?? searched?.X.id ?? null;
+  const pv0 = pvId == null ? null : searched?.X.id === pvId ? searched : moves.find((x) => x.X.id === pvId);
+  const PV = pv0 ? withDrop(pv0) : null;
+  const moveRow = (x0, i) => {
+    const x = withDrop(x0);
     const active = mineP.filter((p) => !ilA.has(p.id));
     const opts = [...(active.length < st.roster ? [["|", "יש מקום פנוי בסגל"]] : []),
       ...active.map((p) => [p, ilRoom(p, me)]).filter(([, k]) => k).map(([p, k]) => [`${p.id}|${k}`, `${p.name} ל־${k === "il" ? "IL" : "IL+"}`]),
@@ -4966,7 +4992,8 @@ function renderMatchup() {
     const costly = x.drop && x.kind !== "il" && (x.drop.gpTotal ?? x.drop.gp ?? 0) >= needGp
       && seasonValue(x.drop) > seasonValue(x.X) + (st.fmt === "pts" ? 3 : 0.75);
     const days = weekDays().filter((d) => x.A2.cell.get(`${x.X.id}|${d}`)?.slot);
-    return `<li${i < 0 ? ` class="msearched"` : ""}><span class="rk">${i < 0 ? "🔍" : i + 1}</span>${x.X.img ? `<img class="mimg" src="${x.X.img}" alt="" loading="lazy" decoding="async">` : `<span class="mimg"></span>`}
+    const cls = [i < 0 ? "msearched" : "", PV?.X.id === x0.X.id ? "mpv" : ""].filter(Boolean).join(" ");
+    return `<li data-mupv="${x0.X.id}" title="לחיצה על השורה: הצגה בהרכב היומי"${cls ? ` class="${cls}"` : ""}><span class="rk">${i < 0 ? "🔍" : i + 1}</span>${x.X.img ? `<img class="mimg" src="${x.X.img}" alt="" loading="lazy" decoding="async">` : `<span class="mimg"></span>`}
       <span class="mwho"><span class="mline"><span class="pn" data-pcard="${x.X.id}">${esc(x.X.name)}</span>${teamLogo(x.X.team26)}${x.X.hurt ? injuryPill(x.X) : ""}
         <span class="mdays" title="הימים שבהם הוא נכנס להרכב">${days.map(dayShort).join(" ") || "–"}</span></span>
         <small class="mdrop">${dropSel}</small></span>
@@ -5004,12 +5031,19 @@ function renderMatchup() {
   // the day the roster tables show: today when it is in this week, else the week's first day
   { const td = etDay(new Date()), days = weekDays();
     if (!MU_DAY || !days.includes(MU_DAY)) MU_DAY = days.includes(td) ? td : days[0]; }
-  const G = gridSide === "a" ? { roster: mineP, T: A, il: ilA } : { roster: oppP, T: B, il: ilB };
+  const pvOn = gridSide === "a" && PV;
+  const G = gridSide === "b" ? { roster: oppP, T: B, il: ilB }
+    : pvOn ? { roster: [PV.X, ...mineP], T: PV.A2, il: ilA } : { roster: mineP, T: A, il: ilA };
+  const pvIn = pvOn ? PV.X.id : null, pvOut = pvOn && PV.drop ? PV.drop.id : null, pvFrom = pvOn ? pickupFrom() : null;
   const today = etDay(new Date());
-  const gridRows = [...G.roster].sort((a, b) => (G.il.has(a.id) - G.il.has(b.id)) || muValue(b) - muValue(a)).map((p) => {
+  const pvRank = (p) => (p.id === pvIn ? 0 : p.id === pvOut ? 1 : 2);
+  const gridRows = [...G.roster].sort((a, b) => pvRank(a) - pvRank(b) || (G.il.has(a.id) - G.il.has(b.id)) || muValue(b) - muValue(a)).map((p) => {
     const cells = weekDays().map((d) => {
       const c = G.T.cell.get(`${p.id}|${d}`);
-      if (G.il.has(p.id)) return `<td class="dg il"></td>`;
+      if (G.il.has(p.id) && p.id !== pvOut) return `<td class="dg il"></td>`;
+      // the pickup: before it the new player is not on the team yet, from it on the released one is gone
+      if (!c && p.id === pvIn && d < pvFrom) return `<td class="dg pvoff" title="עוד לא בקבוצה"></td>`;
+      if (!c && p.id === pvOut && d >= pvFrom) return `<td class="dg pvoff" title="${PV.kind === "il" || PV.kind === "ilp" ? `עבר ל־${PV.kind === "ilp" ? "IL+" : "IL"}` : "שוחרר"}"></td>`;
       if (!c) return `<td class="dg"></td>`;
       const opp = c.gm ? `${c.gm.g.h === p.team26 ? "" : "@"}${c.gm.opp}` : c.r ? `${c.r[2] ? "" : "@"}${c.r[1]}` : "";
       const cls = c.out ? "out" : c.slot ? (c.r ? "on done" : c.ch < 1 ? "on gtd" : "on") : "bn";
@@ -5022,16 +5056,17 @@ function renderMatchup() {
       const click = gridSide === "a" && !c.out ? ` data-lu="${p.id}|${d}" tabindex="0"` : "";
       return `<td class="dg ${cls}${c.lock ? " locked" : ""}${click ? " clk" : ""}" title="${tip}"${click}><span>${esc(opp)}</span>${c.slot ? `<small>${c.slot}${c.lock ? " 🔒" : ""}</small>` : c.out ? "<small>OUT</small>" : `<small>BN${c.lock ? " 🔒" : ""}</small>`}</td>`;
     }).join("");
-    return `<tr${G.il.has(p.id) ? ` class="ilrow"` : ""}><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span></span>${G.il.has(p.id) ? `<small class="iltag">IL</small>` : ""}</td>${cells}</tr>`;
+    const pvTag = p.id === pvIn ? `<small class="pvtag in">פיק אפ - נכנס</small>` : p.id === pvOut ? `<small class="pvtag out">פיק אפ - יוצא</small>` : "";
+    return `<tr class="${[G.il.has(p.id) && p.id !== pvOut ? "ilrow" : "", p.id === pvIn ? "pvin" : p.id === pvOut ? "pvout" : ""].filter(Boolean).join(" ")}"><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span>${pvTag}</span>${G.il.has(p.id) ? `<small class="iltag">IL</small>` : ""}</td>${cells}</tr>`;
   }).join("");
   // Why this lineup: what the choice leans on, and who sits on busy days
   // Under the grid: only the busy days (more players than slots) and why the extra ones sit out
   function lineupWhy() {
     if (gridSide !== "a") return "";
     const lines = [];
-    for (const day of A.days) {
+    for (const day of G.T.days) {
       if (day.past || day.playing <= LINEUP.length) continue;
-      const benched = mineP.filter((p) => { const c = A.cell.get(`${p.id}|${day.d}`); return c && !c.out && !c.slot && !c.lock; });
+      const benched = G.roster.filter((p) => { const c = G.T.cell.get(`${p.id}|${day.d}`); return c && !c.out && !c.slot && !c.lock; });
       if (!benched.length) continue;
       const names = benched.map((p) => `<span class="pn" data-pcard="${p.id}">${esc(p.name)}</span>`).join(", ");
       const why = day.empty.length
@@ -5172,6 +5207,7 @@ function renderMatchup() {
     </section>
     <section class="cmpsec mudaygrid"><div class="dghead"><h3>הרכב יומי</h3>
       <div class="seg" role="group"><button type="button" data-mugrid="a" aria-pressed="${gridSide === "a"}">${esc(myName)}</button><button type="button" data-mugrid="b" aria-pressed="${gridSide === "b"}">${esc(oppName)}</button></div></div>
+      ${pvOn ? `<div class="pvbar"><span>בדיקת פיק אפ: <b>${esc(PV.X.name)}</b> נכנס${PV.drop ? `, <b>${esc(PV.drop.name)}</b> ${PV.kind === "il" || PV.kind === "ilp" ? `עובר ל־${PV.kind === "ilp" ? "IL+" : "IL"}` : "יוצא"}` : ""} · משחקים בהרכב: <b dir="ltr">${Math.round(A.starts + A.played)} → ${Math.round(PV.A2.starts + PV.A2.played)}</b></span><button type="button" class="mact" data-mupvoff="1">ביטול הבדיקה</button></div>` : ""}
       <div class="tbl-wrap short"><table class="box daygrid"><thead><tr><th class="nosort">שחקן</th>${weekDays().map((d, i) => `<th class="nosort${d === today ? " today" : ""}">${esc(dayLabel(d))}${gridSide === "a" ? `<span class="luday">${i ? `<button type="button" class="lubtn" data-lucopy="${d}" title="העתק את ההרכב של אתמול">⤶</button>` : ""}${st.lineup?.[d] && Object.keys(st.lineup[d]).length ? `<button type="button" class="lubtn" data-lureset="${d}" title="אפס להמלצה">↺</button>` : ""}</span>` : ""}</th>`).join("")}</tr></thead><tbody>${gridRows}</tbody><tfoot>${gridFoot}</tfoot></table></div>
       ${lineupWhy()}
     </section>
@@ -5240,7 +5276,7 @@ $("muOut").addEventListener("keydown", (e) => { if (e.key === "Enter" && e.targe
 $("muOut").addEventListener("input", (e) => {
   if (e.target.id !== "muSearch") return;
   const id = MU.freeLookup.get(e.target.value);
-  if (id != null && id !== MU_SEARCH) { MU_SEARCH = id; renderMatchup(); }
+  if (id != null && id !== MU_SEARCH) { MU_SEARCH = id; MU_PREVIEW = null; renderMatchup(); }
 });
 $("muOut").addEventListener("change", (e) => {
   const ss = e.target.closest("[data-muslot]");
@@ -5257,7 +5293,7 @@ $("muOut").addEventListener("change", (e) => {
   }
   if (e.target.id === "muSearch") {
     const id = MU.freeLookup.get(e.target.value);
-    if (id != null || !e.target.value) { MU_SEARCH = id ?? null; renderMatchup(); }
+    if (id != null || !e.target.value) { MU_SEARCH = id ?? null; MU_PREVIEW = null; renderMatchup(); }
     return;
   }
   const sel = e.target.closest("[data-mudropsel]");
@@ -5266,11 +5302,18 @@ $("muOut").addEventListener("change", (e) => {
   renderMatchup();
 });
 $("muOut").addEventListener("click", (e) => {
+  const row = e.target.closest("li[data-mupv]");
+  if (row && !e.target.closest("button, select, .pn")) {
+    const id = Number(row.dataset.mupv);
+    MU_PREVIEW = row.classList.contains("mpv") ? -1 : id;
+    return renderMatchup();
+  }
   const b = e.target.closest("button");
   if (!b) return;
+  if (b.dataset.mupvoff) { MU_PREVIEW = -1; return renderMatchup(); }
   const me = muMe();
   if (b.dataset.mugrid) { st.muGrid = b.dataset.mugrid; saveSettings(); return renderMatchup(); }
-  if (b.dataset.musearchclear) { MU_SEARCH = null; return renderMatchup(); }
+  if (b.dataset.musearchclear) { MU_SEARCH = null; MU_PREVIEW = null; return renderMatchup(); }
   if (b.dataset.murs) {
     const k = b.dataset.murs, cur = MU_RSORT;
     // first tap: high to low (names A to Z), second: the other way, third: back to lineup order
