@@ -5140,11 +5140,7 @@ function renderMatchup() {
     const full = active.length >= st.roster;
     return `<div class="muroster"><h4>${esc(title)}</h4>
       <div class="muauto"><button type="button" class="mact" data-muclear="${t}" title="כל השחקנים לספסל, כדי לבנות את ההרכב מהתחלה">איפוס הרכב</button><button type="button" class="mact${manual ? "" : " on"}" data-muauto="${t}" title="משבץ את השחקנים החזקים ביותר בעמדות שמתאימות להם, כל יום מחדש">בחירה אוטומטית</button></div><table class="box murt"><thead><tr>${rsTh("name", "שחקן")}${rsTh("starts", "הרכב", "משחקים בהרכב מתוך המשחקים שלו השבוע")}<th class="nosort">עמדה</th>${CATS.map((c) => rsTh(c.k, c.l)).join("")}<th class="nosort"></th></tr></thead><tbody>${rows}</tbody></table>
-      <div class="muadd" data-muaddbox="${t}">
-        <input list="muFree" placeholder="הוספת שחקן חופשי…" autocomplete="off" data-muaddin="${t}" aria-label="שחקן להוספה">
-        <select data-muaddout="${t}" aria-label="במקום">${full ? "" : `<option value="">יש מקום בסגל (${active.length}/${st.roster})</option>`}${active.map((p) => `<option value="${p.id}">במקום ${esc(p.name)}</option>`).join("")}</select>
-        <button type="button" class="mact" data-muadd="${t}">הוסף</button>
-      </div></div>`;
+      </div>`;
   };
 
   // Player photos under each team name, like the team comparison (best players first, the rest as +N)
