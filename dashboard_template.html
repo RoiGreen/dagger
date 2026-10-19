@@ -554,6 +554,9 @@ table.mucats tr.punted td { opacity: .4; }
 .muadds { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; font-weight: 700; color: var(--muted); }
 .muadds input { width: 3.4em; padding: 4px 6px; text-align: center; }
 .muscore .mmid { display: grid; justify-items: center; gap: 8px; min-width: 360px; }
+.muscore .mumode { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.14); }
+.muscore .mumode button { color: #c9d2e6; }
+.muscore .mumode button[aria-pressed="true"] { color: #fff; }
 .mustack { display: flex; justify-content: center; padding-inline-start: 14px; margin-bottom: 8px; direction: ltr; }
 .mustack .mini { width: 44px; height: 44px; border-radius: 50%; margin-inline-start: -14px; border: 2px solid #0c1427; background: #1d2944; overflow: hidden; display: grid; place-items: center; cursor: pointer; }
 .mustack .mini img { width: 100%; height: 100%; object-fit: cover; }
@@ -1210,6 +1213,11 @@ table.box.titab tr.punted td { opacity: .4; }
   .muscore .mside:last-child { grid-column: 3; grid-row: 1; }
   .muscore .mwin { grid-column: 1 / -1; grid-row: 2; }
   .muscore .wins { grid-column: 1 / -1; grid-row: 3; gap: 0 10px; }
+  /* live / forecast on top */
+  .muscore .mumode { grid-column: 1 / -1; grid-row: 1; justify-self: center; margin-bottom: 4px; }
+  .muscore:has(.mumode) .mside:first-child, .muscore:has(.mumode) .mnum, .muscore:has(.mumode) .mside:last-child { grid-row: 2; }
+  .muscore:has(.mumode) .mwin { grid-row: 3; }
+  .muscore:has(.mumode) .wins { grid-row: 4; }
   .muscore .mside b { font-size: .95rem; overflow-wrap: anywhere; }
   .muscore .gcount { font-size: 1rem; }
   .mustack { padding-inline-start: 8px; margin-bottom: 4px; }
@@ -4685,6 +4693,8 @@ const MU_DROP = new Map();
 let MU_SEARCH = null;  // a free agent looked up by name for a pickup
 // the pickup shown in the daily grid: null = the searched player (if any), -1 = none, an id = that row's player
 let MU_PREVIEW = null;
+// live / forecast: { week, mode } once chosen for that week; otherwise live after the week's first game, forecast before
+let MU_MODE = null;
 let MU_RSORT = null;   // roster table sorted by a column: { k, asc }; null = lineup order  // pickup row -> the release chosen by hand ("id|drop" / "id|il" / "|")
 function muModel(p) {
   if (MU.model.has(p.id)) return MU.model.get(p.id);
@@ -4754,7 +4764,7 @@ function weekDays() {
 }
 // A team's regular-season game on a day still to come (not yet in the game logs)
 function gameOn(team, d) {
-  if (!team || d <= LOG_END) return null;
+  if (!team || (d <= LOG_END && !MU?.pre)) return null;
   const g = MU.games.get(`${team}|${d}`);
   return g ? { g, opp: g.h === team ? g.a : g.h } : null;
 }
@@ -4776,8 +4786,9 @@ function planWeek(roster, il, team, swap = null) {
     if (on && !(sameDay && started(swap.add))) who.push(swap.add);
     const cands = [], all = [];  // all: every scheduled game, injured or not (for the games count only)
     for (const p of who) {
-      if (d > LOG_END) { const g0 = gameOn(p.team26, d); if (g0) all.push({ p, v: muValue(p) }); }
-      if (d <= LOG_END) {
+      const past = d <= LOG_END && !MU.pre;
+      if (!past) { const g0 = gameOn(p.team26, d); if (g0) all.push({ p, v: muValue(p) }); }
+      if (past) {
         const r = playedOn(p, d);
         if (r) cands.push({ p, v: muValue(p), r });
       } else {
@@ -4798,7 +4809,7 @@ function planWeek(roster, il, team, swap = null) {
     const pool = cands.filter((c) => mineDay[c.p.id] !== "off").map((c) => (mineDay[c.p.id] === "on" ? { ...c, v: 1e6 + c.v } : c));
     const slot = lineupFor(pool, fixed);
     for (const c of benchLock) T.cell.set(`${c.p.id}|${d}`, { gm: c.gm, r: c.r, slot: null, ch: c.ch, lock: "off" });
-    if (d > LOG_END) T.gamesAll += lineupFor(all).size;  // GTD / OUT count as a game here
+    if (!(d <= LOG_END && !MU.pre)) T.gamesAll += lineupFor(all).size;  // GTD / OUT count as a game here
     for (const c of pool) {
       const on = slot.get(c.p.id);
       T.cell.set(`${c.p.id}|${d}`, { gm: c.gm, r: c.r, slot: on, ch: c.ch, lock: mineDay[c.p.id] || null });
@@ -4825,7 +4836,7 @@ function planWeek(roster, il, team, swap = null) {
     }
     const empty = [...LINEUP.map((x) => x[0])];
     for (const v of slot.values()) empty.splice(empty.indexOf(v), 1);
-    T.days.push({ d, started: slot.size, playing: cands.length, empty, past: d <= LOG_END });
+    T.days.push({ d, started: slot.size, playing: cands.length, empty, past: d <= LOG_END && !MU.pre });
   }
   return T;
 }
@@ -5052,6 +5063,10 @@ function renderMatchup() {
   WEEK = muWeekRange();
   MU = { model: new Map(), games: new Map() };
   for (const g of GAMES) if (!g.pre) { MU.games.set(`${g.h}|${g.d}`, g); MU.games.set(`${g.a}|${g.d}`, g); }
+  // the week has begun once one of its games is in the logs
+  const weekLive = SEASON_DAYS.some((d) => d >= WEEK.from && d <= WEEK.to && d <= LOG_END);
+  const muMode = !weekLive ? "proj" : MU_MODE?.week === WEEK.from ? MU_MODE.mode : "live";
+  MU.pre = weekLive && muMode === "proj";
   const n = Math.max(st.teams, 1), me = muMe();
   const ms = $("muTeam");
   if (ms !== document.activeElement) {
@@ -5091,8 +5106,16 @@ function renderMatchup() {
     A = planWeek(mineP, ilA, me);
     odds = muOdds(A, B);
   }
-  const cats = odds.cats.map((c) => ({ ...c, punted: st.punts.has(c.k), key: oddsKey(c.q) }));
-  const wins = cats.filter((c) => c.q > 0.5).length;
+  const isLive = weekLive && muMode === "live";
+  const cats = odds.cats.map((c) => {
+    const x = { ...c, punted: st.punts.has(c.k), key: oddsKey(c.q) };
+    // who leads right now (fewer turnovers is better); a tie leads nobody
+    const a0 = c.done[0] ?? 0, b0 = c.done[1] ?? 0, d0 = c.k === "TOV" ? b0 - a0 : a0 - b0;
+    x.now = Math.abs(d0) < 1e-9 ? 0 : d0 > 0 ? 1 : -1;
+    return x;
+  });
+  const wins = isLive ? cats.filter((c) => c.now > 0).length : cats.filter((c) => c.q > 0.5).length;
+  const losses = isLive ? cats.filter((c) => c.now < 0).length : cats.length - wins;
   const f = (k, v) => (v == null ? "–" : k.endsWith("_PCT") ? fmt3(v) : fmt1(v));
   const myName = teamName(me), oppName = teamName(st.muOpp);
   const live = cats.filter((c) => !c.punted);
@@ -5313,9 +5336,9 @@ function renderMatchup() {
   const leadCols = () => {
     if (st.fmt === "pts") return "";
     const col = (mineSide) => {
-      const rows = cats.filter((c) => !c.punted && (mineSide ? c.q > 0.5 : c.q < 0.5));
+      const rows = cats.filter((c) => !c.punted && (isLive ? (mineSide ? c.now > 0 : c.now < 0) : (mineSide ? c.q > 0.5 : c.q < 0.5)));
       return `<div class="wrows${rows.length > 4 ? " two" : ""}">` + rows.map((c) => {
-        const me = f(c.k, c.a), opp = f(c.k, c.b);
+        const me = f(c.k, isLive ? c.done[0] : c.a), opp = f(c.k, isLive ? c.done[1] : c.b);
         const lead = `<b>${mineSide ? me : opp}</b>`, rest = `<i>${mineSide ? opp : me}</i>`;
         return `<div class="wr"><span class="wk">${c.l}</span><span class="num">${mineSide ? `${rest}-${lead}` : `${lead}-${rest}`}</span></div>`;
       }).join("") + (rows.length ? "" : `<div class="wr none">–</div>`) + `</div>`;
@@ -5324,19 +5347,20 @@ function renderMatchup() {
   };
   const score = st.fmt === "pts"
     ? `<div class="mnum"><span class="num${odds.fa > odds.fb ? " lead" : ""}">${Math.round(odds.fa)}</span><span class="sep">:</span><span class="num${odds.fb > odds.fa ? " lead" : ""}">${Math.round(odds.fb)}</span><small>FPTS · תחזית סוף השבוע</small></div>`
-    : `<div class="mnum"><span class="num${wins > cats.length - wins ? " lead" : ""}">${wins}</span><span class="sep">:</span><span class="num${cats.length - wins > wins ? " lead" : ""}">${cats.length - wins}</span><small>תחזית סוף השבוע</small></div>`;
+    : `<div class="mnum"><span class="num${wins > losses ? " lead" : ""}">${wins}</span><span class="sep">:</span><span class="num${losses > wins ? " lead" : ""}">${losses}</span><small>${isLive ? `התוצאה כרגע${cats.length - wins - losses ? ` · ${cats.length - wins - losses} בתיקו` : ""}` : weekLive ? "תחזית מלפני תחילת השבוע" : "תחזית סוף השבוע"}</small></div>`;
+  const modeSeg = weekLive ? `<div class="seg mumode" role="group" aria-label="לייב או תחזית"><button type="button" data-mumode="live" aria-pressed="${isLive}">לייב</button><button type="button" data-mumode="proj" aria-pressed="${!isLive}">תחזית</button></div>` : "";
   out.innerHTML = `
     <div class="muscore">
       <div class="mside">${faces(mineP, ilA)}<b>${esc(myName)}</b><span title="משחקים בהרכב: שוחקו מתוך סך הכול השבוע"><b class="gcount" dir="ltr">${A.played}/${A.played + A.gamesAll}</b></span></div>
-      <div class="mmid">${score}<div class="mwin ${oddsKey(odds.win)}"><b>${pctTxt(odds.win)}</b><span>סיכוי לנצח</span></div>${leadCols()}</div>
+      <div class="mmid">${modeSeg}${score}<div class="mwin ${oddsKey(odds.win)}"><b>${pctTxt(odds.win)}</b><span>סיכוי לנצח${isLive ? " (לפי התוצאה עד כה והתחזית להמשך)" : ""}</span></div>${leadCols()}</div>
       <div class="mside">${faces(oppP, ilB)}<b>${esc(oppName)}</b><span title="משחקים בהרכב: שוחקו מתוך סך הכול השבוע"><b class="gcount" dir="ltr">${B.played}/${B.played + B.gamesAll}</b></span></div>
     </div>
     <div class="mugrid">
       <section class="cmpsec"><h3 class="ctr">הקטגוריות</h3>
         <table class="box mucats"><thead><tr><th class="nosort">קטגוריה</th><th class="nosort">${esc(myName)}</th><th class="nosort">${esc(oppName)}</th><th class="nosort">סיכוי לנצח</th></tr></thead><tbody>${
           cats.map((c) => `<tr class="${c.punted ? "punted" : ""}"><td class="lbl">${c.l}</td>
-            <td class="${c.q > 0.5 ? "w" : ""}">${f(c.k, c.a)}${anyPlayed ? `<small class="sofar">עד כה ${f(c.k, c.done[0])}</small>` : ""}</td>
-            <td class="${c.q < 0.5 ? "w" : ""}">${f(c.k, c.b)}${anyPlayed ? `<small class="sofar">עד כה ${f(c.k, c.done[1])}</small>` : ""}</td>
+            <td class="${isLive ? (c.now > 0 ? "w" : "") : c.q > 0.5 ? "w" : ""}">${isLive ? `${f(c.k, c.done[0])}<small class="sofar">צפי ${f(c.k, c.a)}</small>` : `${f(c.k, c.a)}${anyPlayed ? `<small class="sofar">עד כה ${f(c.k, c.done[0])}</small>` : ""}`}</td>
+            <td class="${isLive ? (c.now < 0 ? "w" : "") : c.q < 0.5 ? "w" : ""}">${isLive ? `${f(c.k, c.done[1])}<small class="sofar">צפי ${f(c.k, c.b)}</small>` : `${f(c.k, c.b)}${anyPlayed ? `<small class="sofar">עד כה ${f(c.k, c.done[1])}</small>` : ""}`}</td>
             <td><span class="mubar2 ${c.key}" title="${ODDS_LABEL[c.key]}"><i style="width:${Math.round(c.q * 100)}%"></i></span><b class="muq ${c.key}">${pctTxt(c.q)}</b>${c.punted ? `<small class="sofar">Punt</small>` : ""}</td></tr>`).join("")
         }</tbody></table>
       </section>
@@ -5468,6 +5492,7 @@ $("muOut").addEventListener("click", (e) => {
   const b = e.target.closest("button");
   if (!b) return;
   if (b.dataset.mupvoff) { MU_PREVIEW = -1; return renderMatchup(); }
+  if (b.dataset.mumode) { MU_MODE = { week: (WEEK || weekRange()).from, mode: b.dataset.mumode }; return renderMatchup(); }
   const me = muMe();
   if (b.dataset.mugrid) { st.muGrid = b.dataset.mugrid; saveSettings(); return renderMatchup(); }
   if (b.dataset.musearchclear) { MU_SEARCH = null; MU_PREVIEW = null; return renderMatchup(); }
