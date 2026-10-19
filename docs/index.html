@@ -4960,7 +4960,11 @@ function renderMatchup() {
     const ups = moved.filter((u) => u.d > 0).sort((a, b) => b.d - a.d).slice(0, 3);
     const downs = moved.filter((u) => u.d < 0).sort((a, b) => a.d - b.d).slice(0, 3);
     // releasing someone clearly better for the season: good for this week only
-    const costly = x.drop && x.kind !== "il" && seasonValue(x.drop) > seasonValue(x.X) + (st.fmt === "pts" ? 3 : 0.75);
+    // only a released player with a real sample (20 games, or half the games played so far in 2026-27 alone) is
+    // "worth more over the season": a few hot games are not a reason to keep him
+    const needGp = onlyCurrent() ? Math.min(20, Math.ceil((D.curMaxGp || 0) / 2)) : 20;
+    const costly = x.drop && x.kind !== "il" && (x.drop.gpTotal ?? x.drop.gp ?? 0) >= needGp
+      && seasonValue(x.drop) > seasonValue(x.X) + (st.fmt === "pts" ? 3 : 0.75);
     const days = weekDays().filter((d) => x.A2.cell.get(`${x.X.id}|${d}`)?.slot);
     return `<li${i < 0 ? ` class="msearched"` : ""}><span class="rk">${i < 0 ? "🔍" : i + 1}</span>${x.X.img ? `<img class="mimg" src="${x.X.img}" alt="" loading="lazy" decoding="async">` : `<span class="mimg"></span>`}
       <span class="mwho"><span class="mline"><span class="pn" data-pcard="${x.X.id}">${esc(x.X.name)}</span>${teamLogo(x.X.team26)}${x.X.hurt ? injuryPill(x.X) : ""}
