@@ -4150,8 +4150,9 @@ function publishedRound() {
 // a player's per-game line for round k: 2025-26 (or his projection) for round 0; else 2026-27 up to that Sunday
 function rankLine(p, k) {
   if (k === 0) {
-    const y = p.seasons?.[2025];
-    return y && y.gp > 0 ? y.s : p.proj || null;
+    // 2025-26; a player who missed it (healthy again now) comes in with the last season he played
+    const ys = Object.keys(p.seasons || {}).map(Number).filter((y) => y <= 2025 && p.seasons[y].gp > 0).sort();
+    return ys.length ? p.seasons[ys[ys.length - 1]].s : p.proj || null;
   }
   const cur = p.seasons?.[D.current];
   if (!cur || !cur.gp) return null;
@@ -4194,9 +4195,9 @@ function weeklyRanks() {
   const R = st.lgWeekly.r, last = publishedRound(), shown = {};
   let changed = false;
   const today = etDay(new Date());
-  if (!R[0] || today < REG_START) {
-    const s0 = rankSnap(0);
-    if (JSON.stringify(R[0]?.teams) !== JSON.stringify(s0.teams)) { R[0] = s0; changed = true; }
+  if (!R[0] || R[0].v !== 2 || today < REG_START) {
+    const s0 = { ...rankSnap(0), v: 2 };
+    if (R[0]?.v !== 2 || JSON.stringify(R[0]?.teams) !== JSON.stringify(s0.teams)) { R[0] = s0; changed = true; }
   }
   for (let k = 1; k <= last; k++) {
     if (R[k]) continue;
@@ -4279,7 +4280,7 @@ function leagueTable() {
   teams.sort((a, b) => sortVal(b) - sortVal(a) || a.t - b.t);
   const heat = Object.fromEntries(CATS.map((c) => [c.k, percentileHeat(teams.map((x) => (c.k === "TOV" ? -1 : 1) * (x.T[c.k] ?? 0)))]));
   const head = (k, l, tip = "") => `<th class="nosort${key === k ? " sorted" : ""}${st.punts.has(k) ? " punted" : ""}"${tip ? ` data-tip="${esc(tip)}"` : ""}><button type="button" class="lsort" data-cmplsort="${k}">${l}</button></th>`;
-  const when = sel === 0 ? (etDay(new Date()) < REG_START ? "מתעדכן עד תחילת העונה · ממוצעי 2025-26 (רוקיז: תחזית)" : "לפני העונה · ממוצעי 2025-26 (רוקיז: תחזית)")
+  const when = sel === 0 ? (etDay(new Date()) < REG_START ? "מתעדכן עד תחילת העונה · ממוצעי 2025-26 (מי שלא שיחק בה: העונה האחרונה שלו; רוקיז: תחזית)" : "לפני העונה · ממוצעי 2025-26 (מי שלא שיחק בה: העונה האחרונה שלו; רוקיז: תחזית)")
     : (() => { const d = shiftDay(roundWeek(sel).to, 1); return `פורסם ביום ב׳ ${Number(d.slice(8))}.${Number(d.slice(5, 7))} ב־9:00 · ממוצעי 26-27 עד סוף המחזור`; })();
   return `<section class="cmpsec lgsec"><h3 class="ctr">דירוג עוצמה</h3>
     <div class="lgweek"><select data-lground aria-label="איזה מחזור">${rounds.map((k) => `<option value="${k}"${k === sel ? " selected" : ""}>${esc(roundLabel(k))}</option>`).join("")}</select><small>${when}</small></div>
