@@ -1101,11 +1101,17 @@ table.box.lgtab td.lpts { font-weight: 800; font-size: 1rem; }
 table.box.lgtab tr.me td { box-shadow: inset 0 0 0 9999px color-mix(in srgb, var(--mine) 10%, transparent); }
 table.box.lgtab tr.me td.tn { color: var(--mine); }
 table.box.lgtab .punted { opacity: .4; }
+table.box.lgtab .lgup { color: var(--pos); font-weight: 800; }
+table.box.lgtab .lgdn { color: var(--neg); font-weight: 800; }
+table.box.lgtab .lgsame { color: var(--muted); }
+table.box.lgtab td.lgtip { font-family: var(--font-body); font-size: .8rem; white-space: nowrap; text-align: start; }
 table.box.lgtab .lsort { border: 0; background: none; font: inherit; color: inherit; cursor: pointer; padding: 0; }
 table.box.lgtab th.sorted .lsort { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 700px) {
-  table.box.lgtab td.rank, table.box.lgtab th:first-child { position: sticky; right: 0; z-index: 2; background: var(--surface); }
-  table.box.lgtab td.tn, table.box.lgtab th:nth-child(2) { position: sticky; right: 28px; z-index: 2; background: var(--surface); max-width: 9em; overflow: hidden; text-overflow: ellipsis; }
+  table.box.lgtab td.rank, table.box.lgtab th:first-child { position: sticky; right: 0; z-index: 2; background: var(--surface); width: 28px; min-width: 28px; max-width: 28px; padding-inline: 2px; box-sizing: border-box; }
+  table.box.lgtab th:nth-child(2) { font-size: .66rem; }
+  table.box.lgtab td.lgch, table.box.lgtab th:nth-child(2) { position: sticky; right: 28px; z-index: 2; background: var(--surface); width: 34px; min-width: 34px; max-width: 34px; padding-inline: 2px; box-sizing: border-box; }
+  table.box.lgtab td.tn, table.box.lgtab th:nth-child(3) { position: sticky; right: 62px; z-index: 2; background: var(--surface); max-width: 9em; overflow: hidden; text-overflow: ellipsis; }
 }
 
 table.box.murt .rsort { border: 0; background: none; font: inherit; color: inherit; cursor: pointer; padding: 0; white-space: nowrap; }
@@ -4133,19 +4139,55 @@ function leagueTable() {
     }
   }
   for (const x of teams) x.pts = live.reduce((a, c) => a + x[`p_${c.k}`], 0);
-  const key = st.cmp.lsort || "pts";
-  const sortVal = (x) => (key === "pts" ? x.pts : key === "Z" ? x.T.Z : -x[`r_${key}`]);
+  // the overall place (by the category places), kept once a week to show the change from the week before
+  const overall = new Map([...teams].sort((a, b) => b.pts - a.pts || a.t - b.t).map((x, i) => [x.t, i + 1]));
+  const wk = weekOf(etDay(new Date())).from;
+  if (!st.lgRankHist || typeof st.lgRankHist !== "object") st.lgRankHist = {};
+  const prevWk = Object.keys(st.lgRankHist).filter((w) => w < wk).sort().pop();
+  const prev = prevWk ? st.lgRankHist[prevWk] : null;
+  const nowSnap = Object.fromEntries(overall);
+  if (JSON.stringify(st.lgRankHist[wk]) !== JSON.stringify(nowSnap)) {
+    st.lgRankHist[wk] = nowSnap;
+    for (const w of Object.keys(st.lgRankHist).sort().slice(0, -6)) delete st.lgRankHist[w];  // the last 6 weeks are enough
+    saveSettings();
+  }
+  // a short tip per team: the categories cheapest to climb in (closest to the team above, in the league's spread),
+  // and one to let go when it is last there by far
+  const sd = Object.fromEntries(CATS.map((c) => {
+    const v = teams.filter((x) => x.list.length).map((x) => x.T[c.k] ?? 0), m = v.reduce((a, b) => a + b, 0) / Math.max(v.length, 1);
+    return [c.k, Math.sqrt(v.reduce((a, b) => a + (b - m) ** 2, 0) / Math.max(v.length, 1)) || 1];
+  }));
+  const tip = (x) => {
+    if (!x.list.length) return "–";
+    const cats = CATS.filter((c) => !(x.t === myIdx() && st.punts.has(c.k)));
+    const sign = (c) => (c.k === "TOV" ? -1 : 1), val = (y, c) => sign(c) * (y.T[c.k] ?? 0);
+    const gap = (c) => {
+      const above = teams.filter((y) => y.list.length && val(y, c) > val(x, c)).map((y) => val(y, c));
+      return above.length ? (Math.min(...above) - val(x, c)) / sd[c.k] : null;
+    };
+    const g = cats.map((c) => ({ c, g: gap(c), r: x[`r_${c.k}`] })).filter((u) => u.g != null);
+    const climb = g.filter((u) => u.g < 0.6).sort((a, b) => a.g - b.g).slice(0, 2);
+    const drop = g.filter((u) => u.r === n && u.g > 1).sort((a, b) => b.g - a.g)[0];
+    const parts = [];
+    if (climb.length) parts.push(`לחזק <bdi>${climb.map((u) => u.c.l).join(", ")}</bdi>`);
+    if (drop && !climb.some((u) => u.c.k === drop.c.k)) parts.push(`לוותר על <bdi>${drop.c.l}</bdi>`);
+    return parts.length ? parts.join(" · ") : "קבוצה מאוזנת";
+  };
+  const key = st.cmp.lsort && st.cmp.lsort !== "Z" ? st.cmp.lsort : "pts";
+  const sortVal = (x) => (key === "pts" ? x.pts : -x[`r_${key}`]);
   teams.sort((a, b) => sortVal(b) - sortVal(a) || a.t - b.t);
   const heat = Object.fromEntries(CATS.map((c) => [c.k, percentileHeat(teams.map((x) => (c.k === "TOV" ? -1 : 1) * (x.T[c.k] ?? 0)))]));
   const head = (k, l, tip = "") => `<th class="nosort${key === k ? " sorted" : ""}${st.punts.has(k) ? " punted" : ""}"${tip ? ` data-tip="${esc(tip)}"` : ""}><button type="button" class="lsort" data-cmplsort="${k}">${l}</button></th>`;
   return `<section class="cmpsec lgsec"><h3 class="ctr">כל הליגה</h3>
-    <div class="tbl-wrap short"><table class="box lgtab"><thead><tr><th class="nosort">#</th><th class="nosort">קבוצה</th>
-      ${head("pts", "נקודות", `סכום המקומות בכל הקטגוריות: מקום ראשון בקטגוריה = ${n} נקודות, אחרון = 1`)}
-      ${CATS.map((c) => head(c.k, c.l)).join("")}${head("Z", "Z", "סכום ציוני ה־Z של השחקנים")}</tr></thead><tbody>
-      ${teams.map((x, i) => `<tr class="${x.t === myIdx() ? "me" : ""}"><td class="rank">${i + 1}</td><td class="tn">${esc(teamName(x.t))}</td>
-        <td class="lpts">${x.list.length ? (Number.isInteger(x.pts) ? x.pts : x.pts.toFixed(1)) : "–"}</td>
+    <div class="tbl-wrap short"><table class="box lgtab"><thead><tr><th class="nosort${key === "pts" ? " sorted" : ""}"><button type="button" class="lsort" data-cmplsort="pts" data-tip="המקום הכללי: לפי המקומות בכל הקטגוריות">#</button></th>
+      <th class="nosort" data-tip="שינוי במקום הכללי לעומת השבוע הקודם">שינוי</th><th class="nosort">קבוצה</th>
+      ${CATS.map((c) => head(c.k, c.l)).join("")}<th class="nosort" data-tip="איפה הכי קל לעלות מקום (הכי קרוב לקבוצה שמעליה), ומה כדאי לשחרר כשהקבוצה אחרונה בו בפער גדול">המלצה</th></tr></thead><tbody>
+      ${teams.map((x, i) => {
+        const d = prev && prev[x.t] != null ? prev[x.t] - overall.get(x.t) : 0;
+        const ch = !prev || !d ? `<span class="lgsame">–</span>` : `<span class="${d > 0 ? "lgup" : "lgdn"}">${d > 0 ? "▲" : "▼"}${Math.abs(d)}</span>`;
+        return `<tr class="${x.t === myIdx() ? "me" : ""}"><td class="rank">${key === "pts" ? overall.get(x.t) : i + 1}</td><td class="lgch" dir="ltr">${ch}</td><td class="tn">${esc(teamName(x.t))}</td>
         ${CATS.map((c) => `<td class="${st.punts.has(c.k) ? "punted" : ""}" style="${x.list.length ? heat[c.k]((c.k === "TOV" ? -1 : 1) * (x.T[c.k] ?? 0)) : ""}">${x.list.length ? catFmt(c.k)(x.T[c.k] ?? 0) : "–"}<small>#${x[`r_${c.k}`]}</small></td>`).join("")}
-        <td>${x.list.length ? x.T.Z.toFixed(1) : "–"}</td></tr>`).join("")}
+        <td class="lgtip">${tip(x)}</td></tr>`; }).join("")}
     </tbody></table></div>
     <p class="munote ctrnote">סכום הממוצעים למשחק של השחקנים בסגל (בלי IL). ${st.punts.size ? "קטגוריה ב־Punt לא נספרת בנקודות." : ""}</p>
   </section>`;
