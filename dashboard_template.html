@@ -1102,6 +1102,9 @@ table.box.lgtab tr.me td { box-shadow: inset 0 0 0 9999px color-mix(in srgb, var
 table.box.lgtab tr.me td.tn { color: var(--mine); }
 table.box.lgtab .punted { opacity: .4; }
 table.box.lgtab .lgup { color: var(--pos); font-weight: 800; }
+.lgweek { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; }
+.lgweek select { width: auto; min-width: 240px; max-width: 100%; font: inherit; font-weight: 700; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.lgweek small { color: var(--muted); }
 table.box.lgtab .lgdn { color: var(--neg); font-weight: 800; }
 table.box.lgtab .lgsame { color: var(--muted); }
 table.box.lgtab td.lgtip { font-family: var(--font-body); font-size: .78rem; line-height: 1.35; white-space: normal; text-align: center; width: 130px; min-width: 130px; max-width: 130px; }
@@ -4122,14 +4125,106 @@ function tradeImpact() {
   </section>`;
 }
 
+// ---------- The weekly power ranking ----------
+// Published every Monday at 9:00 (Israel time) for the fantasy week (Monday-Sunday) just ended: each team's active
+// roster as it is then, with every player's 2026-27 per-game numbers up to that Sunday. Round 0 is the opening
+// ranking (2025-26 numbers, rookies by their projection), live until the season starts. Each round is kept in the
+// account, so a later trade does not rewrite it.
+const RANK_KEYS = ["PTS", "REB", "AST", "STL", "BLK", "FG3M", "TOV", "FGM", "FGA", "FTM", "FTA", "FG3A", "OREB", "DD2", "TD3"];
+const ilParts = () => {
+  const f = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" }).formatToParts(new Date());
+  const g = (t) => f.find((x) => x.type === t).value;
+  return { d: `${g("year")}-${g("month")}-${g("day")}`, h: Number(g("hour")) };
+};
+// round k (1, 2, ...) = the k-th fantasy week of the regular season; published the Monday after it
+const roundWeek = (k) => weekOf(shiftDay(weekOf(REG_START).from, 7 * (k - 1)));
+function publishedRound() {
+  const now = ilParts();
+  let k = 0;
+  while (k < 40) {
+    const pub = shiftDay(roundWeek(k + 1).to, 1);
+    if (now.d > pub || (now.d === pub && now.h >= 9)) k++; else break;
+  }
+  return k;
+}
+// a player's per-game line for round k: 2025-26 (or his projection) for round 0; else 2026-27 up to that Sunday
+function rankLine(p, k) {
+  if (k === 0) {
+    const y = p.seasons?.[2025];
+    return y && y.gp > 0 ? y.s : p.proj || null;
+  }
+  const cur = p.seasons?.[D.current];
+  if (!cur || !cur.gp) return null;
+  const cut = roundWeek(k).to;
+  const tot = cur.s.map((v) => v * cur.gp);
+  let gp = cur.gp;
+  // the games after that Sunday come off (the player card keeps his last 30 games)
+  for (const r of p.recent || []) {
+    if (r[0] <= cut || r[0] < REG_START || r.length < 18) continue;
+    const g = { MIN: r[5], PTS: r[6], FGM: r[7], FGA: r[8], FTM: r[9], FTA: r[10], FG3M: r[11], FG3A: r[12], REB: r[13], AST: r[14], STL: r[15], BLK: r[16], TOV: r[17], OREB: r[18] };
+    const tens = [g.PTS, g.REB, g.AST, g.STL, g.BLK].filter((v) => v >= 10).length;
+    g.DD2 = tens >= 2 ? 1 : 0; g.TD3 = tens >= 3 ? 1 : 0;
+    S.forEach((k2, i) => { if (g[k2] != null) tot[i] -= g[k2]; });
+    gp--;
+  }
+  return gp > 0 ? tot.map((v) => Math.max(0, v) / gp) : null;
+}
+function rankSnap(k) {
+  const n = Math.max(st.teams, 1);
+  return { n, at: new Date().toISOString(), teams: Array.from({ length: n }, (_, t) => {
+    const il = ilOf(t), list = rosterOf(t).filter((p) => !il.has(p.id));
+    const o = Object.fromEntries(RANK_KEYS.map((x) => [x, 0]));
+    let has = 0;
+    for (const p of list) {
+      const a = rankLine(p, k);
+      if (!a) continue;
+      has++;
+      for (const x of RANK_KEYS) o[x] += a[ix[x]] || 0;
+    }
+    for (const x of RANK_KEYS) o[x] = Math.round(o[x] * 100) / 100;
+    return { n: list.length, has, v: o };
+  }) };
+}
+// keeps the rounds up to date: round 0 follows the rosters until the season starts; a published round is kept once
+// the game logs reach its Sunday (before that it shows, but is worked out again on the next visit)
+function weeklyRanks() {
+  const n = Math.max(st.teams, 1);
+  if (!Array.from({ length: n }, (_, t) => rosterOf(t).length).every(Boolean)) return null;
+  if (!st.lgWeekly || typeof st.lgWeekly !== "object" || st.lgWeekly.n !== n) st.lgWeekly = { n, r: {} };
+  const R = st.lgWeekly.r, last = publishedRound(), shown = {};
+  let changed = false;
+  const today = etDay(new Date());
+  if (!R[0] || today < REG_START) {
+    const s0 = rankSnap(0);
+    if (JSON.stringify(R[0]?.teams) !== JSON.stringify(s0.teams)) { R[0] = s0; changed = true; }
+  }
+  for (let k = 1; k <= last; k++) {
+    if (R[k]) continue;
+    if (k < last - 1) continue;  // an old round never seen on this account: its rosters are unknown
+    const sk = rankSnap(k);
+    if (LOG_END >= roundWeek(k).to) { R[k] = sk; changed = true; } else shown[k] = sk;
+  }
+  if (changed) saveSettings();
+  return { R: { ...R, ...shown }, last };
+}
+const roundLabel = (k) => {
+  if (k === 0) return "פתיחה (לפני העונה)";
+  const w = roundWeek(k), dd = (d) => `${Number(d.slice(8))}.${Number(d.slice(5, 7))}`;
+  return `מחזור ${k} · ${dd(w.from)}–${dd(w.to)}`;
+};
+
 // Every team of the league in every category: the team's per-game total (FG% / FT% as team percentages), its place in
 // the league in that category, and Roto points: the best team in a category gets as many points as there are teams,
 // the last one 1 (punted categories do not count). Sorted by any column.
 function leagueTable() {
   const n = Math.max(st.teams, 1);
-  const teams = Array.from({ length: n }, (_, t) => ({ t, list: rosterOf(t).filter((p) => !ilOf(t).has(p.id)) }));
-  if (teams.every((x) => !x.list.length)) return `<p class="munote nopick">אחרי הדראפט תופיע כאן ההשוואה בין כל הקבוצות</p>`;
-  for (const x of teams) x.T = cmpTotals(x.list);
+  const W = weeklyRanks();
+  if (!W) return `<p class="munote nopick">אחרי הדראפט (כשלכל הקבוצות יש שחקנים) יופיע כאן דירוג העוצמה</p>`;
+  const rounds = Object.keys(W.R).map(Number).sort((a, b) => a - b);
+  const sel = st.cmp.lgRound != null && W.R[st.cmp.lgRound] ? st.cmp.lgRound : rounds[rounds.length - 1];
+  const snap = W.R[sel];
+  const pct = (m, a) => (a ? m / a : 0);
+  const teams = snap.teams.map((x, t) => ({ t, list: { length: x.has }, T: { ...x.v, FG_PCT: pct(x.v.FGM, x.v.FGA), FT_PCT: pct(x.v.FTM, x.v.FTA), FG3_PCT: pct(x.v.FG3M, x.v.FG3A) } }));
   const live = CATS.filter((c) => !st.punts.has(c.k));
   // place in each category (1 = best; fewer turnovers is better), ties share the better place; Roto points from it
   for (const c of CATS) {
@@ -4141,18 +4236,22 @@ function leagueTable() {
     }
   }
   for (const x of teams) x.pts = live.reduce((a, c) => a + x[`p_${c.k}`], 0);
-  // the overall place (by the category places), kept once a week to show the change from the week before
-  const overall = new Map([...teams].sort((a, b) => b.pts - a.pts || a.t - b.t).map((x, i) => [x.t, i + 1]));
-  const wk = weekOf(etDay(new Date())).from;
-  if (!st.lgRankHist || typeof st.lgRankHist !== "object") st.lgRankHist = {};
-  const prevWk = Object.keys(st.lgRankHist).filter((w) => w < wk).sort().pop();
-  const prev = prevWk ? st.lgRankHist[prevWk] : null;
-  const nowSnap = Object.fromEntries(overall);
-  if (JSON.stringify(st.lgRankHist[wk]) !== JSON.stringify(nowSnap)) {
-    st.lgRankHist[wk] = nowSnap;
-    for (const w of Object.keys(st.lgRankHist).sort().slice(0, -6)) delete st.lgRankHist[w];  // the last 6 weeks are enough
-    saveSettings();
-  }
+  // the overall place (by the category places), and the change from the round before
+  const placeOf = (sn) => {
+    const tt = sn.teams.map((x, t) => ({ t, has: x.has, T: { ...x.v, FG_PCT: pct(x.v.FGM, x.v.FGA), FT_PCT: pct(x.v.FTM, x.v.FTA), FG3_PCT: pct(x.v.FG3M, x.v.FG3A) } }));
+    const pts = new Map(tt.map((x) => [x.t, 0]));
+    for (const c of live) {
+      const sign = c.k === "TOV" ? -1 : 1, val = (x) => (x.has ? sign * (x.T[c.k] ?? 0) : -Infinity);
+      for (const x of tt) {
+        const better = tt.filter((y) => val(y) > val(x)).length, same = tt.filter((y) => val(y) === val(x)).length;
+        pts.set(x.t, pts.get(x.t) + n - better - (same - 1) / 2);
+      }
+    }
+    return new Map([...tt].sort((a, b) => pts.get(b.t) - pts.get(a.t) || a.t - b.t).map((x, i) => [x.t, i + 1]));
+  };
+  const overall = placeOf(snap);
+  const prevK = rounds.filter((k) => k < sel).pop();
+  const prev = prevK != null ? Object.fromEntries(placeOf(W.R[prevK])) : null;
   // a short tip per team: the categories cheapest to climb in (closest to the team above, in the league's spread),
   // and one to let go when it is last there by far
   const sd = Object.fromEntries(CATS.map((c) => {
@@ -4180,7 +4279,10 @@ function leagueTable() {
   teams.sort((a, b) => sortVal(b) - sortVal(a) || a.t - b.t);
   const heat = Object.fromEntries(CATS.map((c) => [c.k, percentileHeat(teams.map((x) => (c.k === "TOV" ? -1 : 1) * (x.T[c.k] ?? 0)))]));
   const head = (k, l, tip = "") => `<th class="nosort${key === k ? " sorted" : ""}${st.punts.has(k) ? " punted" : ""}"${tip ? ` data-tip="${esc(tip)}"` : ""}><button type="button" class="lsort" data-cmplsort="${k}">${l}</button></th>`;
+  const when = sel === 0 ? (etDay(new Date()) < REG_START ? "מתעדכן עד תחילת העונה · ממוצעי 2025-26 (רוקיז: תחזית)" : "לפני העונה · ממוצעי 2025-26 (רוקיז: תחזית)")
+    : (() => { const d = shiftDay(roundWeek(sel).to, 1); return `פורסם ביום ב׳ ${Number(d.slice(8))}.${Number(d.slice(5, 7))} ב־9:00 · ממוצעי 26-27 עד סוף המחזור`; })();
   return `<section class="cmpsec lgsec"><h3 class="ctr">דירוג עוצמה</h3>
+    <div class="lgweek"><select data-lground aria-label="איזה מחזור">${rounds.map((k) => `<option value="${k}"${k === sel ? " selected" : ""}>${esc(roundLabel(k))}</option>`).join("")}</select><small>${when}</small></div>
     <div class="tbl-wrap short"><table class="box lgtab"><thead><tr><th class="nosort${key === "pts" ? " sorted" : ""}"><button type="button" class="lsort" data-cmplsort="pts" data-tip="המקום הכללי: לפי המקומות בכל הקטגוריות">#</button></th>
       <th class="nosort" data-tip="שינוי במקום הכללי לעומת השבוע הקודם">שינוי</th><th class="nosort">קבוצה</th>
       ${CATS.map((c) => head(c.k, c.l)).join("")}<th class="nosort" data-tip="איפה הכי קל לעלות מקום (הכי קרוב לקבוצה שמעליה), ומה כדאי לשחרר כשהקבוצה אחרונה בו בפער גדול">המלצה</th></tr></thead><tbody>
@@ -4191,9 +4293,13 @@ function leagueTable() {
         ${CATS.map((c) => `<td class="${st.punts.has(c.k) ? "punted" : ""}" style="${x.list.length ? heat[c.k]((c.k === "TOV" ? -1 : 1) * (x.T[c.k] ?? 0)) : ""}">${x.list.length ? catFmt(c.k)(x.T[c.k] ?? 0) : "–"}<small>#${x[`r_${c.k}`]}</small></td>`).join("")}
         <td class="lgtip">${tip(x)}</td></tr>`; }).join("")}
     </tbody></table></div>
-    <p class="munote ctrnote">סכום הממוצעים למשחק של השחקנים בסגל (בלי IL). ${st.punts.size ? "קטגוריה ב־Punt לא נספרת בנקודות." : ""}</p>
+    <p class="munote ctrnote">סכום הממוצעים למשחק של השחקנים בסגל הפעיל (בלי IL) ביום הפרסום. הדירוג מתעדכן בכל יום ב׳ ב־9:00 לפי המחזור שהסתיים.</p>
   </section>`;
 }
+$("viewCmp").addEventListener("change", (e) => {
+  const s2 = e.target.closest("[data-lground]");
+  if (s2) { st.cmp.lgRound = Number(s2.value); renderCmp(); }
+});
 $("viewCmp").addEventListener("click", (e) => {
   const sortBtn = e.target.closest("[data-cmplsort]");
   if (sortBtn) { st.cmp.lsort = sortBtn.dataset.cmplsort; return renderCmp(); }
