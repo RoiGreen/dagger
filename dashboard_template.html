@@ -636,7 +636,7 @@ table.box.daygrid td.dg small { display: block; font-size: .64rem; opacity: .8; 
 table.box.daygrid td.dg.on { background: color-mix(in srgb, var(--pos) 18%, transparent); font-weight: 700; }
 table.box.daygrid td.dg.on.gtd { background: color-mix(in srgb, var(--led) 22%, transparent); }
 table.box.daygrid td.dg.on.done { background: color-mix(in srgb, var(--muted) 16%, transparent); }
-table.box.daygrid td.dg.pvoff { background: repeating-linear-gradient(135deg, transparent 0 6px, color-mix(in srgb, var(--muted) 14%, transparent) 6px 8px); }
+table.box.daygrid td.dg.pvgone { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--neg); }
 table.box.daygrid tr.pvin td.pn { box-shadow: inset -3px 0 0 var(--pos); }
 table.box.daygrid tr.pvout td.pn { box-shadow: inset -3px 0 0 var(--neg); }
 table.box.daygrid tr.pvout td.pn .pw > span:not(.pvtag) { text-decoration: line-through; opacity: .7; }
@@ -5042,8 +5042,14 @@ function renderMatchup() {
       const c = G.T.cell.get(`${p.id}|${d}`);
       if (G.il.has(p.id) && p.id !== pvOut) return `<td class="dg il"></td>`;
       // the pickup: before it the new player is not on the team yet, from it on the released one is gone
-      if (!c && p.id === pvIn && d < pvFrom) return `<td class="dg pvoff" title="עוד לא בקבוצה"></td>`;
-      if (!c && p.id === pvOut && d >= pvFrom) return `<td class="dg pvoff" title="${PV.kind === "il" || PV.kind === "ilp" ? `עבר ל־${PV.kind === "ilp" ? "IL+" : "IL"}` : "שוחרר"}"></td>`;
+      if (!c && p.id === pvIn && d < pvFrom) return `<td class="dg" title="עוד לא בקבוצה"></td>`;
+      if (!c && p.id === pvOut && d >= pvFrom) {
+        // the game he would have had without the move, struck through
+        const c0 = A.cell.get(`${p.id}|${d}`);
+        if (!c0 || !c0.gm) return `<td class="dg"></td>`;
+        const o0 = `${c0.gm.g.h === p.team26 ? "" : "@"}${c0.gm.opp}`;
+        return `<td class="dg pvgone" title="המשחק שהיה נחשב לו בלי החילוף"><span>${esc(o0)}</span><small>${c0.out ? "OUT" : c0.slot || "BN"}</small></td>`;
+      }
       if (!c) return `<td class="dg"></td>`;
       const opp = c.gm ? `${c.gm.g.h === p.team26 ? "" : "@"}${c.gm.opp}` : c.r ? `${c.r[2] ? "" : "@"}${c.r[1]}` : "";
       const cls = c.out ? "out" : c.slot ? (c.r ? "on done" : c.ch < 1 ? "on gtd" : "on") : "bn";
