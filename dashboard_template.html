@@ -1104,7 +1104,9 @@ table.box.lgtab .punted { opacity: .4; }
 table.box.lgtab .lgup { color: var(--pos); font-weight: 800; }
 table.box.lgtab .lgdn { color: var(--neg); font-weight: 800; }
 table.box.lgtab .lgsame { color: var(--muted); }
-table.box.lgtab td.lgtip { font-family: var(--font-body); font-size: .8rem; white-space: nowrap; text-align: start; }
+table.box.lgtab td.lgtip { font-family: var(--font-body); font-size: .78rem; line-height: 1.35; white-space: normal; text-align: center; width: 130px; min-width: 130px; max-width: 130px; }
+table.box.lgtab th:last-child { text-align: center; }
+@media (min-width: 701px) { table.box.lgtab td:not(.rank):not(.lgch):not(.tn):not(.lgtip) { min-width: 66px; } }
 table.box.lgtab .lsort { border: 0; background: none; font: inherit; color: inherit; cursor: pointer; padding: 0; }
 table.box.lgtab th.sorted .lsort { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 700px) {
@@ -4171,7 +4173,7 @@ function leagueTable() {
     const parts = [];
     if (climb.length) parts.push(`לחזק <bdi>${climb.map((u) => u.c.l).join(", ")}</bdi>`);
     if (drop && !climb.some((u) => u.c.k === drop.c.k)) parts.push(`לוותר על <bdi>${drop.c.l}</bdi>`);
-    return parts.length ? parts.join(" · ") : "קבוצה מאוזנת";
+    return parts.length ? parts.join("<br>") : "קבוצה מאוזנת";
   };
   const key = st.cmp.lsort && st.cmp.lsort !== "Z" ? st.cmp.lsort : "pts";
   const sortVal = (x) => (key === "pts" ? x.pts : -x[`r_${key}`]);
