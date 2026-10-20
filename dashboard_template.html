@@ -644,6 +644,7 @@ table.box.daygrid td.dg small { display: block; font-size: .64rem; opacity: .8; 
 table.box.daygrid td.dg.on { background: color-mix(in srgb, var(--pos) 18%, transparent); font-weight: 700; }
 table.box.daygrid td.dg.on.gtd { background: color-mix(in srgb, var(--led) 22%, transparent); }
 table.box.daygrid td.dg.on.done { background: color-mix(in srgb, var(--muted) 16%, transparent); }
+table.box.daygrid td.dg.ilgame { background: color-mix(in srgb, var(--muted) 16%, transparent); color: var(--muted); text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--neg); }
 table.box.daygrid td.dg.pvgone { color: var(--muted); text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--neg); }
 table.box.daygrid tr.pvin td.pn { box-shadow: inset -3px 0 0 var(--pos); }
 table.box.daygrid tr.pvout td.pn { box-shadow: inset -3px 0 0 var(--neg); }
@@ -5351,7 +5352,11 @@ function renderMatchup() {
   const gridRows = [...G.roster].sort((a, b) => pvRank(a) - pvRank(b) || (G.il.has(a.id) - G.il.has(b.id)) || muValue(b) - muValue(a)).map((p) => {
     const cells = weekDays().map((d) => {
       const c = G.T.cell.get(`${p.id}|${d}`);
-      if (G.il.has(p.id) && p.id !== pvOut) return `<td class="dg il"></td>`;
+      // on IL / IL+: the games he would have had, greyed and struck through
+      if (G.il.has(p.id) && p.id !== pvOut) {
+        const g0 = p.team26 ? MU.games.get(`${p.team26}|${d}`) : null;
+        return g0 ? `<td class="dg il ilgame" title="ב־${onILPlus(gridSide === "a" ? me : st.muOpp, p.id) ? "IL+" : "IL"}: לא נכנס להרכב"><span>${g0.h === p.team26 ? "" : "@"}${esc(g0.h === p.team26 ? g0.a : g0.h)}</span><small>${onILPlus(gridSide === "a" ? me : st.muOpp, p.id) ? "IL+" : "IL"}</small></td>` : `<td class="dg il"></td>`;
+      }
       // the pickup: before it the new player is not on the team yet, from it on the released one is gone
       if (!c && p.id === pvIn && d < pvFrom) return `<td class="dg" title="עוד לא בקבוצה"></td>`;
       if (!c && p.id === pvOut && d >= pvFrom) {
