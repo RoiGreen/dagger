@@ -6770,6 +6770,13 @@ st.availSeasons = st.availSeasons.filter((i) => SEASONS[i] !== D.preseason);  //
 if (!st.availSeasons.length) st.availSeasons = [SEASONS.indexOf(2025)];
 st.availSeasons = st.availSeasons.filter((i) => SEASONS[i] != null);
 if (!st.availSeasons.length) st.availSeasons = [2];
+// From the morning of 21.10.2026 (Israel time), once 2026-27 has games in the data, a visit opens on 2026-27 alone
+// (the general and advanced tables, and the matchup's projections). Before that, 2025-26.
+{
+  const il = new Intl.DateTimeFormat("en-CA", { timeZone: "Asia/Jerusalem", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", hourCycle: "h23" }).formatToParts(new Date());
+  const g = (t) => il.find((x) => x.type === t).value, day = `${g("year")}-${g("month")}-${g("day")}`;
+  if ((day > "2026-10-21" || (day === "2026-10-21" && Number(g("hour")) >= 6)) && D.curMaxGp > 0 && SEASONS.includes(D.current)) st.availSeasons = [SEASONS.indexOf(D.current)];
+}
 
 // Clicking into a number field selects its value, so typing replaces it
 document.addEventListener("focusin", (e) => { if (e.target.matches('input[type="number"]')) e.target.select(); });
