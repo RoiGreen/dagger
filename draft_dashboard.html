@@ -3904,9 +3904,10 @@ function renderCmpSide(side) {
   // Trade: keep my roster at its size. I get more players -> drop or IL someone; I give more -> room for a free agent
   let rb = $("cmpRoster" + S2);
   if (!rb) { rb = document.createElement("div"); rb.id = "cmpRoster" + S2; rb.className = "rbal"; $("cmpChips" + S2).after(rb); }
-  rb.hidden = c.mode !== "trade" || side === "b";
-  if (c.mode === "trade" && (c.adds || []).length) c.adds = [];  // free-agent adds are the pickup tab's job
-  if (c.mode === "trade") {
+  // the roster-room box is off: a trade is checked as the players swapped, without releases
+  rb.hidden = true; rb.style.display = "none";
+  if (c.mode === "trade") { c.adds = []; c.drops = []; }
+  if (false) {
     const give = c.a.length, get = c.b.length, drops = c.drops || [], adds = c.adds || [];
     const need = get - give - drops.length + adds.length;  // > 0: spots I still have to clear
     const opt = (p) => `<option value="${p.id}">${esc(p.name)} · ${esc(p.pos || "–")} · ${esc(p.team26 || "FA")}</option>`;
