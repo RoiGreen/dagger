@@ -556,6 +556,9 @@ table.mucats tr.punted td { opacity: .4; }
 .muadds { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; font-weight: 700; color: var(--muted); }
 .muadds input { width: 3.4em; padding: 4px 6px; text-align: center; }
 .muscore .mmid { display: grid; justify-items: center; gap: 8px; min-width: 360px; }
+.muscore .mupv { font-size: .82rem; color: #ffd38a; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; text-align: center; }
+.muscore .mupv b { color: #fff; }
+.muscore .mupv .mact { padding: 2px 8px; font-size: .74rem; }
 .muscore .mumode { background: rgba(255,255,255,.08); border-color: rgba(255,255,255,.14); }
 .muscore .mumode button { color: #c9d2e6; }
 .muscore .mumode button[aria-pressed="true"] { color: #fff; }
@@ -5111,20 +5114,26 @@ function renderMatchup() {
     odds = muOdds(A, B);
   }
   const isLive = weekLive && muMode === "live";
-  const cats = odds.cats.map((c) => {
-    const x = { ...c, punted: st.punts.has(c.k), key: oddsKey(c.q) };
-    // who leads right now (fewer turnovers is better); a tie leads nobody
-    const a0 = c.done[0] ?? 0, b0 = c.done[1] ?? 0, d0 = c.k === "TOV" ? b0 - a0 : a0 - b0;
-    x.now = Math.abs(d0) < 1e-9 ? 0 : d0 > 0 ? 1 : -1;
-    return x;
-  });
-  const wins = isLive ? cats.filter((c) => c.now > 0).length : cats.filter((c) => c.q > 0.5).length;
-  const losses = isLive ? cats.filter((c) => c.now < 0).length : cats.length - wins;
+  // what the top of the page shows: my week as planned, or with the pickup being checked (set again below)
+  let cats, wins, losses, SO = odds, SA = A;
+  const showOdds = (o) => {
+    cats = o.cats.map((c) => {
+      const x = { ...c, punted: st.punts.has(c.k), key: oddsKey(c.q) };
+      // who leads right now (fewer turnovers is better); a tie leads nobody
+      const a0 = c.done[0] ?? 0, b0 = c.done[1] ?? 0, d0 = c.k === "TOV" ? b0 - a0 : a0 - b0;
+      x.now = Math.abs(d0) < 1e-9 ? 0 : d0 > 0 ? 1 : -1;
+      return x;
+    });
+    wins = isLive ? cats.filter((c) => c.now > 0).length : cats.filter((c) => c.q > 0.5).length;
+    losses = isLive ? cats.filter((c) => c.now < 0).length : cats.length - wins;
+  };
+  showOdds(odds);
   const f = (k, v) => (v == null ? "–" : k.endsWith("_PCT") ? fmt3(v) : fmt1(v));
   const myName = teamName(me), oppName = teamName(st.muOpp);
-  const live = cats.filter((c) => !c.punted);
-  const by = (keys) => live.filter((c) => keys.includes(c.key));
-  const chase = by(["toss", "lean-l"]), hold = by(["win", "lean-w"]), drop = by(["lose"]);
+  const by = (keys) => cats.filter((c) => !c.punted && keys.includes(c.key));
+  let chase, hold, drop;
+  const showAdvice = () => { chase = by(["toss", "lean-l"]); hold = by(["win", "lean-w"]); drop = by(["lose"]); };
+  showAdvice();
   const chip = (c) => `<span class="mucat ${c.key}"><bdi>${c.l}</bdi></span>`;
   const anyPlayed = A.played + B.played > 0;
   const g1 = (x) => fmt1(x).replace(/\.0$/, "");
@@ -5155,6 +5164,7 @@ function renderMatchup() {
   const pvId = MU_PREVIEW === -1 ? null : MU_PREVIEW ?? searched?.X.id ?? null;
   const pv0 = pvId == null ? null : searched?.X.id === pvId ? searched : moves.find((x) => x.X.id === pvId);
   const PV = pv0 ? withDrop(pv0) : null;
+  if (PV) { SO = PV.r; SA = PV.A2; showOdds(PV.r); showAdvice(); }
   const moveRow = (x0, i) => {
     const x = withDrop(x0);
     const active = mineP.filter((p) => !ilA.has(p.id));
@@ -5351,13 +5361,13 @@ function renderMatchup() {
     return `<div class="wins"><div class="wcol wa"><div class="wh">${esc(myName)}</div>${col(true)}</div><div class="wcol wb"><div class="wh">${esc(oppName)}</div>${col(false)}</div></div>`;
   };
   const score = st.fmt === "pts"
-    ? `<div class="mnum"><span class="num${odds.fa > odds.fb ? " lead" : ""}">${Math.round(odds.fa)}</span><span class="sep">:</span><span class="num${odds.fb > odds.fa ? " lead" : ""}">${Math.round(odds.fb)}</span><small>FPTS · תחזית סוף השבוע</small></div>`
+    ? `<div class="mnum"><span class="num${SO.fa > SO.fb ? " lead" : ""}">${Math.round(SO.fa)}</span><span class="sep">:</span><span class="num${SO.fb > SO.fa ? " lead" : ""}">${Math.round(SO.fb)}</span><small>FPTS · תחזית סוף השבוע</small></div>`
     : `<div class="mnum"><span class="num${wins > losses ? " lead" : ""}">${wins}</span><span class="sep">:</span><span class="num${losses > wins ? " lead" : ""}">${losses}</span><small>${isLive ? `התוצאה כרגע${cats.length - wins - losses ? ` · ${cats.length - wins - losses} בתיקו` : ""}` : weekLive ? "תחזית מלפני תחילת השבוע" : "תחזית סוף השבוע"}</small></div>`;
   const modeSeg = weekLive ? `<div class="seg mumode" role="group" aria-label="לייב או תחזית"><button type="button" data-mumode="live" aria-pressed="${isLive}">לייב</button><button type="button" data-mumode="proj" aria-pressed="${!isLive}">תחזית</button></div>` : "";
   out.innerHTML = `
     <div class="muscore">
-      <div class="mside">${faces(mineP, ilA)}<b>${esc(myName)}</b><span title="משחקים בהרכב: שוחקו מתוך סך הכול השבוע"><b class="gcount" dir="ltr">${A.played}/${A.played + A.gamesAll}</b></span></div>
-      <div class="mmid">${modeSeg}${score}<div class="mwin ${oddsKey(odds.win)}"><b>${pctTxt(odds.win)}</b><span>סיכוי לנצח${isLive ? " (לפי התוצאה עד כה והתחזית להמשך)" : ""}</span></div>${leadCols()}</div>
+      <div class="mside">${faces(mineP, ilA)}<b>${esc(myName)}</b><span title="משחקים בהרכב: שוחקו מתוך סך הכול השבוע"><b class="gcount" dir="ltr">${SA.played}/${SA.played + SA.gamesAll}</b></span></div>
+      <div class="mmid">${modeSeg}${PV ? `<div class="mupv">עם הפיק אפ: <b>${esc(PV.X.name)}</b>${PV.drop ? ` במקום <b>${esc(PV.drop.name)}</b>` : ""} · <span dir="ltr">${pctTxt(odds.win)} → ${pctTxt(PV.r.win)}</span> <button type="button" class="mact" data-mupvoff="1">ביטול</button></div>` : ""}${score}<div class="mwin ${oddsKey(SO.win)}"><b>${pctTxt(SO.win)}</b><span>סיכוי לנצח${isLive ? " (לפי התוצאה עד כה והתחזית להמשך)" : ""}</span></div>${leadCols()}</div>
       <div class="mside">${faces(oppP, ilB)}<b>${esc(oppName)}</b><span title="משחקים בהרכב: שוחקו מתוך סך הכול השבוע"><b class="gcount" dir="ltr">${B.played}/${B.played + B.gamesAll}</b></span></div>
     </div>
     <div class="mugrid">
@@ -5374,7 +5384,7 @@ function renderMatchup() {
           ${chase.length ? `<div><b>לחזק</b>${chase.map(chip).join("")}<p>קטגוריות צמודות או בפיגור קטן: כאן פיק אפ יכול להכריע.</p></div>` : ""}
           ${hold.length ? `<div><b>לשמור</b>${hold.map(chip).join("")}<p>היתרון שלך. אל תשחרר שחקנים שמחזיקים אותן.</p></div>` : ""}
           ${drop.length ? `<div><b>לוותר</b>${drop.map(chip).join("")}<p>פיגור גדול: עדיף להשקיע במקום אחר.</p></div>` : ""}
-          <div><b>משחקים</b><p>${A.starts > B.starts + 0.5 ? `יש לך ${g1(A.starts - B.starts)} משחקים יותר בהרכב: הכמות לטובתך בקטגוריות המצטברות.` : B.starts > A.starts + 0.5 ? `ליריב ${g1(B.starts - A.starts)} משחקים יותר בהרכב: שחקן שממלא ימים פנויים יכול לסגור את הפער.` : "מספר המשחקים בהרכב דומה לשני הצדדים."}</p></div>
+          <div><b>משחקים</b><p>${SA.starts > B.starts + 0.5 ? `יש לך ${g1(SA.starts - B.starts)} משחקים יותר בהרכב: הכמות לטובתך בקטגוריות המצטברות.` : B.starts > SA.starts + 0.5 ? `ליריב ${g1(B.starts - SA.starts)} משחקים יותר בהרכב: שחקן שממלא ימים פנויים יכול לסגור את הפער.` : "מספר המשחקים בהרכב דומה לשני הצדדים."}</p></div>
         </div>
         <div class="muinj"><div><h4>${esc(myName)}</h4><ul>${hurtRows(mineP, A, ilA) || `<li class="none">אין חסרים</li>`}</ul></div><div><h4>${esc(oppName)}</h4><ul>${hurtRows(oppP, B, ilB) || `<li class="none">אין חסרים</li>`}</ul></div></div>
       </section>
