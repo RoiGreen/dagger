@@ -3674,6 +3674,8 @@ function pickupRoster() {
   const t = st.cmp.pt;
   return rosterOf(t).filter((p) => !ilOf(t).has(p.id));  // the active roster: IL / IL+ players do not count
 }
+// how many players a pickup may add: the open roster spots plus the ones being released
+const pickupRoom = () => Math.max(0, st.roster - pickupRoster().length + st.cmp.a.length);
 // avg: the team's numbers per player instead of its totals (percentages and rates stay as they are)
 // Fantasy points by source, with the league's weights; the parts add up to FPTS (punted parts drop out)
 const FP_PARTS = [
@@ -3821,6 +3823,10 @@ function renderCmpSide(side) {
         box.dataset.mode = "pickB";
       }
       const psel = box.querySelector("[data-cmptp]");
+      // a full roster takes no one more than the players released
+      const full = c.b.length >= pickupRoom();
+      psel.disabled = full;
+      psel.placeholder = full ? `הסגל מלא (${pickupRoster().length - c.a.length + c.b.length}/${st.roster}): כדי להוסיף עוד, בחר שחקן להוריד` : "הקלד או בחר שחקן להוסיף";
       const drafted = new Set(picks.map((x) => x.id));
       const pool = players.filter((p) => p.L && !drafted.has(p.id) && !c.b.includes(p.id)).sort(byRank);
       if (psel !== document.activeElement) {
@@ -3991,6 +3997,7 @@ function renderCmp() {
     $("cmpOut").innerHTML = leagueTable(checkedMoves());
     return;
   }
+  if (M.pickup && c.pt != null && c.b.length > pickupRoom()) c.b = c.b.slice(0, pickupRoom());  // a release taken back: the last adds go too
   renderCmpSide("a"); renderCmpSide("b");
   $("cmpSwap").hidden = !!M.pickup;
   let LA = cmpPlayers("a"), LB = cmpPlayers("b");
@@ -4657,6 +4664,10 @@ $("viewCmp").addEventListener("input", (e) => {
   if (tp && CMP_TP[tp.dataset.cmptp].has(tp.value)) {
     // A name picked from the list (or typed in full) joins the side
     const side = tp.dataset.cmptp, id = CMP_TP[side].get(tp.value);
+    if (st.cmp.mode === "pickup" && side === "b" && st.cmp.b.length >= pickupRoom()) {
+      tp.value = ""; tp.blur();
+      return showToast("הסגל מלא: קודם בחר שחקן להוריד");
+    }
     if (!st.cmp[side].includes(id)) st.cmp[side] = [...st.cmp[side], id].slice(-CMP_MODES[st.cmp.mode].max);
     tp.value = ""; tp.blur();
     saveSettings(); return renderCmp();
