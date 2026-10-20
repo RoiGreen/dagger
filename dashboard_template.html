@@ -688,7 +688,8 @@ table.box.daygrid tr.dgfoot .over { color: var(--neg); }
 .mupicks .mtags .trow { display: inline-flex; gap: 4px; flex-wrap: wrap; justify-content: center; }
 .mupicks .mtags i.gain { background: color-mix(in srgb, var(--pos) 18%, transparent); color: var(--pos); }
 .mupicks .mtags i.loss { background: color-mix(in srgb, var(--neg) 14%, transparent); color: var(--neg); }
-.mupicks li > .mwarn { flex: none; max-width: 150px; font-style: normal; font-size: .8rem; font-weight: 800; line-height: 1.3; color: var(--neg); text-align: center; }
+.mupicks li > .mwarn + .mtags { margin-inline-start: 0; }
+.mupicks li > .mwarn { flex: none; margin-inline-start: auto; max-width: 150px; font-style: normal; font-size: .8rem; font-weight: 800; line-height: 1.3; color: var(--neg); text-align: center; }
 .mupicks .mfit { font-family: var(--font-num); font-size: 1.15rem; min-width: 5.5rem; text-align: center; color: var(--accent); }
 .mupickhead { display: flex; justify-content: flex-end; padding-inline: 11px calc(11px + 64px + 10px); margin: -6px 0 2px; }  /* over the % column: skip the button */
 .mupicks .mgo { width: 64px; flex: none; }
@@ -5178,10 +5179,10 @@ function renderMatchup() {
       <span class="mwho"><span class="mline"><span class="pn" data-pcard="${x.X.id}">${esc(x.X.name)}</span>${teamLogo(x.X.team26)}${x.X.hurt ? injuryPill(x.X) : ""}
         <span class="mdays" title="הימים שבהם הוא נכנס להרכב">${days.map(dayShort).join(" ") || "–"}</span></span>
         <small class="mdrop">${dropSel}</small></span>
+      ${costly ? `<em class="mwarn" title="השבוע זה משפר את הסיכוי, אבל ${esc(x.drop.name)} שווה יותר לאורך העונה"><bdi>${esc(x.drop.name)}</bdi> שווה יותר לאורך העונה</em>` : ""}
       <span class="mtags"><span class="trow">${ups.map((u) => `<i class="gain"><bdi>${u.l}</bdi> +${Math.round(u.d * 100)}%</i>`).join("")}</span>
         ${downs.length ? `<span class="trow">${downs.map((u) => `<i class="loss"><bdi>${u.l}</bdi> −${Math.round(-u.d * 100)}%</i>`).join("")}</span>` : ""}
 </span>
-      ${costly ? `<em class="mwarn" title="השבוע זה משפר את הסיכוי, אבל ${esc(x.drop.name)} שווה יותר לאורך העונה"><bdi>${esc(x.drop.name)}</bdi> שווה יותר לאורך העונה</em>` : ""}
       <b class="mfit" title="סיכוי לנצח את המצ'אפ אחרי המהלך">${pctTxt(x.r.win)}<small${x.r.win < odds.win - 0.005 ? ` class="neg"` : ""}>${x.r.win < odds.win - 0.005 ? "−" : "+"}${Math.abs(Math.round((x.r.win - odds.win) * 100))}%</small></b>
       <button type="button" class="mgo" data-mumove="${x.X.id}|${x.drop?.id ?? ""}|${x.kind ?? ""}">בצע</button></li>`;
   };
