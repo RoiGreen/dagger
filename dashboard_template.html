@@ -1324,6 +1324,14 @@ table.box.titab tr.punted td { opacity: .4; }
 
 /* phone: tab bar at the bottom, the side panel as a sheet from the bottom (none of it shows on a wider screen) */
 .msetbtn, .mscrim, .msheethead { display: none; }
+.inappbar { display: none; }
+@media (max-width: 700px) {
+  .inapp .inappbar:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 10px; position: relative;
+    margin: 0; padding: 10px 40px 10px 14px; background: #0f1a33; color: #eef2fa; font-size: .86rem; font-weight: 700; }
+  .inappbar .mact { white-space: nowrap; text-decoration: none; padding: 7px 12px; background: var(--accent); color: #fff; border-color: var(--accent); border-radius: 10px; }
+  .inappbar small { grid-column: 1 / -1; color: #aab5cf; font-weight: 600; font-size: .74rem; }
+  .inappbar .inappx { position: absolute; top: 6px; inset-inline-end: 6px; width: 28px; height: 28px; border: 0; background: none; color: #aab5cf; font-size: 1rem; }
+}
 @media (max-width: 700px) {
   .tabs { position: fixed; inset-inline: 0; bottom: 0; z-index: 80; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0;
     border-radius: 0; border: 0; border-top: 1px solid var(--line); overflow: visible; margin: 0;
@@ -1348,6 +1356,12 @@ table.box.titab tr.punted td { opacity: .4; }
   #mSet::before { -webkit-mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h9M17 7h3M4 17h3M11 17h9'/%3E%3Ccircle cx='15' cy='7' r='2'/%3E%3Ccircle cx='9' cy='17' r='2'/%3E%3C/svg%3E"); mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24' fill='none' stroke='black' stroke-width='2' stroke-linecap='round' stroke-linejoin='round'%3E%3Cpath d='M4 7h9M17 7h3M4 17h3M11 17h9'/%3E%3Ccircle cx='15' cy='7' r='2'/%3E%3Ccircle cx='9' cy='17' r='2'/%3E%3C/svg%3E"); }
   .wrap { padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
   .toast { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
+  /* in-app browsers move their own toolbar while scrolling: the tab bar sticks to the top there instead */
+  .inapp .tabs { top: 0; bottom: auto; border-top: 0; border-bottom: 1px solid var(--line); padding: calc(2px + env(safe-area-inset-top, 0px)) 2px 4px; box-shadow: 0 6px 18px rgba(0, 0, 0, .10); }
+  .inapp .tabs button { min-height: 48px; }
+  .inapp body { padding-top: 60px; }
+  .inapp .wrap { padding-bottom: 24px; }
+  .inapp .toast { bottom: 18px; }
 
   /* the side panel: a sheet that slides up from the bottom */
   aside { position: fixed; inset-inline: 0; bottom: 0; z-index: 95; max-height: 86dvh; overflow-y: auto; overscroll-behavior: contain;
@@ -1566,6 +1580,23 @@ table.box.titab tr.punted td { opacity: .4; }
 
 <div class="toast" id="toast" role="status" hidden></div>
 <div class="gmodal" id="gameModal" hidden><div class="gcard" id="gameCard" role="dialog" aria-modal="true" aria-label="משחק"></div></div>
+<script>
+// In-app browsers (X / Twitter, Instagram, Facebook, LinkedIn, TikTok...): iOS web views lack the "Safari/" token,
+// Android web views carry "; wv)". Marked on <html> so the phone layout can avoid fixed bars there.
+(function () {
+  var ua = navigator.userAgent || "";
+  var ios = /iPhone|iPad|iPod/.test(ua), android = /Android/.test(ua);
+  var named = /FBAN|FBAV|FB_IAB|Instagram|Twitter|LinkedInApp|TikTok|musical_ly|Snapchat|Line\//i.test(ua);
+  var inapp = named || (ios && !/Safari\//.test(ua)) || (android && /; wv\)/.test(ua));
+  if (inapp) document.documentElement.classList.add("inapp", ios ? "inapp-ios" : android ? "inapp-android" : "inapp-other");
+})();
+</script>
+<div class="inappbar" id="inappBar" hidden>
+  <span>נפתח מתוך אפליקציה. לתצוגה מלאה וברורה, פתחו בדפדפן</span>
+  <a id="inappOpen" class="mact on" href="#">פתח בדפדפן</a>
+  <small id="inappHint" dir="rtl"></small>
+  <button type="button" class="inappx" id="inappClose" aria-label="סגירה">✕</button>
+</div>
 <div class="wrap">
   <header class="top jumbo">
     <div class="jumbo-in">
@@ -1918,6 +1949,25 @@ table.box.titab tr.punted td { opacity: .4; }
 <script>
 const D = /*__DATA__*/null;
 const PHONE = matchMedia("(max-width: 700px)");  // phone layout: tab bar at the bottom, settings in a sheet
+// In an in-app browser: offer to open the page in the phone's own browser (Safari / Chrome)
+(() => {
+  const root = document.documentElement;
+  if (!root.classList.contains("inapp")) return;
+  const byId = (x) => document.getElementById(x);
+  const bar = byId("inappBar"), link = byId("inappOpen"), hint = byId("inappHint");
+  const url = location.href.split("#")[0];
+  if (root.classList.contains("inapp-ios")) {
+    link.href = url.replace(/^https?:\/\//, "x-safari-https://");  // opens Safari (iOS 17+)
+    hint.innerHTML = "אם לא נפתח: לחצו על כפתור השיתוף ובחרו <bdi>Safari</bdi>";
+  } else if (root.classList.contains("inapp-android")) {
+    link.href = `intent://${url.replace(/^https?:\/\//, "")}#Intent;scheme=https;package=com.android.chrome;end`;
+    hint.textContent = "אם לא נפתח: לחצו על התפריט ובחרו פתיחה בדפדפן";
+  } else { link.href = url; link.target = "_blank"; }
+  let gone = false;
+  try { gone = sessionStorage.getItem("inappBarClosed") === "1"; } catch (e) {}
+  bar.hidden = gone;
+  byId("inappClose").addEventListener("click", () => { bar.hidden = true; try { sessionStorage.setItem("inappBarClosed", "1"); } catch (e) {} });
+})();
 // In-app browsers (Twitter / X, Instagram, Facebook on iOS) show and hide their own toolbar while scrolling, and the
 // page's fixed bottom bar can stay where the old bottom was, mid-screen. Keep it on the visible bottom edge.
 (() => {
@@ -1926,7 +1976,7 @@ const PHONE = matchMedia("(max-width: 700px)");  // phone layout: tab bar at the
   const place = () => {
     const tabs = document.querySelector(".tabs");
     if (!tabs) return;
-    if (!PHONE.matches) { tabs.style.transform = ""; return; }
+    if (!PHONE.matches || document.documentElement.classList.contains("inapp")) { tabs.style.transform = ""; return; }
     const shift = Math.round(vv.offsetTop + vv.height - window.innerHeight);
     tabs.style.transform = Math.abs(shift) > 1 ? `translateY(${shift}px)` : "";
   };
