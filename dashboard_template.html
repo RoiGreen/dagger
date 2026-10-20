@@ -1918,6 +1918,23 @@ table.box.titab tr.punted td { opacity: .4; }
 <script>
 const D = /*__DATA__*/null;
 const PHONE = matchMedia("(max-width: 700px)");  // phone layout: tab bar at the bottom, settings in a sheet
+// In-app browsers (Twitter / X, Instagram, Facebook on iOS) show and hide their own toolbar while scrolling, and the
+// page's fixed bottom bar can stay where the old bottom was, mid-screen. Keep it on the visible bottom edge.
+(() => {
+  const vv = window.visualViewport;
+  if (!vv) return;
+  const place = () => {
+    const tabs = document.querySelector(".tabs");
+    if (!tabs) return;
+    if (!PHONE.matches) { tabs.style.transform = ""; return; }
+    const shift = Math.round(vv.offsetTop + vv.height - window.innerHeight);
+    tabs.style.transform = Math.abs(shift) > 1 ? `translateY(${shift}px)` : "";
+  };
+  vv.addEventListener("resize", place); vv.addEventListener("scroll", place);
+  addEventListener("scroll", place, { passive: true }); addEventListener("orientationchange", place);
+  PHONE.addEventListener?.("change", place);
+  setTimeout(place, 0);
+})();
 const S = D.stats;
 const ix = Object.fromEntries(S.map((s, i) => [s, i]));
 // Every category a league can play with; a league picks its own (st.cats), the standard 9 by default
