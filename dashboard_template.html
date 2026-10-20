@@ -1326,15 +1326,20 @@ table.box.titab tr.punted td { opacity: .4; }
 .msetbtn, .mscrim, .msheethead { display: none; }
 .inappbar { display: none; }
 @media (max-width: 700px) {
-  .inapp .inappbar:not([hidden]) { display: grid; grid-template-columns: minmax(0, 1fr) auto; align-items: center; gap: 6px 10px; position: relative;
-    margin: 0; padding: 10px 40px 10px 14px; background: #0f1a33; color: #eef2fa; font-size: .86rem; font-weight: 700; }
-  .inappbar .mact { white-space: nowrap; text-decoration: none; padding: 7px 12px; background: var(--accent); color: #fff; border-color: var(--accent); border-radius: 10px; }
-  .inappbar small { grid-column: 1 / -1; color: #aab5cf; font-weight: 600; font-size: .74rem; }
+  .inapp .inappbar:not([hidden]) { display: grid; gap: 10px; margin: 0 0 10px; padding: 14px; border-radius: 16px; background: #0f1a33;
+    color: #eef2fa; border: 2px solid var(--accent); }
+  .inappbar .ihead { display: grid; grid-template-columns: 40px minmax(0, 1fr); gap: 10px; align-items: center; }
+  .inappbar .ihead b { display: block; font-size: 1rem; }
+  .inappbar .ihead small { display: block; color: #aab5cf; font-size: .8rem; margin-top: 2px; }
+  .inappbar .iico { width: 40px; height: 40px; border-radius: 10px; background: url("icon-180.png") center / cover, var(--accent); }
+  .inappbar .ibtns { display: grid; grid-template-columns: 1fr auto; gap: 8px; }
+  .inappbar .ibtns .mact { padding: 10px 14px; border-radius: 12px; font-weight: 800; }
+  .inappbar .ibtns .mact.on { background: var(--accent); color: #fff; border-color: var(--accent); }
+  .inappbar .ibtns .mact:not(.on) { background: transparent; color: #eef2fa; border: 1px solid rgba(255,255,255,.25); }
   .inappbar .kbd { display: inline-block; min-width: 1.3em; padding: 0 5px; border-radius: 6px; background: rgba(255,255,255,.14); color: #fff; font-weight: 800; text-align: center; }
-  .inappbar .inappsteps:not([hidden]) { grid-column: 1 / -1; display: grid; gap: 6px; margin-top: 4px; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,.08); font-size: .84rem; }
-  .inappbar .inappsteps ol { margin: 0; padding-inline-start: 18px; display: grid; gap: 3px; font-weight: 600; }
+  .inappbar .inappsteps:not([hidden]) { display: grid; gap: 8px; padding: 10px 12px; border-radius: 10px; background: rgba(255,255,255,.08); font-size: .86rem; }
+  .inappbar .inappsteps ol { margin: 0; padding-inline-start: 18px; display: grid; gap: 4px; font-weight: 600; }
   .inappbar .inappsteps .mact { justify-self: start; background: transparent; color: #fff; border: 1px solid rgba(255,255,255,.35); padding: 6px 10px; border-radius: 10px; }
-  .inappbar .inappx { position: absolute; top: 6px; inset-inline-end: 6px; width: 28px; height: 28px; border: 0; background: none; color: #aab5cf; font-size: 1rem; }
 }
 @media (max-width: 700px) {
   .tabs { position: fixed; inset-inline: 0; bottom: 0; z-index: 80; display: grid; grid-template-columns: repeat(6, minmax(0, 1fr)); gap: 0;
@@ -1599,15 +1604,9 @@ table.box.titab tr.punted td { opacity: .4; }
 })();
 </script>
 <div class="inappbar" id="inappBar" hidden>
-  <span>נפתח מתוך אפליקציה. לתצוגה מלאה וברורה, פתחו בדפדפן</span>
-  <a id="inappOpen" class="mact on" href="#">פתח בדפדפן</a>
-  <small id="inappHint" dir="rtl"></small>
-  <div class="inappsteps" id="inappSteps" dir="rtl" hidden>
-    <b>האפליקציה לא מאפשרת לעבור אוטומטית. זה לוקח שני צעדים:</b>
-    <ol dir="rtl"><li>לחצו על <span class="kbd">⋮</span> שליד הכתובת של האתר</li><li>בחרו בפתיחה בדפדפן (<bdi dir="ltr">Open in Safari</bdi>)</li></ol>
-    <button type="button" class="mact" id="inappCopy">או: העתקת הקישור</button>
-  </div>
-  <button type="button" class="inappx" id="inappClose" aria-label="סגירה">✕</button>
+  <div class="ihead"><span class="iico" aria-hidden="true"></span><div><b>הוסיפו את <bdi>Dagger</bdi> למסך הבית</b><small>נפתח במסך מלא, כמו אפליקציה, והקבוצה שלכם במרחק לחיצה</small></div></div>
+  <div class="ibtns"><button type="button" class="mact on" id="inappHow">איך מוסיפים</button><button type="button" class="mact" id="inappLater">לא עכשיו</button></div>
+  <div class="inappsteps" id="inappSteps" dir="rtl" hidden></div>
 </div>
 <div class="wrap">
   <header class="top jumbo">
@@ -1961,33 +1960,31 @@ table.box.titab tr.punted td { opacity: .4; }
 <script>
 const D = /*__DATA__*/null;
 const PHONE = matchMedia("(max-width: 700px)");  // phone layout: tab bar at the bottom, settings in a sheet
-// In an in-app browser: offer to open the page in the phone's own browser (Safari / Chrome)
+// In an in-app browser (X, Instagram...): a card that shows how to add the site to the home screen (it then opens
+// full screen, like an app). Adding needs the phone's own browser, so the steps start by opening it there.
 (() => {
   const root = document.documentElement;
   if (!root.classList.contains("inapp")) return;
   const byId = (x) => document.getElementById(x);
-  const bar = byId("inappBar"), link = byId("inappOpen"), hint = byId("inappHint");
+  const bar = byId("inappBar"), steps = byId("inappSteps");
   const url = location.href.split("#")[0];
-  if (root.classList.contains("inapp-ios")) {
-    link.href = url.replace(/^https?:\/\//, "x-safari-https://");  // opens Safari (iOS 17+)
-    hint.innerHTML = "או: לחצו על <span class=\"kbd\">⋮</span> שליד הכתובת ובחרו בפתיחה בדפדפן";
-  } else if (root.classList.contains("inapp-android")) {
-    link.href = `intent://${url.replace(/^https?:\/\//, "")}#Intent;scheme=https;package=com.android.chrome;end`;
-    hint.innerHTML = "או: <span class=\"kbd\">⋮</span> בפינה ואז \"פתיחה בדפדפן\"";
-  } else { link.href = url; link.target = "_blank"; }
-  // the app may ignore the link: if the page is still here a moment later, show the two manual steps
-  link.addEventListener("click", () => {
-    setTimeout(() => { if (document.visibilityState === "visible") byId("inappSteps").hidden = false; }, 900);
+  const KEY = "a2hsLater";
+  let later = 0;
+  try { later = Number(localStorage.getItem(KEY) || 0); } catch (e) {}
+  if (Date.now() - later < 7 * 864e5) return;  // "not now": ask again in a week
+  bar.hidden = false;
+  const k = (t) => `<span class="kbd">${t}</span>`;
+  steps.innerHTML = (root.classList.contains("inapp-android")
+    ? `<ol dir="rtl"><li>לחצו על ${k("⋮")} ובחרו בפתיחה בדפדפן</li><li>בכרום: ${k("⋮")} ואז הוספה למסך הבית</li></ol>`
+    : `<ol dir="rtl"><li>לחצו על ${k("⋮")} שליד הכתובת ובחרו בפתיחה בדפדפן (<bdi dir="ltr">Open in Safari</bdi>)</li><li>בספארי: כפתור השיתוף ${k("⇧")} ואז הוספה למסך הבית</li></ol>`)
+    + `<button type="button" class="mact" id="inappCopy">העתקת הקישור</button>`;
+  byId("inappHow").addEventListener("click", () => { steps.hidden = !steps.hidden; });
+  byId("inappLater").addEventListener("click", () => { bar.hidden = true; try { localStorage.setItem(KEY, String(Date.now())); } catch (e) {} });
+  steps.addEventListener("click", async (e) => {
+    const b = e.target.closest("#inappCopy");
+    if (!b) return;
+    try { await navigator.clipboard.writeText(url); b.textContent = "הקישור הועתק"; } catch (er) { prompt("העתיקו את הקישור:", url); }
   });
-  byId("inappCopy").addEventListener("click", async () => {
-    const b = byId("inappCopy");
-    try { await navigator.clipboard.writeText(url); b.textContent = "הקישור הועתק. הדביקו אותו בספארי"; }
-    catch (e) { prompt("העתיקו את הקישור:", url); }
-  });
-  let gone = false;
-  try { gone = sessionStorage.getItem("inappBarClosed") === "1"; } catch (e) {}
-  bar.hidden = true;  // like other sites opened from X: the page itself just works there, no banner
-  byId("inappClose").addEventListener("click", () => { bar.hidden = true; try { sessionStorage.setItem("inappBarClosed", "1"); } catch (e) {} });
 })();
 // In-app browsers (Twitter / X, Instagram, Facebook on iOS) show and hide their own toolbar while scrolling, and the
 // page's fixed bottom bar can stay where the old bottom was, mid-screen. Keep it on the visible bottom edge.

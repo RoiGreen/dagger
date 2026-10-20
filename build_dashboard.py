@@ -721,10 +721,20 @@ def build_site(html: str) -> None:
     head, body = html[:cut], html[cut:]
     page = ('<!doctype html><html lang="he"><head><meta charset="utf-8">'
             '<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">'
+            # home-screen app: icon, name and full screen when opened from the home screen
+            '<link rel="manifest" href="manifest.webmanifest"><link rel="apple-touch-icon" href="icon-180.png">'
+            '<meta name="apple-mobile-web-app-capable" content="yes"><meta name="mobile-web-app-capable" content="yes">'
+            '<meta name="apple-mobile-web-app-title" content="Dagger"><meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">'
+            '<meta name="theme-color" content="#0f1a33">'
             f"<style>{SITE_RESET}</style>{GOATCOUNTER}{head}</head><body>{body}</body></html>")
     SITE_OUT.parent.mkdir(exist_ok=True)
     SITE_OUT.write_text(page, encoding="utf-8")
     (SITE_OUT.parent / ".nojekyll").write_text("", encoding="utf-8")  # serve files as-is
+    (SITE_OUT.parent / "manifest.webmanifest").write_text(json.dumps({
+        "name": "Dagger · NBA Fantasy", "short_name": "Dagger", "lang": "he", "dir": "rtl", "start_url": "./", "scope": "./",
+        "display": "standalone", "background_color": "#0f1a33", "theme_color": "#0f1a33",
+        "icons": [{"src": "icon-192.png", "sizes": "192x192", "type": "image/png"}, {"src": "icon-512.png", "sizes": "512x512", "type": "image/png"}],
+    }, ensure_ascii=False), encoding="utf-8")
     print(f"Saved website {SITE_OUT.relative_to(HERE)}")
 
 
