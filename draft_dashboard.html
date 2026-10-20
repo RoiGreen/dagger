@@ -1975,8 +1975,8 @@ const PHONE = matchMedia("(max-width: 700px)");  // phone layout: tab bar at the
   bar.hidden = false;
   const k = (t) => `<span class="kbd">${t}</span>`;
   steps.innerHTML = (root.classList.contains("inapp-android")
-    ? `<ol dir="rtl"><li>לחצו על ${k("⋮")} ובחרו בפתיחה בדפדפן</li><li>בכרום: ${k("⋮")} ואז הוספה למסך הבית</li></ol>`
-    : `<ol dir="rtl"><li>לחצו על ${k("⋮")} שליד הכתובת ובחרו בפתיחה בדפדפן (<bdi dir="ltr">Open in Safari</bdi>)</li><li>בספארי: כפתור השיתוף ${k("⇧")} ואז הוספה למסך הבית</li></ol>`)
+    ? `<ol dir="rtl"><li>לחצו על ${k("⋮")} בפינת המסך</li><li>בחרו בפתיחה בדפדפן</li><li>בכרום: ${k("⋮")} ואז הוספה למסך הבית</li></ol>`
+    : `<ol dir="rtl"><li>לחצו על ${k("⋮")} שליד <bdi dir="ltr">${location.hostname.split(".").slice(-2).join(".")}</bdi> בתחתית המסך</li><li>בחרו בפתיחה בספארי</li><li>בספארי: כפתור השיתוף ${k("⇧")} ואז הוספה למסך הבית</li></ol>`)
     + `<button type="button" class="mact" id="inappCopy">העתקת הקישור</button>`;
   byId("inappHow").addEventListener("click", () => { steps.hidden = !steps.hidden; });
   byId("inappLater").addEventListener("click", () => { bar.hidden = true; try { localStorage.setItem(KEY, String(Date.now())); } catch (e) {} });
