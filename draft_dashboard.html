@@ -1121,6 +1121,7 @@ table.box.lgtab .lgup { color: var(--pos); font-weight: 800; }
 .lgweek { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; }
 .lgweek select { width: auto; min-width: 240px; max-width: 100%; font: inherit; font-weight: 700; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
 .lgweek small { color: var(--muted); }
+.lgpk { text-align: center; margin: -4px 0 10px; font-weight: 700; color: var(--accent); }
 table.box.lgtab .lgdn { color: var(--neg); font-weight: 800; }
 table.box.lgtab .lgsame { color: var(--muted); }
 table.box.lgtab td.lgtip { font-family: var(--font-body); font-size: .78rem; line-height: 1.35; white-space: normal; text-align: center; width: 130px; min-width: 130px; max-width: 130px; }
@@ -4089,6 +4090,7 @@ function renderCmp() {
         ${chart === "fp" ? cmpBars(fpParts().map((x) => ({ k: x.k, l: x.l, tip: x.tip })), A, B, "fp") : cmpBars(catRows, A, B, chart)}
       </div>
     </section>
+    ${c.mode === "pickup" && (c.a.length || c.b.length) ? leagueTable({ out: c.a, inn: c.b }) : ""}
     ${c.mode === "trade" ? tradeImpact() : `<section class="cmpsec">
       <h3>נתונים מתקדמים</h3>
       <div class="cmpgrid">
@@ -4241,13 +4243,28 @@ const roundLabel = (k) => {
 // Every team of the league in every category: the team's per-game total (FG% / FT% as team percentages), its place in
 // the league in that category, and Roto points: the best team in a category gets as many points as there are teams,
 // the last one 1 (punted categories do not count). Sorted by any column.
-function leagueTable() {
+// pk = { out: [ids], inn: [ids] }: a pickup being checked, applied to my team in the round shown
+function leagueTable(pk = null) {
   const n = Math.max(st.teams, 1);
   const W = weeklyRanks();
   if (!W) return `<p class="munote nopick">אחרי הדראפט (כשלכל הקבוצות יש שחקנים) יופיע כאן דירוג העוצמה</p>`;
   const rounds = Object.keys(W.R).map(Number).sort((a, b) => a - b);
   const sel = st.cmp.lgRound != null && W.R[st.cmp.lgRound] ? st.cmp.lgRound : rounds[rounds.length - 1];
-  const snap = W.R[sel];
+  const snap0 = W.R[sel];
+  // with a pickup: my team loses the released players' lines and gets the added ones' (for that round's numbers)
+  const pkOn = pk && (pk.out.length || pk.inn.length);
+  const snap = !pkOn ? snap0 : { ...snap0, teams: snap0.teams.map((x, t) => {
+    if (t !== myIdx()) return x;
+    const v = { ...x.v };
+    let has = x.has;
+    for (const [ids, sign] of [[pk.out, -1], [pk.inn, 1]]) for (const id of ids) {
+      const a = rankLine(PLAYER_BY_ID.get(id), sel);
+      if (!a) continue;
+      has += sign;
+      for (const k of RANK_KEYS) v[k] = Math.max(0, v[k] + sign * (a[ix[k]] || 0));
+    }
+    return { ...x, has: Math.max(0, has), v };
+  }) };
   const pct = (m, a) => (a ? m / a : 0);
   const teams = snap.teams.map((x, t) => ({ t, list: { length: x.has }, T: { ...x.v, FG_PCT: pct(x.v.FGM, x.v.FGA), FT_PCT: pct(x.v.FTM, x.v.FTA), FG3_PCT: pct(x.v.FG3M, x.v.FG3A) } }));
   const live = CATS.filter((c) => !st.punts.has(c.k));
@@ -4276,7 +4293,8 @@ function leagueTable() {
   };
   const overall = placeOf(snap);
   const prevK = rounds.filter((k) => k < sel).pop();
-  const prev = prevK != null ? Object.fromEntries(placeOf(W.R[prevK])) : null;
+  // with a pickup the change is the pickup's: the places without it
+  const prev = pkOn ? Object.fromEntries(placeOf(snap0)) : prevK != null ? Object.fromEntries(placeOf(W.R[prevK])) : null;
   // a short tip per team: the categories cheapest to climb in (closest to the team above, in the league's spread),
   // and one to let go when it is last there by far
   const sd = Object.fromEntries(CATS.map((c) => {
@@ -4310,10 +4328,12 @@ function leagueTable() {
   const head = (k, l, tip = "") => `<th class="nosort${key === k ? " sorted" : ""}${st.punts.has(k) ? " punted" : ""}"${tip ? ` data-tip="${esc(tip)}"` : ""}><button type="button" class="lsort" data-cmplsort="${k}">${l}</button></th>`;
   const when = sel === 0 ? (etDay(new Date()) < REG_START ? "מתעדכן עד תחילת העונה · ממוצעי 2025-26 (מי שלא שיחק בה: העונה האחרונה שלו; רוקיז: תחזית)" : "לפני העונה · ממוצעי 2025-26 (מי שלא שיחק בה: העונה האחרונה שלו; רוקיז: תחזית)")
     : (() => { const d = shiftDay(roundWeek(sel).to, 1); return `פורסם ביום ב׳ ${Number(d.slice(8))}.${Number(d.slice(5, 7))} ב־9:00 · ממוצעי 26-27 עד סוף המחזור`; })();
-  return `<section class="cmpsec lgsec"><h3 class="ctr">דירוג עוצמה</h3>
+  const pkNames = (ids) => ids.map((id) => PLAYER_BY_ID.get(id)?.name).filter(Boolean).map((x) => `<bdi>${esc(x)}</bdi>`).join(", ");
+  return `<section class="cmpsec lgsec"><h3 class="ctr">דירוג עוצמה${pkOn ? " · כולל הפיק אפ" : ""}</h3>
+    ${pkOn ? `<p class="lgpk"><bdi>${esc(teamName(myIdx()))}</bdi>${pk.inn.length ? ` מוסיפה ${pkNames(pk.inn)}` : ""}${pk.out.length ? `${pk.inn.length ? " ו" : " "}מורידה ${pkNames(pk.out)}` : ""}</p>` : ""}
     <div class="lgweek"><select data-lground aria-label="איזה מחזור">${rounds.map((k) => `<option value="${k}"${k === sel ? " selected" : ""}>${esc(roundLabel(k))}</option>`).join("")}</select><small>${when}</small></div>
     <div class="tbl-wrap short"><table class="box lgtab"><thead><tr><th class="nosort${key === "pts" ? " sorted" : ""}"><button type="button" class="lsort" data-cmplsort="pts" data-tip="המקום הכללי: לפי המקומות בכל הקטגוריות">#</button></th>
-      <th class="nosort" data-tip="שינוי במקום הכללי לעומת השבוע הקודם">שינוי</th><th class="nosort">קבוצה</th>
+      <th class="nosort" data-tip="${pkOn ? "שינוי במקום הכללי בגלל הפיק אפ" : "שינוי במקום הכללי לעומת השבוע הקודם"}">${pkOn ? "שינוי מהפיק אפ" : "שינוי"}</th><th class="nosort">קבוצה</th>
       ${CATS.map((c) => head(c.k, c.l)).join("")}<th class="nosort" data-tip="איפה הכי קל לעלות מקום (הכי קרוב לקבוצה שמעליה), ומה כדאי לשחרר כשהקבוצה אחרונה בו בפער גדול">המלצה</th></tr></thead><tbody>
       ${teams.map((x, i) => {
         const d = prev && prev[x.t] != null ? prev[x.t] - overall.get(x.t) : 0;
