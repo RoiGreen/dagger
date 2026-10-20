@@ -3819,7 +3819,7 @@ function renderCmpSide(side) {
     } else {
       // the player to add can be typed: the list narrows to matching names
       if (box.dataset.mode !== "pickB") {
-        box.innerHTML = `<input data-cmptp="b" autocomplete="off" aria-label="שחקן להוסיף" placeholder="הקלד או בחר שחקן להוסיף" role="combobox" aria-expanded="false"><datalist id="cmpTpb"></datalist>`;
+        box.innerHTML = `<select data-cmpnba="b" aria-label="קבוצת NBA"></select><input data-cmptp="b" autocomplete="off" aria-label="שחקן להוסיף" placeholder="הקלד או בחר שחקן להוסיף" role="combobox" aria-expanded="false"><datalist id="cmpTpb"></datalist>`;
         box.dataset.mode = "pickB";
       }
       const psel = box.querySelector("[data-cmptp]");
@@ -3827,8 +3827,15 @@ function renderCmpSide(side) {
       const full = c.b.length >= pickupRoom();
       psel.disabled = full;
       psel.placeholder = full ? `הסגל מלא (${pickupRoster().length - c.a.length + c.b.length}/${st.roster}): כדי להוסיף עוד, בחר שחקן להוריד` : "הקלד או בחר שחקן להוסיף";
+      // the free agents of one NBA team, or of all of them
+      c.nba = c.nba || { a: "", b: "" };
+      const nsel = box.querySelector("[data-cmpnba]");
+      if (nsel !== document.activeElement) {
+        nsel.innerHTML = `<option value="">כל הקבוצות</option>` + Object.keys(TEAM_NAMES).sort().map((t) => `<option value="${t}">${esc(TEAM_NAMES[t])}</option>`).join("");
+        nsel.value = c.nba.b || "";
+      }
       const drafted = new Set(picks.map((x) => x.id));
-      const pool = players.filter((p) => p.L && !drafted.has(p.id) && !c.b.includes(p.id)).sort(byRank);
+      const pool = players.filter((p) => p.L && !drafted.has(p.id) && !c.b.includes(p.id) && (!c.nba.b || p.team26 === c.nba.b)).sort(byRank);
       if (psel !== document.activeElement) {
         const label = (p) => `${p.name} · ${p.pos || "–"} · ${p.team26 || "FA"}${rank.has(p.id) ? ` · #${rank.get(p.id)}` : ""}`;
         CMP_TP.b = new Map(pool.map((p) => [label(p), p.id]));
