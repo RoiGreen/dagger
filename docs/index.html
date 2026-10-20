@@ -1357,9 +1357,12 @@ table.box.titab tr.punted td { opacity: .4; }
   .wrap { padding-bottom: calc(84px + env(safe-area-inset-bottom, 0px)); }
   .toast { bottom: calc(76px + env(safe-area-inset-bottom, 0px)); }
   /* in-app browsers move their own toolbar while scrolling: the tab bar sticks to the top there instead */
-  .inapp .tabs { top: 0; bottom: auto; border-top: 0; border-bottom: 1px solid var(--line); padding: calc(2px + env(safe-area-inset-top, 0px)) 2px 4px; box-shadow: 0 6px 18px rgba(0, 0, 0, .10); }
-  .inapp .tabs button { min-height: 48px; }
-  .inapp body { padding-top: 60px; }
+  /* nothing fixed on the screen there: the app's own browser slides and resizes, so the tab bar is part of the page */
+  .inapp .tabs { position: static; inset: auto; margin: 6px 0 10px; padding: 4px 2px; border: 1px solid var(--line); border-radius: 14px;
+    background: var(--surface); backdrop-filter: none; -webkit-backdrop-filter: none; box-shadow: none; }
+  .inapp .tabs button { min-height: 50px; }
+  .inapp .tabhead-inner { display: grid; width: 100%; }
+  .inapp .tabs { width: 100%; box-sizing: border-box; }
   .inapp .wrap { padding-bottom: 24px; }
   .inapp .toast { bottom: 18px; }
 
