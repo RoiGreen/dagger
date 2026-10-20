@@ -2000,6 +2000,14 @@ function applySeasons() {
     // No qualifying season: off the board, but keep numbers for his favorites / my-team entries
     p.has = chosen.length > 0 && !short;
     let lines = p.has ? chosen : Object.keys(p.seasons).map(Number).sort().map((y) => ({ y, ...p.seasons[y] }));
+    // My team and favorites: a player with no games in the chosen seasons (out injured, say) still shows, with the
+    // last season he played before them (marked with that season). Not in 2026-27 on its own (its own games only).
+    if (!p.has && !onlyCurrent() && (mine.has(p.id) || fav.has(p.id))) {
+      const real = Object.keys(p.seasons).map(Number).filter((y) => y !== D.preseason && y !== D.current && p.seasons[y].gp > 0).sort();
+      const back = real.filter((y) => y < Math.min(...ys));
+      const use = back.length ? back[back.length - 1] : real.length ? real[real.length - 1] : null;
+      if (use != null) { lines = [{ y: use, ...p.seasons[use] }]; p.has = true; }
+    }
     const games = lines.reduce((a, l) => a + l.gp, 0);
     p.s = S.map((_, i) => lines.reduce((a, l) => a + l.s[i] * l.gp, 0) / games);
     p.gp = Math.round(games / lines.length);  // games per season he played
