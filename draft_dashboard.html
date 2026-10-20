@@ -1141,9 +1141,17 @@ table.box.lgtab .lgup { color: var(--pos); font-weight: 800; }
 .lgweek { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; }
 .lgweek select { width: auto; min-width: 240px; max-width: 100%; font: inherit; font-weight: 700; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
 .lgweek small { color: var(--muted); }
-.lgpk { display: flex; justify-content: center; gap: 28px; flex-wrap: wrap; margin: -4px 0 10px; }
-.lgpk p { margin: 0; text-align: center; font-weight: 700; color: var(--accent); line-height: 1.5; }
-.lgpk .mact { margin-top: 4px; font-weight: 600; }
+.lgpk { display: flex; justify-content: center; gap: 28px; flex-wrap: wrap; margin: -4px 0 12px; }
+.lgpk .mvblock { display: grid; justify-items: center; gap: 8px; }
+.lgpk .mvcards { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
+.lgpk .mvcard { display: grid; gap: 6px; min-width: 210px; padding: 10px 14px; border: 1px solid var(--line); border-radius: 12px; background: var(--surface-2); }
+.lgpk .mvcard > b { text-align: center; font-size: .95rem; }
+.lgpk .mvp { display: grid; grid-template-columns: 34px minmax(0, 1fr) auto; align-items: center; gap: 8px; font-weight: 700; font-size: .88rem; }
+.lgpk .mvp img, .lgpk .mvp .noimg { width: 34px; height: 34px; border-radius: 50%; object-fit: cover; background: var(--sunk); }
+.lgpk .mvp i { font-style: normal; font-size: .9rem; font-weight: 800; width: 26px; height: 26px; display: grid; place-items: center; border-radius: 50%; }
+.lgpk .mvp.out i { color: var(--neg); background: color-mix(in srgb, var(--neg) 14%, transparent); }
+.lgpk .mvp.in i { color: var(--pos); background: color-mix(in srgb, var(--pos) 14%, transparent); }
+.lgpk .mact { font-weight: 600; }
 table.box.lgtab .lgdn { color: var(--neg); font-weight: 800; }
 table.box.lgtab .lgsame { color: var(--muted); }
 table.box.lgtab td.lgtip { font-family: var(--font-body); font-size: .78rem; line-height: 1.35; white-space: normal; text-align: center; width: 130px; min-width: 130px; max-width: 130px; }
@@ -4421,11 +4429,15 @@ function leagueTable(mv = null) {
   const head = (k, l, tip = "") => `<th class="nosort${key === k ? " sorted" : ""}${st.punts.has(k) ? " punted" : ""}"${tip ? ` data-tip="${esc(tip)}"` : ""}><button type="button" class="lsort" data-cmplsort="${k}">${l}</button></th>`;
   const when = sel === 0 ? (etDay(new Date()) < REG_START ? "מתעדכן עד תחילת העונה · ממוצעי 2025-26 (מי שלא שיחק בה: העונה האחרונה שלו; רוקיז: תחזית)" : "לפני העונה · ממוצעי 2025-26 (מי שלא שיחק בה: העונה האחרונה שלו; רוקיז: תחזית)")
     : (() => { const d = shiftDay(roundWeek(sel).to, 1); return `פורסם ביום ב׳ ${Number(d.slice(8))}.${Number(d.slice(5, 7))} ב־9:00 · ממוצעי 26-27 עד סוף המחזור`; })();
+  // a team's card in a move: who goes out (red arrow down) and who comes in (green arrow up), with their photos
+  const mvPlayer = (id, dir) => { const pl = PLAYER_BY_ID.get(id); if (!pl) return "";
+    return `<div class="mvp ${dir}">${pl.img ? `<img src="${pl.img}" alt="" loading="lazy" decoding="async">` : `<span class="noimg"></span>`}<bdi>${esc(pl.name)}</bdi><i title="${dir === "out" ? "יוצא" : "נכנס"}">${dir === "out" ? "▼" : "▲"}</i></div>`; };
+  const mvCard = (m) => `<div class="mvcard"><b><bdi>${esc(teamName(m.t))}</bdi></b>${m.out.map((id) => mvPlayer(id, "out")).join("")}${m.inn.map((id) => mvPlayer(id, "in")).join("")}</div>`;
   const pkNames = (ids) => ids.map((id) => PLAYER_BY_ID.get(id)?.name).filter(Boolean).map((x) => `<bdi>${esc(x)}</bdi>`).join(", ");
   const kinds = pkOn ? [...new Set(mv.map((m) => m.kind))] : [];
   const kindHe = { pickup: "הפיק אפ", trade: "הטרייד" };
   return `<section class="cmpsec lgsec"><h3 class="ctr">דירוג עוצמה${pkOn ? ` · כולל ${kinds.map((k) => kindHe[k]).join(" ו")}` : ""}</h3>
-    ${pkOn ? `<div class="lgpk">${kinds.map((k) => `<p>${mv.filter((m) => m.kind === k).map((m) => `<bdi>${esc(teamName(m.t))}</bdi> - ${m.out.length ? `יוצא ${pkNames(m.out)}` : ""}${m.out.length && m.inn.length ? "<br>" : ""}${m.inn.length ? `נכנס ${pkNames(m.inn)}` : ""}`).join("<br>")}<br><button type="button" class="mact" data-pkclear="${k}">בלי ${kindHe[k]}</button></p>`).join("")}</div>` : ""}
+    ${pkOn ? `<div class="lgpk">${kinds.map((k) => `<div class="mvblock"><div class="mvcards">${mv.filter((m) => m.kind === k).map((m) => mvCard(m)).join("")}</div><button type="button" class="mact" data-pkclear="${k}">בלי ${kindHe[k]}</button></div>`).join("")}</div>` : ""}
     <div class="lgweek"><select data-lground aria-label="איזה מחזור">${rounds.map((k) => `<option value="${k}"${k === sel ? " selected" : ""}>${esc(roundLabel(k))}</option>`).join("")}</select><small>${when}</small></div>
     <div class="tbl-wrap short"><table class="box lgtab"><thead><tr><th class="nosort${key === "pts" ? " sorted" : ""}"><button type="button" class="lsort" data-cmplsort="pts" data-tip="המקום הכללי: לפי המקומות בכל הקטגוריות">#</button></th>
       <th class="nosort" data-tip="${pkOn ? "שינוי במקום הכללי בגלל המהלך" : "שינוי במקום הכללי לעומת השבוע הקודם"}">${pkOn ? "שינוי מהמהלך" : "שינוי"}</th><th class="nosort">קבוצה</th>
