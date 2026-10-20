@@ -1134,7 +1134,9 @@ table.box.lgtab .lgup { color: var(--pos); font-weight: 800; }
 .lgweek { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; }
 .lgweek select { width: auto; min-width: 240px; max-width: 100%; font: inherit; font-weight: 700; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
 .lgweek small { color: var(--muted); }
-.lgpk { text-align: center; margin: -4px 0 10px; font-weight: 700; color: var(--accent); }
+.lgpk { display: flex; justify-content: center; gap: 28px; flex-wrap: wrap; margin: -4px 0 10px; }
+.lgpk p { margin: 0; text-align: center; font-weight: 700; color: var(--accent); line-height: 1.5; }
+.lgpk .mact { margin-top: 4px; font-weight: 600; }
 table.box.lgtab .lgdn { color: var(--neg); font-weight: 800; }
 table.box.lgtab .lgsame { color: var(--muted); }
 table.box.lgtab td.lgtip { font-family: var(--font-body); font-size: .78rem; line-height: 1.35; white-space: normal; text-align: center; width: 130px; min-width: 130px; max-width: 130px; }
@@ -3986,11 +3988,7 @@ function renderCmp() {
   document.querySelector("#viewCmp .cmpsides").hidden = !!M.league;
   if (M.league) {
     // the pickup checked in the pickup mode, while it still fits the rosters (not made yet, the released still there)
-    const pk = c.pkSaved;
-    const onTeam = (id) => rosterOf(pk.t).some((p) => p.id === id);
-    const fits = pk && pk.out.every(onTeam) && pk.inn.every((id) => !picks.some((x) => x.id === id) && !mine.has(id));
-    if (pk && !fits) c.pkSaved = null;
-    $("cmpOut").innerHTML = leagueTable(fits ? pk : null);
+    $("cmpOut").innerHTML = leagueTable(checkedMoves());
     return;
   }
   renderCmpSide("a"); renderCmpSide("b");
@@ -4126,7 +4124,6 @@ function renderCmp() {
         ${chart === "fp" ? cmpBars(fpParts().map((x) => ({ k: x.k, l: x.l, tip: x.tip })), A, B, "fp") : cmpBars(catRows, A, B, chart)}
       </div>
     </section>
-    ${c.mode === "pickup" && (c.a.length || c.b.length) ? leagueTable({ t: c.pt ?? myIdx(), out: c.a, inn: c.b }) : ""}
     ${c.mode === "trade" ? tradeImpact() : `<section class="cmpsec">
       <h3>נתונים מתקדמים</h3>
       <div class="cmpgrid">
@@ -4279,22 +4276,43 @@ const roundLabel = (k) => {
 // Every team of the league in every category: the team's per-game total (FG% / FT% as team percentages), its place in
 // the league in that category, and Roto points: the best team in a category gets as many points as there are teams,
 // the last one 1 (punted categories do not count). Sorted by any column.
+// The pickup and the trade being checked in the comparison (kept per mode), while they still fit the rosters:
+// [{ kind, t, out: [ids], inn: [ids] }] - a trade gives two entries, one per team
+function checkedMoves() {
+  const c = st.cmp, sv = c.saved || {}, out = [];
+  const onTeam = (t, id) => rosterOf(t).some((p) => p.id === id);
+  const isFree = (id) => !picks.some((x) => x.id === id) && !mine.has(id);
+  const pk = sv.pickup, pt = pk?.pt ?? myIdx();
+  if (pk && (pk.a.length || pk.b.length)) {
+    if (pk.a.every((id) => onTeam(pt, id)) && pk.b.every(isFree)) out.push({ kind: "pickup", t: pt, out: pk.a, inn: pk.b });
+    else delete sv.pickup;  // made (or a player moved on): nothing left to check
+  }
+  const tr = sv.trade, ta = tr?.tta != null && tr.tta !== "" ? Number(tr.tta) : null, tb = tr?.ttb != null && tr.ttb !== "" ? Number(tr.ttb) : null;
+  if (tr && ta != null && tb != null && ta !== tb && (tr.a.length || tr.b.length)) {
+    const drops = (tr.drops || []).filter((d) => d.kind === "drop").map((d) => d.id), adds = tr.adds || [];
+    if (tr.a.every((id) => onTeam(ta, id)) && tr.b.every((id) => onTeam(tb, id)) && adds.every(isFree)) {
+      out.push({ kind: "trade", t: ta, out: [...tr.a, ...drops], inn: [...tr.b, ...adds] }, { kind: "trade", t: tb, out: tr.b, inn: tr.a });
+    } else delete sv.trade;
+  }
+  return out.length ? out : null;
+}
 const M_LEAGUE = () => !!CMP_MODES[st.cmp.mode]?.league;
-// pk = { t, out: [ids], inn: [ids] }: a pickup being checked, applied to team t in the round shown
-function leagueTable(pk = null) {
+// mv: the moves being checked (checkedMoves), applied to their teams in the round shown
+function leagueTable(mv = null) {
   const n = Math.max(st.teams, 1);
   const W = weeklyRanks();
   if (!W) return `<p class="munote nopick">אחרי הדראפט (כשלכל הקבוצות יש שחקנים) יופיע כאן דירוג העוצמה</p>`;
   const rounds = Object.keys(W.R).map(Number).sort((a, b) => a - b);
   const sel = st.cmp.lgRound != null && W.R[st.cmp.lgRound] ? st.cmp.lgRound : rounds[rounds.length - 1];
   const snap0 = W.R[sel];
-  // with a pickup: my team loses the released players' lines and gets the added ones' (for that round's numbers)
-  const pkOn = pk && (pk.out.length || pk.inn.length);
+  // with a move: a team loses the lines of the players it lets go and gets the incoming ones' (that round's numbers)
+  const pkOn = !!(mv && mv.length);
   const snap = !pkOn ? snap0 : { ...snap0, teams: snap0.teams.map((x, t) => {
-    if (t !== pk.t) return x;
+    const ch = mv.filter((m) => m.t === t);
+    if (!ch.length) return x;
     const v = { ...x.v };
     let has = x.has;
-    for (const [ids, sign] of [[pk.out, -1], [pk.inn, 1]]) for (const id of ids) {
+    for (const [ids, sign] of [[ch.flatMap((m) => m.out), -1], [ch.flatMap((m) => m.inn), 1]]) for (const id of ids) {
       const a = rankLine(PLAYER_BY_ID.get(id), sel);
       if (!a) continue;
       has += sign;
@@ -4366,11 +4384,13 @@ function leagueTable(pk = null) {
   const when = sel === 0 ? (etDay(new Date()) < REG_START ? "מתעדכן עד תחילת העונה · ממוצעי 2025-26 (מי שלא שיחק בה: העונה האחרונה שלו; רוקיז: תחזית)" : "לפני העונה · ממוצעי 2025-26 (מי שלא שיחק בה: העונה האחרונה שלו; רוקיז: תחזית)")
     : (() => { const d = shiftDay(roundWeek(sel).to, 1); return `פורסם ביום ב׳ ${Number(d.slice(8))}.${Number(d.slice(5, 7))} ב־9:00 · ממוצעי 26-27 עד סוף המחזור`; })();
   const pkNames = (ids) => ids.map((id) => PLAYER_BY_ID.get(id)?.name).filter(Boolean).map((x) => `<bdi>${esc(x)}</bdi>`).join(", ");
-  return `<section class="cmpsec lgsec"><h3 class="ctr">דירוג עוצמה${pkOn ? " · כולל הפיק אפ" : ""}</h3>
-    ${pkOn ? `<p class="lgpk">${M_LEAGUE() ? `<button type="button" class="mact" data-pkclear="1">בלי הפיק אפ</button> ` : ""}<bdi>${esc(teamName(pk.t))}</bdi> - ${pk.out.length ? `יוצא ${pkNames(pk.out)}` : ""}${pk.out.length && pk.inn.length ? "<br>" : ""}${pk.inn.length ? `נכנס ${pkNames(pk.inn)}` : ""}</p>` : ""}
+  const kinds = pkOn ? [...new Set(mv.map((m) => m.kind))] : [];
+  const kindHe = { pickup: "הפיק אפ", trade: "הטרייד" };
+  return `<section class="cmpsec lgsec"><h3 class="ctr">דירוג עוצמה${pkOn ? ` · כולל ${kinds.map((k) => kindHe[k]).join(" ו")}` : ""}</h3>
+    ${pkOn ? `<div class="lgpk">${kinds.map((k) => `<p>${mv.filter((m) => m.kind === k).map((m) => `<bdi>${esc(teamName(m.t))}</bdi> - ${m.out.length ? `יוצא ${pkNames(m.out)}` : ""}${m.out.length && m.inn.length ? "<br>" : ""}${m.inn.length ? `נכנס ${pkNames(m.inn)}` : ""}`).join("<br>")}<br><button type="button" class="mact" data-pkclear="${k}">בלי ${kindHe[k]}</button></p>`).join("")}</div>` : ""}
     <div class="lgweek"><select data-lground aria-label="איזה מחזור">${rounds.map((k) => `<option value="${k}"${k === sel ? " selected" : ""}>${esc(roundLabel(k))}</option>`).join("")}</select><small>${when}</small></div>
     <div class="tbl-wrap short"><table class="box lgtab"><thead><tr><th class="nosort${key === "pts" ? " sorted" : ""}"><button type="button" class="lsort" data-cmplsort="pts" data-tip="המקום הכללי: לפי המקומות בכל הקטגוריות">#</button></th>
-      <th class="nosort" data-tip="${pkOn ? "שינוי במקום הכללי בגלל הפיק אפ" : "שינוי במקום הכללי לעומת השבוע הקודם"}">${pkOn ? "שינוי מהפיק אפ" : "שינוי"}</th><th class="nosort">קבוצה</th>
+      <th class="nosort" data-tip="${pkOn ? "שינוי במקום הכללי בגלל המהלך" : "שינוי במקום הכללי לעומת השבוע הקודם"}">${pkOn ? "שינוי מהמהלך" : "שינוי"}</th><th class="nosort">קבוצה</th>
       ${CATS.map((c) => head(c.k, c.l)).join("")}<th class="nosort" data-tip="איפה הכי קל לעלות מקום (הכי קרוב לקבוצה שמעליה), ומה כדאי לשחרר כשהקבוצה אחרונה בו בפער גדול">המלצה</th></tr></thead><tbody>
       ${teams.map((x, i) => {
         const d = prev && prev[x.t] != null ? prev[x.t] - overall.get(x.t) : 0;
@@ -4387,7 +4407,8 @@ $("viewCmp").addEventListener("change", (e) => {
   if (s2) { st.cmp.lgRound = Number(s2.value); renderCmp(); }
 });
 $("viewCmp").addEventListener("click", (e) => {
-  if (e.target.closest("[data-pkclear]")) { st.cmp.pkSaved = null; return renderCmp(); }
+  const clr = e.target.closest("[data-pkclear]");
+  if (clr) { const k = clr.dataset.pkclear; if (st.cmp.saved) delete st.cmp.saved[k]; return renderCmp(); }
   const sortBtn = e.target.closest("[data-cmplsort]");
   if (sortBtn) { st.cmp.lsort = sortBtn.dataset.cmplsort; return renderCmp(); }
 }, true);
@@ -4396,12 +4417,16 @@ $("viewCmp").addEventListener("click", (e) => {
   if (!t) return;
   const c = st.cmp;
   if (t.dataset.cmpmode) {
+    // each mode keeps its own picks (a pickup or a trade being checked stays when another mode is opened, and the
+    // power ranking shows them)
+    c.saved = c.saved || {};
+    if (!CMP_MODES[c.mode].league) c.saved[c.mode] = JSON.parse(JSON.stringify({ a: c.a, b: c.b, tta: c.tta, ttb: c.ttb, pt: c.pt, drops: c.drops || [], adds: c.adds || [], sw: c.sw }));
     // A pickup's two lists (drops from my team, adds from the undrafted) do not carry over to or from other modes
-    // a pickup being checked carries over to the power ranking (shown there with it, until it is cleared)
-    if (c.mode === "pickup" && (c.a.length || c.b.length)) c.pkSaved = { t: c.pt ?? myIdx(), out: [...c.a], inn: [...c.b] };
     if (CMP_MODES[c.mode].pickup !== CMP_MODES[t.dataset.cmpmode].pickup) { c.a = []; c.b = []; }
     c.drops = []; c.adds = [];
     c.mode = t.dataset.cmpmode;
+    const back = c.saved[c.mode];
+    if (back && !CMP_MODES[c.mode].league) Object.assign(c, JSON.parse(JSON.stringify(back)));
     c.chart = "val";  // every mode opens on the values chart
     const M = CMP_MODES[c.mode];
     if (M.max) { c.a = c.a.slice(-M.max); c.b = c.b.slice(-M.max); }
