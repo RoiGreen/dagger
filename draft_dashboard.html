@@ -3962,7 +3962,15 @@ function renderCmp() {
   const c = st.cmp, M = CMP_MODES[c.mode];
   for (const b of document.querySelectorAll("[data-cmpmode]")) b.setAttribute("aria-pressed", b.dataset.cmpmode === c.mode);
   document.querySelector("#viewCmp .cmpsides").hidden = !!M.league;
-  if (M.league) { $("cmpOut").innerHTML = leagueTable(); return; }
+  if (M.league) {
+    // the pickup checked in the pickup mode, while it still fits the rosters (not made yet, the released still there)
+    const pk = c.pkSaved;
+    const onTeam = (id) => rosterOf(pk.t).some((p) => p.id === id);
+    const fits = pk && pk.out.every(onTeam) && pk.inn.every((id) => !picks.some((x) => x.id === id) && !mine.has(id));
+    if (pk && !fits) c.pkSaved = null;
+    $("cmpOut").innerHTML = leagueTable(fits ? pk : null);
+    return;
+  }
   renderCmpSide("a"); renderCmpSide("b");
   $("cmpSwap").hidden = !!M.pickup;
   let LA = cmpPlayers("a"), LB = cmpPlayers("b");
@@ -4249,6 +4257,7 @@ const roundLabel = (k) => {
 // Every team of the league in every category: the team's per-game total (FG% / FT% as team percentages), its place in
 // the league in that category, and Roto points: the best team in a category gets as many points as there are teams,
 // the last one 1 (punted categories do not count). Sorted by any column.
+const M_LEAGUE = () => !!CMP_MODES[st.cmp.mode]?.league;
 // pk = { t, out: [ids], inn: [ids] }: a pickup being checked, applied to team t in the round shown
 function leagueTable(pk = null) {
   const n = Math.max(st.teams, 1);
@@ -4336,7 +4345,7 @@ function leagueTable(pk = null) {
     : (() => { const d = shiftDay(roundWeek(sel).to, 1); return `פורסם ביום ב׳ ${Number(d.slice(8))}.${Number(d.slice(5, 7))} ב־9:00 · ממוצעי 26-27 עד סוף המחזור`; })();
   const pkNames = (ids) => ids.map((id) => PLAYER_BY_ID.get(id)?.name).filter(Boolean).map((x) => `<bdi>${esc(x)}</bdi>`).join(", ");
   return `<section class="cmpsec lgsec"><h3 class="ctr">דירוג עוצמה${pkOn ? " · כולל הפיק אפ" : ""}</h3>
-    ${pkOn ? `<p class="lgpk"><bdi>${esc(teamName(pk.t))}</bdi>${pk.inn.length ? ` מוסיפה ${pkNames(pk.inn)}` : ""}${pk.out.length ? `${pk.inn.length ? " ו" : " "}מורידה ${pkNames(pk.out)}` : ""}</p>` : ""}
+    ${pkOn ? `<p class="lgpk">${M_LEAGUE() ? `<button type="button" class="mact" data-pkclear="1">בלי הפיק אפ</button> ` : ""}<bdi>${esc(teamName(pk.t))}</bdi>${pk.inn.length ? ` מוסיפה ${pkNames(pk.inn)}` : ""}${pk.out.length ? `${pk.inn.length ? " ו" : " "}מורידה ${pkNames(pk.out)}` : ""}</p>` : ""}
     <div class="lgweek"><select data-lground aria-label="איזה מחזור">${rounds.map((k) => `<option value="${k}"${k === sel ? " selected" : ""}>${esc(roundLabel(k))}</option>`).join("")}</select><small>${when}</small></div>
     <div class="tbl-wrap short"><table class="box lgtab"><thead><tr><th class="nosort${key === "pts" ? " sorted" : ""}"><button type="button" class="lsort" data-cmplsort="pts" data-tip="המקום הכללי: לפי המקומות בכל הקטגוריות">#</button></th>
       <th class="nosort" data-tip="${pkOn ? "שינוי במקום הכללי בגלל הפיק אפ" : "שינוי במקום הכללי לעומת השבוע הקודם"}">${pkOn ? "שינוי מהפיק אפ" : "שינוי"}</th><th class="nosort">קבוצה</th>
@@ -4356,6 +4365,7 @@ $("viewCmp").addEventListener("change", (e) => {
   if (s2) { st.cmp.lgRound = Number(s2.value); renderCmp(); }
 });
 $("viewCmp").addEventListener("click", (e) => {
+  if (e.target.closest("[data-pkclear]")) { st.cmp.pkSaved = null; return renderCmp(); }
   const sortBtn = e.target.closest("[data-cmplsort]");
   if (sortBtn) { st.cmp.lsort = sortBtn.dataset.cmplsort; return renderCmp(); }
 }, true);
@@ -4365,6 +4375,8 @@ $("viewCmp").addEventListener("click", (e) => {
   const c = st.cmp;
   if (t.dataset.cmpmode) {
     // A pickup's two lists (drops from my team, adds from the undrafted) do not carry over to or from other modes
+    // a pickup being checked carries over to the power ranking (shown there with it, until it is cleared)
+    if (c.mode === "pickup" && (c.a.length || c.b.length)) c.pkSaved = { t: c.pt ?? myIdx(), out: [...c.a], inn: [...c.b] };
     if (CMP_MODES[c.mode].pickup !== CMP_MODES[t.dataset.cmpmode].pickup) { c.a = []; c.b = []; }
     c.drops = []; c.adds = [];
     c.mode = t.dataset.cmpmode;
