@@ -3720,7 +3720,8 @@ function cmpTotals(list, avg = false) {
   o.FG3_PCT = o.FG3A ? o.FG3M / o.FG3A : list.length ? 0 : null;
   const zs = list.map(zOf);
   o.z = Object.fromEntries(CATS.map((c) => [c.k, zs.reduce((a, r) => a + (r ? r.z[c.k] : 0), 0)]));
-  o.Z = CATS.filter((c) => !st.punts.has(c.k)).reduce((a, c) => a + o.z[c.k], 0) - AVAIL_LEVEL * list.length;  // against the best players on the market
+  // each player's own Z (with the few-games pull, as in the tables), against the best players on the market
+  o.Z = zs.reduce((a, r) => a + (r ? r.total : 0), 0) - AVAIL_LEVEL * list.length;
   o.FPTS = list.reduce((a, p) => a + p.F[m], 0);
   // Advanced: per game minutes, availability averaged, rates weighted by minutes
   o.MIN = list.reduce((a, p) => a + p.L.g.MIN, 0);
