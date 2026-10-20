@@ -4,7 +4,7 @@
 203500,Adams,Steven,steven-adams,1610612745,rockets,0,Houston,Rockets,HOU,12,C,6-11,279,Pittsburgh,New Zealand,2013.0,1.0,12.0,1.0,2013,2026,,,,Season,0
 1628389,Adebayo,Bam,bam-adebayo,1610612748,heat,0,Miami,Heat,MIA,13,C-F,6-9,260,Kentucky,USA,2017.0,1.0,14.0,1.0,2017,2026,,,,Season,0
 1642369,Ajayi,Michael,michael-ajayi,1610612766,hornets,0,Charlotte,Hornets,CHA,,G,6-7,235,Butler,USA,,,,1.0,2026,2026,,,,Season,1
-1643022,Akins,Jaden,jaden-akins,1610612752,knicks,0,New York,Knicks,NYK,,G,6-2,195,Michigan State,USA,,,,1.0,2026,2026,,,,Season,1
+1643022,Akins,Jaden,jaden-akins,1610612752,knicks,0,New York,Knicks,NYK,14,G,6-2,195,Michigan State,USA,,,,1.0,2026,2026,,,,Season,1
 1630583,Aldama,Santi,santi-aldama,1610612742,mavericks,0,Dallas,Mavericks,DAL,34,F-C,7-0,215,Loyola-Maryland,Spain,2021.0,1.0,30.0,1.0,2021,2026,,,,Season,0
 1641725,Alexander,Trey,trey-alexander,1610612762,jazz,0,Utah,Jazz,UTA,15,G,6-5,185,Creighton,USA,,,,1.0,2024,2026,,,,Season,1
 1629638,Alexander-Walker,Nickeil,nickeil-alexander-walker,1610612737,hawks,0,Atlanta,Hawks,ATL,7,G,6-5,205,Virginia Tech,Canada,2019.0,1.0,17.0,1.0,2019,2026,,,,Season,0
@@ -17,7 +17,7 @@
 203507,Antetokounmpo,Giannis,giannis-antetokounmpo,1610612748,heat,0,Miami,Heat,MIA,7,F,6-11,250,Filathlitikos,Greece,2013.0,1.0,15.0,1.0,2013,2026,,,,Season,0
 1628384,Anunoby,OG,og-anunoby,1610612752,knicks,0,New York,Knicks,NYK,8,F-G,6-7,240,Indiana,United Kingdom,2017.0,1.0,23.0,1.0,2017,2026,,,,Season,0
 1630166,Avdija,Deni,deni-avdija,1610612757,blazers,0,Portland,Trail Blazers,POR,8,F,6-8,228,Maccabi Tel Aviv,Israel,2020.0,1.0,9.0,1.0,2020,2026,,,,Season,0
-1643591,Awaka,Tobe,tobe-awaka,1610612741,bulls,0,Chicago,Bulls,CHI,,F,6-8,250,Arizona,USA,,,,1.0,2026,2026,,,,Season,1
+1643591,Awaka,Tobe,tobe-awaka,1610612741,bulls,0,Chicago,Bulls,CHI,19,F,6-8,250,Arizona,USA,,,,1.0,2026,2026,,,,Season,1
 1629028,Ayton,Deandre,deandre-ayton,1610612764,wizards,0,Washington,Wizards,WAS,8,C,7-0,252,Arizona,Bahamas,2018.0,1.0,1.0,1.0,2018,2026,,,,Season,0
 1628963,Bagley III,Marvin,marvin-bagley-iii,1610612743,nuggets,0,Denver,Nuggets,DEN,3,F,6-10,235,Duke,USA,2018.0,1.0,2.0,1.0,2018,2026,,,,Season,0
 1642846,Bailey,Ace,ace-bailey,1610612762,jazz,0,Utah,Jazz,UTA,19,F,6-9,200,Rutgers,USA,2025.0,1.0,5.0,1.0,2025,2026,,,,Season,0
@@ -36,7 +36,7 @@
 1641736,Beekman,Reece,reece-beekman,1610612764,wizards,0,Washington,Wizards,WAS,26,G,6-1,190,Virginia,USA,,,,1.0,2024,2026,,,,Season,1
 1642866,Beringer,Joan,joan-beringer,1610612750,timberwolves,0,Minnesota,Timberwolves,MIN,19,F,7-0,230,Cedevita Olimpija (Slovenia),France,2025.0,1.0,17.0,1.0,2025,2026,,,,Season,0
 1630180,Bey,Saddiq,saddiq-bey,1610612740,pelicans,0,New Orleans,Pelicans,NOP,41,F,6-8,240,Villanova,USA,2020.0,1.0,19.0,1.0,2020,2026,,,,Season,0
-1641844,Biberovic,Tarik,tarik-biberovic,1610612742,mavericks,0,Dallas,Mavericks,DAL,,F,6-6,218,                                   ,Bosnia and Herzegovina,2023.0,2.0,56.0,1.0,2026,2026,,,,Season,0
+1641844,Biberovic,Tarik,tarik-biberovic,1610612742,mavericks,0,Dallas,Mavericks,DAL,13,F,6-6,218,                                   ,Bosnia and Herzegovina,2023.0,2.0,56.0,1.0,2026,2026,,,,Season,0
 1643548,Bilodeau,Tyler,tyler-bilodeau,1610612751,nets,0,Brooklyn,Nets,BKN,34,F,6-8,230,UCLA,USA,2026.0,2.0,43.0,1.0,2026,2026,,,,Season,1
 1629048,Bitadze,Goga,goga-bitadze,1610612753,magic,0,Orlando,Magic,ORL,35,C-F,6-11,235,Mega Basket,Georgia,2019.0,1.0,18.0,1.0,2019,2026,,,,Season,0
 1642927,Bittle,Nate,nate-bittle,1610612761,raptors,0,Toronto,Raptors,TOR,,C,7-0,215,Oregon,USA,,,,1.0,2026,2026,,,,Season,1
@@ -97,8 +97,8 @@
 1628380,Collins,Zach,zach-collins,1610612741,bulls,0,Chicago,Bulls,CHI,12,F-C,6-9,240,Gonzaga,USA,2017.0,1.0,10.0,1.0,2017,2026,,,,Season,0
 201144,Conley,Mike,mike-conley,1610612738,celtics,0,Boston,Celtics,BOS,45,G,6-0,182,Ohio State,USA,2007.0,1.0,4.0,1.0,2007,2026,,,,Season,0
 1643553,Conwell,Ryan,ryan-conwell,1610612748,heat,0,Miami,Heat,MIA,4,G,6-2,215,Louisville,USA,2026.0,2.0,37.0,1.0,2026,2026,,,,Season,0
-1643721,Cooper,Carson,carson-cooper,1610612763,grizzlies,0,Memphis,Grizzlies,MEM,,F,6-10,,Michigan State,,,,,1.0,2026,2026,,,,Season,1
-1643595,Copeland,Quadir,quadir-copeland,1610612745,rockets,0,Houston,Rockets,HOU,,G,6-5,214,North Carolina State,USA,,,,1.0,2026,2026,,,,Season,1
+1643721,Cooper,Carson,carson-cooper,1610612763,grizzlies,0,Memphis,Grizzlies,MEM,20,F,6-10,245,Michigan State,USA,,,,1.0,2026,2026,,,,Season,1
+1643595,Copeland,Quadir,quadir-copeland,1610612745,rockets,0,Houston,Rockets,HOU,25,G,6-5,214,North Carolina State,USA,,,,1.0,2026,2026,,,,Season,1
 1641731,Coulibaly,Bilal,bilal-coulibaly,1610612764,wizards,0,Washington,Wizards,WAS,0,G,6-7,195,Metropolitans 92,France,2023.0,1.0,7.0,1.0,2023,2026,,,,Season,0
 1642907,Coward,Cedric,cedric-coward,1610612763,grizzlies,0,Memphis,Grizzlies,MEM,23,G,6-6,206,Washington State,USA,2025.0,1.0,11.0,1.0,2025,2026,,,,Season,0
 1642384,Crawford,Isaiah,isaiah-crawford,1610612745,rockets,0,Houston,Rockets,HOU,27,F,6-6,225,Louisiana Tech,USA,,,,1.0,2024,2026,,,,Season,0
@@ -118,7 +118,7 @@
 1641711,Dick,Gradey,gradey-dick,1610612746,clippers,0,LA,Clippers,LAC,9,G-F,6-7,200,Kansas,USA,2023.0,1.0,13.0,1.0,2023,2026,,,,Season,0
 1631172,Dieng,Ousmane,ousmane-dieng,1610612749,bucks,0,Milwaukee,Bucks,MIL,21,F,6-9,185,New Zealand Breakers,France,2022.0,1.0,11.0,1.0,2022,2026,,,,Season,0
 1631215,Diop,Khalifa,khalifa-diop,1610612739,cavaliers,0,Cleveland,Cavaliers,CLE,18,C,6-10,231,CB Gran Canaria,Senegal,2022.0,2.0,39.0,1.0,2026,2026,,,,Season,0
-1643717,Dix,Josh,josh-dix,1610612760,thunder,0,Oklahoma City,Thunder,OKC,,,6-5,,Creighton,,,,,1.0,2026,2026,,,,Season,1
+1643717,Dix,Josh,josh-dix,1610612760,thunder,0,Oklahoma City,Thunder,OKC,21,G,6-5,210,Creighton,USA,,,,1.0,2026,2026,,,,Season,1
 1643621,Donaldson,Tre,tre-donaldson,1610612748,heat,0,Miami,Heat,MIA,24,G,6-1,200,Miami,USA,,,,1.0,2026,2026,,,,Season,1
 1629029,Dončić,Luka,luka-dončić,1610612747,lakers,0,Los Angeles,Lakers,LAL,77,F-G,6-8,230,Real Madrid,Slovenia,2018.0,1.0,3.0,1.0,2018,2026,,,,Season,0
 1629652,Dort,Luguentz,luguentz-dort,1610612737,hawks,0,Atlanta,Hawks,ATL,0,G,6-4,220,Arizona State,Canada,,,,1.0,2019,2026,,,,Season,0
@@ -159,7 +159,7 @@
 1642273,George,Kyshawn,kyshawn-george,1610612764,wizards,0,Washington,Wizards,WAS,18,F,6-8,200,Miami,Switzerland,2024.0,1.0,24.0,1.0,2024,2026,,,,Season,0
 202331,George,Paul,paul-george,1610612738,celtics,0,Boston,Celtics,BOS,13,F,6-8,230,Fresno State,USA,2010.0,1.0,10.0,1.0,2010,2026,,,,Season,0
 1630581,Giddey,Josh,josh-giddey,1610612741,bulls,0,Chicago,Bulls,CHI,3,G,6-8,214,NBA Global Academy,Australia,2021.0,1.0,6.0,1.0,2021,2026,,,,Season,0
-1642933,Gilbert,Keshon,keshon-gilbert,1610612737,hawks,0,Atlanta,Hawks,ATL,,G,6-3,200,Iowa State,USA,,,,1.0,2025,2026,,,,Season,1
+1642933,Gilbert,Keshon,keshon-gilbert,1610612737,hawks,0,Atlanta,Hawks,ATL,00,G,6-3,200,Iowa State,USA,,,,1.0,2025,2026,,,,Season,1
 1628983,Gilgeous-Alexander,Shai,shai-gilgeous-alexander,1610612760,thunder,0,Oklahoma City,Thunder,OKC,2,G,6-6,195,Kentucky,Canada,2018.0,1.0,11.0,1.0,2018,2026,,,,Season,0
 1630264,Gill,Anthony,anthony-gill,1610612764,wizards,0,Washington,Wizards,WAS,16,F,6-8,230,Virginia,USA,,,,1.0,2020,2026,,,,Season,0
 1631221,Gillespie,Collin,collin-gillespie,1610612756,suns,0,Phoenix,Suns,PHX,12,G,6-1,195,Villanova,USA,,,,1.0,2022,2026,,,,Season,0
@@ -186,7 +186,7 @@
 1630702,Hardy,Jaden,jaden-hardy,1610612747,lakers,0,Los Angeles,Lakers,LAL,7,G,6-4,198,NBA G League Ignite,USA,2022.0,2.0,37.0,1.0,2022,2026,,,,Season,0
 1641989,Harkless,Elijah,elijah-harkless,1610612765,pistons,0,Detroit,Pistons,DET,94,G,6-3,195,UNLV,USA,,,,1.0,2024,2026,,,,Season,1
 1642844,Harper,Dylan,dylan-harper,1610612759,spurs,0,San Antonio,Spurs,SAS,2,G,6-5,215,Rutgers,USA,2025.0,1.0,2.0,1.0,2025,2026,,,,Season,0
-1631199,Harper Jr.,Ron,ron-harper-jr,1610612738,celtics,0,Boston,Celtics,BOS,13,G-F,6-5,231,Rutgers,USA,,,,1.0,2022,2026,,,,Season,0
+1631199,Harper Jr.,Ron,ron-harper-jr,1610612738,celtics,0,Boston,Celtics,BOS,8,G-F,6-5,231,Rutgers,USA,,,,1.0,2022,2026,,,,Season,0
 202699,Harris,Tobias,tobias-harris,1610612759,spurs,0,San Antonio,Spurs,SAS,23,F,6-8,226,Tennessee,USA,2011.0,1.0,19.0,1.0,2011,2026,,,,Season,0
 1628404,Hart,Josh,josh-hart,1610612752,knicks,0,New York,Knicks,NYK,3,G,6-5,215,Villanova,USA,2017.0,1.0,30.0,1.0,2017,2026,,,,Season,0
 1628392,Hartenstein,Isaiah,isaiah-hartenstein,1610612760,thunder,0,Oklahoma City,Thunder,OKC,55,C-F,7-0,250,Zalgiris,Germany,2017.0,2.0,43.0,1.0,2018,2026,,,,Season,0
@@ -197,7 +197,7 @@
 1641707,Hendricks,Taylor,taylor-hendricks,1610612763,grizzlies,0,Memphis,Grizzlies,MEM,22,F,6-9,215,Central Florida,USA,2023.0,1.0,9.0,1.0,2023,2026,,,,Season,0
 1629639,Herro,Tyler,tyler-herro,1610612749,bucks,0,Milwaukee,Bucks,MIL,11,G,6-5,195,Kentucky,USA,2019.0,1.0,13.0,1.0,2019,2026,,,,Season,0
 1626209,Hezonja,Mario,mario-hezonja,1610612739,cavaliers,0,Cleveland,Cavaliers,CLE,33,F-G,6-8,255,FC Barcelona,Croatia,2015.0,1.0,5.0,1.0,2015,2026,,,,Season,0
-1627741,Hield,Buddy,buddy-hield,1610612741,bulls,0,Chicago,Bulls,CHI,8,G,6-5,220,Oklahoma,Bahamas,2016.0,1.0,6.0,1.0,2016,2026,,,,Season,0
+1627741,Hield,Buddy,buddy-hield,1610612741,bulls,0,Chicago,Bulls,CHI,7,G,6-5,220,Oklahoma,Bahamas,2016.0,1.0,6.0,1.0,2016,2026,,,,Season,0
 1642396,Hinson,Blake,blake-hinson,1610612762,jazz,0,Utah,Jazz,UTA,25,F,6-8,230,Pittsburgh,USA,,,,1.0,2025,2026,,,,Season,1
 201950,Holiday,Jrue,jrue-holiday,1610612757,blazers,0,Portland,Trail Blazers,POR,5,G,6-4,220,UCLA,USA,2009.0,1.0,17.0,1.0,2009,2026,,,,Season,0
 1641842,Holland II,Ronald,ronald-holland-ii,1610612765,pistons,0,Detroit,Pistons,DET,5,F,6-8,206,NBA G League Ignite,USA,2024.0,1.0,5.0,1.0,2024,2026,,,,Season,0
@@ -251,7 +251,7 @@
 201599,Jordan,DeAndre,deandre-jordan,1610612740,pelicans,0,New Orleans,Pelicans,NOP,6,C,6-11,280,Texas A&M,USA,2008.0,2.0,35.0,1.0,2008,2026,,,,Season,0
 1631107,Jović,Nikola,nikola-jović,1610612748,heat,0,Miami,Heat,MIA,5,F,6-10,245,Mega Basket,Serbia,2022.0,1.0,27.0,1.0,2022,2026,,,,Season,0
 1641750,Kalkbrenner,Ryan,ryan-kalkbrenner,1610612766,hornets,0,Charlotte,Hornets,CHA,11,C,7-1,256,Creighton,USA,2025.0,2.0,34.0,1.0,2025,2026,,,,Season,0
-1641751,Kaluma,Arthur,arthur-kaluma,1610612747,lakers,0,Los Angeles,Lakers,LAL,,F,6-7,225,Texas,Uganda,,,,1.0,2026,2026,,,,Season,1
+1641751,Kaluma,Arthur,arthur-kaluma,1610612747,lakers,0,Los Angeles,Lakers,LAL,47,F,6-7,225,Texas,Uganda,,,,1.0,2026,2026,,,,Season,1
 1642284,Karaban,Alex,alex-karaban,1610612758,kings,0,Sacramento,Kings,SAC,33,F,6-7,220,Connecticut,USA,2026.0,1.0,29.0,1.0,2026,2026,,,,Season,0
 1628379,Kennard,Luke,luke-kennard,1610612756,suns,0,Phoenix,Suns,PHX,8,G,6-5,206,Duke,USA,2017.0,1.0,12.0,1.0,2017,2026,,,,Season,0
 1643257,Kent,Jayson,jayson-kent,1610612757,blazers,0,Portland,Trail Blazers,POR,,F,6-8,215,Texas,USA,,,,1.0,2025,2026,,,,Season,1
@@ -291,7 +291,7 @@
 1642918,Martin,Alijah,alijah-martin,1610612761,raptors,0,Toronto,Raptors,TOR,55,G,6-2,210,Florida,USA,2025.0,2.0,39.0,1.0,2025,2026,,,,Season,0
 1628997,Martin,Caleb,caleb-martin,1610612742,mavericks,0,Dallas,Mavericks,DAL,16,F,6-5,205,Nevada,USA,,,,1.0,2019,2026,,,,Season,0
 1643568,Martinelli,Nick,nick-martinelli,1610612746,clippers,0,LA,Clippers,LAC,12,F,6-7,220,Northwestern,USA,2026.0,2.0,55.0,1.0,2026,2026,,,,Season,1
-1642942,Mashack,Jahmai,jahmai-mashack,1610612763,grizzlies,0,Memphis,Grizzlies,MEM,,G,6-4,203,Tennessee,USA,2025.0,2.0,59.0,1.0,2025,2026,,,,Season,1
+1642942,Mashack,Jahmai,jahmai-mashack,1610612763,grizzlies,0,Memphis,Grizzlies,MEM,21,G,6-4,203,Tennessee,USA,2025.0,2.0,59.0,1.0,2025,2026,,,,Season,1
 1631097,Mathurin,Bennedict,bennedict-mathurin,1610612740,pelicans,0,New Orleans,Pelicans,NOP,24,G-F,6-5,222,Arizona,Canada,2022.0,1.0,6.0,1.0,2022,2026,,,,Season,0
 1631255,Matković,Karlo,karlo-matković,1610612740,pelicans,0,New Orleans,Pelicans,NOP,17,F-C,6-11,255,Mega Basket,Bosnia and Herzegovina,2022.0,2.0,52.0,1.0,2024,2026,,,,Season,0
 1630178,Maxey,Tyrese,tyrese-maxey,1610612755,sixers,0,Philadelphia,76ers,PHI,0,G,6-2,200,Kentucky,USA,2020.0,1.0,21.0,1.0,2020,2026,,,,Season,0
@@ -332,6 +332,7 @@
 1631200,Murray,Kris,kris-murray,1610612763,grizzlies,0,Memphis,Grizzlies,MEM,17,F,6-8,218,Iowa,USA,2023.0,1.0,23.0,1.0,2023,2026,,,,Season,0
 1642867,Murray-Boyles,Collin,collin-murray-boyles,1610612761,raptors,0,Toronto,Raptors,TOR,30,F,6-7,245,South Carolina,USA,2025.0,1.0,9.0,1.0,2025,2026,,,,Season,0
 1629004,Mykhailiuk,Svi,svi-mykhailiuk,1610612762,jazz,0,Utah,Jazz,UTA,10,G-F,6-6,205,Kansas,Ukraine,2018.0,2.0,47.0,1.0,2018,2026,,,,Season,0
+1631250,Nance,Pete,pete-nance,1610612749,bucks,0,Milwaukee,Bucks,MIL,35,F,6-9,225,Northwestern,USA,,,,1.0,2023,2026,,,,Season,1
 1626204,Nance Jr.,Larry,larry-nance-jr,1610612754,pacers,0,Indiana,Pacers,IND,22,F-C,6-8,245,Wyoming,USA,2015.0,1.0,27.0,1.0,2015,2026,,,,Season,0
 1641761,Nelson,Grant,grant-nelson,1610612751,nets,0,Brooklyn,Nets,BKN,16,F,6-10,240,Alabama,USA,,,,1.0,2025,2026,,,,Season,1
 1643593,Nelson,Izaiyah,izaiyah-nelson,1610612753,magic,0,Orlando,Magic,ORL,25,F,6-10,218,South Florida,USA,2026.0,2.0,51.0,1.0,2026,2026,,,,Season,1
@@ -351,7 +352,7 @@
 1643536,Okorie,Ebuka,ebuka-okorie,1610612765,pistons,0,Detroit,Pistons,DET,23,G,6-2,185,Stanford,Nigeria,2026.0,1.0,17.0,1.0,2026,2026,,,,Season,0
 1630171,Okoro,Isaac,isaac-okoro,1610612741,bulls,0,Chicago,Bulls,CHI,35,F-G,6-6,225,Auburn,USA,2020.0,1.0,5.0,1.0,2020,2026,,,,Season,0
 1643590,Okpara,Felix,felix-okpara,1610612764,wizards,0,Washington,Wizards,WAS,34,C,6-11,235,Tennessee,Nigeria,2026.0,2.0,46.0,1.0,2026,2026,,,,Season,1
-1642391,Onyenso,Ugonna,ugonna-onyenso,1610612765,pistons,0,Detroit,Pistons,DET,,C,6-11,225,Virginia,Nigeria,2026.0,2.0,53.0,1.0,2026,2026,,,,Season,1
+1642391,Onyenso,Ugonna,ugonna-onyenso,1610612765,pistons,0,Detroit,Pistons,DET,34,C,6-11,225,Virginia,Nigeria,2026.0,2.0,53.0,1.0,2026,2026,,,,Season,1
 1626162,Oubre Jr.,Kelly,kelly-oubre-jr,1610612754,pacers,0,Indiana,Pacers,IND,10,F-G,6-7,210,Kansas,USA,2015.0,1.0,15.0,1.0,2015,2026,,,,Season,0
 1642923,Oweh,Otega,otega-oweh,1610612760,thunder,0,Oklahoma City,Thunder,OKC,13,G,6-4,215,Kentucky,USA,2026.0,2.0,41.0,1.0,2026,2026,,,,Season,1
 1627780,Payton II,Gary,gary-payton-ii,1610612744,warriors,0,Golden State,Warriors,GSW,0,G,6-2,192,Oregon State,USA,,,,1.0,2016,2026,,,,Season,0
@@ -391,7 +392,7 @@
 1630194,Reed,Paul,paul-reed,1610612765,pistons,0,Detroit,Pistons,DET,7,F,6-9,210,DePaul,USA,2020.0,2.0,58.0,1.0,2020,2026,,,,Season,0
 1643542,Reed Jr.,Tarris,tarris-reed-jr,1610612759,spurs,0,San Antonio,Spurs,SAS,10,C,6-10,265,Connecticut,USA,2026.0,1.0,26.0,1.0,2026,2026,,,,Season,0
 1642882,Reese,Julian,julian-reese,1610612740,pelicans,0,New Orleans,Pelicans,NOP,13,F,6-11,230,Maryland,USA,,,,1.0,2025,2026,,,,Season,1
-1629675,Reid,Naz,naz-reid,1610612766,hornets,0,Charlotte,Hornets,CHA,11,C-F,6-9,264,Louisiana State,USA,,,,1.0,2019,2026,,,,Season,0
+1629675,Reid,Naz,naz-reid,1610612766,hornets,0,Charlotte,Hornets,CHA,0,C-F,6-9,264,Louisiana State,USA,,,,1.0,2019,2026,,,,Season,0
 1642954,Richard,Will,will-richard,1610612744,warriors,0,Golden State,Warriors,GSW,3,G,6-3,207,Florida,USA,2025.0,2.0,56.0,1.0,2025,2026,,,,Season,0
 1630208,Richards,Nick,nick-richards,1610612748,heat,0,Miami,Heat,MIA,8,C,6-11,255,Kentucky,Jamaica,2020.0,2.0,42.0,1.0,2020,2026,,,,Season,0
 1642859,Richardson,Jase,jase-richardson,1610612753,magic,0,Orlando,Magic,ORL,11,G,6-2,185,Michigan State,USA,2025.0,1.0,25.0,1.0,2025,2026,,,,Season,0
@@ -400,7 +401,7 @@
 1629130,Robinson,Duncan,duncan-robinson,1610612765,pistons,0,Detroit,Pistons,DET,55,F,6-7,215,Michigan,USA,,,,1.0,2018,2026,,,,Season,0
 1629011,Robinson,Mitchell,mitchell-robinson,1610612738,celtics,0,Boston,Celtics,BOS,4,C-F,7-0,245,Western Kentucky,USA,2018.0,2.0,36.0,1.0,2018,2026,,,,Season,0
 1631157,Rollins,Ryan,ryan-rollins,1610612749,bucks,0,Milwaukee,Bucks,MIL,13,G,6-3,180,Toledo,USA,2022.0,2.0,44.0,1.0,2022,2026,,,,Season,0
-1641712,Rupert,Rayan,rayan-rupert,1610612755,sixers,0,Philadelphia,76ers,PHI,21,G-F,6-7,205,New Zealand Breakers,France,2023.0,2.0,43.0,1.0,2023,2026,,,,Season,1
+1641712,Rupert,Rayan,rayan-rupert,1610612755,sixers,0,Philadelphia,76ers,PHI,12,G-F,6-7,205,New Zealand Breakers,France,2023.0,2.0,43.0,1.0,2023,2026,,,,Season,1
 1642504,Ryan,Cormac,cormac-ryan,1610612749,bucks,0,Milwaukee,Bucks,MIL,30,G,6-5,205,North Carolina,USA,,,,1.0,2025,2026,,,,Season,1
 1627734,Sabonis,Domantas,domantas-sabonis,1610612758,kings,0,Sacramento,Kings,SAC,11,F-C,6-10,240,Gonzaga,Lithuania,2016.0,1.0,11.0,1.0,2016,2026,,,,Season,0
 1642275,Salaün,Tidjane,tidjane-salaün,1610612766,hornets,0,Charlotte,Hornets,CHA,31,F,6-10,207,Cholet,France,2024.0,1.0,6.0,1.0,2024,2026,,,,Season,0
@@ -411,7 +412,7 @@
 1631204,Sasser,Marcus,marcus-sasser,1610612742,mavericks,0,Dallas,Mavericks,DAL,8,G,6-2,195,Houston,USA,2023.0,1.0,25.0,1.0,2023,2026,,,,Season,0
 1631248,Scheierman,Baylor,baylor-scheierman,1610612738,celtics,0,Boston,Celtics,BOS,55,G,6-6,213,Creighton,USA,2024.0,1.0,30.0,1.0,2024,2026,,,,Season,0
 203471,Schröder,Dennis,dennis-schröder,1610612766,hornets,0,Charlotte,Hornets,CHA,17,G,6-1,175,Braunschweig,Germany,2013.0,1.0,17.0,1.0,2013,2026,,,,Season,0
-1643637,Sellers,Jaylin,jaylin-sellers,1610612741,bulls,0,Chicago,Bulls,CHI,,,6-4,,Providence,,,,,1.0,2026,2026,,,,Season,1
+1643637,Sellers,Jaylin,jaylin-sellers,1610612741,bulls,0,Chicago,Bulls,CHI,22,G,6-4,205,Providence,USA,,,,1.0,2026,2026,,,,Season,1
 1630578,Sengun,Alperen,alperen-sengun,1610612745,rockets,0,Houston,Rockets,HOU,28,C,6-11,271,Besiktas,Turkey,2021.0,1.0,16.0,1.0,2021,2026,,,,Season,0
 1641729,Sensabaugh,Brice,brice-sensabaugh,1610612762,jazz,0,Utah,Jazz,UTA,28,F,6-6,225,Ohio State,USA,2023.0,1.0,28.0,1.0,2023,2026,,,,Season,0
 1629012,Sexton,Collin,collin-sexton,1610612747,lakers,0,Los Angeles,Lakers,LAL,10,G,6-1,190,Alabama,USA,2018.0,1.0,8.0,1.0,2018,2026,,,,Season,0
