@@ -1102,6 +1102,7 @@ table.cmpt td.lbl { min-width: 5.5em; }
 @media (max-width: 700px) { .muforce { position: static; width: auto; margin: 0 0 8px; } }
 .muforcehead { margin-inline-end: auto; font-size: .9rem; }
 /* days without a game: a multi-choice box under the pickup search */
+.mufilt { color: var(--accent); font-weight: 700; margin-top: -4px; }
 .munodays { position: absolute; top: 54px; inset-inline-start: 14px; width: min(280px, 32%); z-index: 6; font-size: .86rem; }
 .munodays > summary { list-style: none; cursor: pointer; padding: 7px 12px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--muted); }
 .munodays > summary::-webkit-details-marker { display: none; }
@@ -2330,6 +2331,21 @@ function showOk(p) {
   const s = st.show;
   if (!s || !s.length) return true;
   return (s.includes("free") && !taken.has(p.id) && !mine.has(p.id)) || (s.includes("mine") && mine.has(p.id)) || (s.includes("fav") && fav.has(p.id));
+}
+// The sidebar filters for a pickup in the matchup tab: the same as the tables, without the name search and the
+// free / mine / favorites choice (a pickup is always a free agent)
+function pickupOk(p) {
+  return (!st.minGp || p.has) && (!st.minMin || (p.L?.g.MIN ?? 0) >= st.minMin) &&
+    (!st.pos.size || [...st.pos].some((x) => hasPos(p, x))) &&
+    (!st.teamSel.length || st.teamSel.includes(p.team26 || "-")) &&
+    (p.age == null || p.age <= st.maxAge) &&
+    (st.rookies === "all" || (st.rookies === "only") === !!p.rookie) &&
+    (!st.onlyMoved || hasMoved(p)) &&
+    (!st.noHurt || !p.hurt) &&
+    (!st.weekGames.length || st.weekGames.includes(Math.min(weekLeft(p.team26), 5))) &&
+    (st.inj === "all" || (st.inj === "only") === !!p.injured) &&
+    (!st.roles.length || st.roles.includes(p.role)) &&
+    catOk(p);
 }
 function passes(p) {
   const q = st.q.trim().toLowerCase();
@@ -4983,7 +4999,7 @@ function bestMoves(me, opp, mineP, il, B, base, onlyId = null, forceDrop = null)
   const free = players.filter((p) => p.team26 && p.L && !taken.has(p.id) && !mine.has(p.id) && !picks.some((x) => x.id === p.id));
   const gamesFrom = (p) => weekDays().filter((d) => d >= from).reduce((a, d) => { const gm = gameOn(p.team26, d); return a + (gm ? playChance(p, gm.g) : 0); }, 0);
   const pool = onlyId != null ? free.filter((p) => p.id === onlyId && muModel(p)).map((p) => ({ p, g: gamesFrom(p) }))
-    : free.map((p) => ({ p, g: gamesFrom(p) })).filter((x) => x.g > 0 && muModel(x.p) && ![...MU_NODAYS].some((d) => d >= from && gameOn(x.p.team26, d)))
+    : free.filter(pickupOk).map((p) => ({ p, g: gamesFrom(p) })).filter((x) => x.g > 0 && muModel(x.p) && ![...MU_NODAYS].some((d) => d >= from && gameOn(x.p.team26, d)))
       .sort((a, b) => (muValue(b.p) + (st.fmt === "pts" ? 0 : 4)) * b.g - (muValue(a.p) + (st.fmt === "pts" ? 0 : 4)) * a.g).slice(0, forceDrop != null ? 40 : 32);
   const forced = forceDrop != null ? PLAYER_BY_ID.get(forceDrop) : null;
   const active = mineP.filter((p) => !il.has(p.id));
@@ -5452,6 +5468,7 @@ function renderMatchup() {
       <div class="mupickhead"><span>סיכוי לנצח במצ'אפ הקרוב</span></div><ol class="mupicks">${dropRows}</ol></section>` : ""}
     <section class="cmpsec mupksec"><h3 class="ctr">פיק אפ מומלץ לשבוע הזה</h3>
       <p class="munote ctrnote">בסגל שלך ${activeMine.length} שחקנים פעילים מתוך ${st.roster}${ilA.size ? `, ועוד ${ilA.size} ב־IL / IL+` : ""}${activeMine.length < st.roster ? ": אפשר להוסיף בלי לשחרר" : ""}</p>
+      ${activeFilters() ? `<p class="munote ctrnote mufilt">הסינון בצד פעיל (${activeFilters()}): מוצגים רק שחקנים שעוברים אותו</p>` : ""}
       ${overBy > 0 ? `<p class="munote">קודם לשחרר שחקן מהסגל (למעלה)</p>`
         : left === 0 ? `<p class="munote">ניצלת את כל ${maxAdds} הפיק אפים של השבוע</p>`
         : `<div class="musearch"><input id="muSearch" list="muFree" placeholder="חיפוש שחקן לפיק אפ…" autocomplete="off" aria-label="חיפוש שחקן לפיק אפ"
