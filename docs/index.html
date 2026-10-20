@@ -569,6 +569,7 @@ table.mucats tr.punted td { opacity: .4; }
 .muscore .wins { width: 100%; display: grid; grid-template-columns: 1fr 1fr; gap: 0 18px; margin-top: 4px; padding-top: 10px; border-top: 1px solid rgba(255,255,255,.08); }
 .muscore .wcol { display: grid; gap: 3px; align-content: start; justify-items: center; }  /* the name centred over its numbers */
 .muscore .wcol .wrows { width: max-content; max-width: 100%; }
+
 .muscore .wrows { display: grid; gap: 3px 14px; }
 .muscore .wrows.two { grid-template-columns: 1fr 1fr; }  /* five or more categories: two short columns instead of one long one */
 .muscore .wrows.two .wr { grid-template-columns: 3em minmax(0, 1fr); gap: 6px; font-size: .88rem; }
@@ -1523,6 +1524,13 @@ table.box.titab tr.punted td { opacity: .4; }
   table.box.daygrid tr.pvin .pw, table.box.daygrid tr.pvout .pw { display: grid; grid-template-columns: auto minmax(0, 1fr); column-gap: 6px; row-gap: 1px; }
   table.box.daygrid tr.pvin .pw > img, table.box.daygrid tr.pvout .pw > img { grid-row: span 2; }
   table.box.daygrid .pvtag { grid-column: 2; margin: 0; width: max-content; font-size: .58rem; }
+}
+/* computer: the leaders a little larger */
+@media (min-width: 701px) {
+  .muscore .wh { font-size: 1rem; margin-bottom: 6px; }
+  .muscore .wr { font-size: 1.15rem; gap: 12px; }
+  .muscore .wrows.two .wr { font-size: 1.1rem; grid-template-columns: 3.2em minmax(0, 1fr); gap: 8px; }
+  .muscore .wrows { gap: 5px 18px; }
 }
 </style></head><body>
 
