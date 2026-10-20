@@ -596,6 +596,10 @@ table.mucats .sofar { display: block; font-size: .68rem; font-weight: 600; color
 .mupicks .mdrop { font-size: .74rem; color: var(--muted); font-weight: 600; }
 .mupicks .mdropsel { width: auto; max-width: 240px; padding: 2px 8px; font-size: .76rem; font-weight: 600; color: var(--muted); border-radius: 8px; }
 .mupicks .mdays { font-family: var(--font-body); font-size: .78rem; color: var(--muted); white-space: nowrap; letter-spacing: .08em; }
+.mupicks .mdays i { font-style: normal; }
+.mupicks .mdays i.on { color: var(--ink); font-weight: 800; }
+.mupicks .mdays i.bn { color: var(--muted); opacity: .55; text-decoration: line-through; }
+.mupicks .mdays i.out { color: var(--neg); opacity: .7; text-decoration: line-through; }
 .mupicks .mfit { display: grid; line-height: 1.05; }
 .mupicks .mfit small { font-size: .72rem; color: var(--pos); }
 .mupicks .mfit small.neg { color: var(--neg); }
@@ -5302,11 +5306,12 @@ function renderMatchup() {
     const needGp = onlyCurrent() ? Math.min(20, Math.ceil((D.curMaxGp || 0) / 2)) : 20;
     const costly = x.drop && x.kind !== "il" && (x.drop.gpTotal ?? x.drop.gp ?? 0) >= needGp
       && seasonValue(x.drop) > seasonValue(x.X) + (st.fmt === "pts" ? 3 : 0.75);
-    const days = weekDays().filter((d) => x.A2.cell.get(`${x.X.id}|${d}`)?.slot);
+    // every game he has after the pickup: in the lineup, on the bench (greyed) or out injured
+    const days = weekDays().filter((d) => d >= pickupFrom()).map((d) => ({ d, c: x.A2.cell.get(`${x.X.id}|${d}`) })).filter((u) => u.c);
     const cls = [i < 0 ? "msearched" : "", PV?.X.id === x0.X.id ? "mpv" : ""].filter(Boolean).join(" ");
     return `<li data-mupv="${x0.X.id}" title="לחיצה על השורה: הצגה בהרכב היומי"${cls ? ` class="${cls}"` : ""}><span class="rk">${i < 0 ? "🔍" : i + 1}</span>${x.X.img ? `<img class="mimg" src="${x.X.img}" alt="" loading="lazy" decoding="async">` : `<span class="mimg"></span>`}
       <span class="mwho"><span class="mline"><span class="pn" data-pcard="${x.X.id}">${esc(x.X.name)}</span>${teamLogo(x.X.team26)}${x.X.hurt ? injuryPill(x.X) : ""}
-        <span class="mdays" title="הימים שבהם הוא נכנס להרכב">${days.map(dayShort).join(" ") || "–"}</span></span>
+        <span class="mdays" title="ימי המשחק שלו מהפיק אפ: מודגש = נכנס להרכב, אפור = על הספסל (ההרכב מלא או המקומות שמתאימים לו תפוסים)">${days.map((u) => `<i class="${u.c.slot ? "on" : u.c.out ? "out" : "bn"}" title="${u.c.slot ? `בהרכב: ${u.c.slot}` : u.c.out ? "פצוע" : "על הספסל"}">${dayShort(u.d)}</i>`).join(" ") || "–"}</span></span>
         <small class="mdrop">${dropSel}</small></span>
       ${costly ? `<em class="mwarn" title="השבוע זה משפר את הסיכוי, אבל ${esc(x.drop.name)} שווה יותר לאורך העונה"><bdi>${esc(x.drop.name)}</bdi> שווה יותר לאורך העונה</em>` : ""}
       <span class="mtags"><span class="trow">${ups.map((u) => `<i class="gain"><bdi>${u.l}</bdi> +${Math.round(u.d * 100)}%</i>`).join("")}</span>
