@@ -4090,7 +4090,7 @@ function renderCmp() {
         ${chart === "fp" ? cmpBars(fpParts().map((x) => ({ k: x.k, l: x.l, tip: x.tip })), A, B, "fp") : cmpBars(catRows, A, B, chart)}
       </div>
     </section>
-    ${c.mode === "pickup" && (c.a.length || c.b.length) ? leagueTable({ out: c.a, inn: c.b }) : ""}
+    ${c.mode === "pickup" && (c.a.length || c.b.length) ? leagueTable({ t: c.pt ?? myIdx(), out: c.a, inn: c.b }) : ""}
     ${c.mode === "trade" ? tradeImpact() : `<section class="cmpsec">
       <h3>נתונים מתקדמים</h3>
       <div class="cmpgrid">
@@ -4243,7 +4243,7 @@ const roundLabel = (k) => {
 // Every team of the league in every category: the team's per-game total (FG% / FT% as team percentages), its place in
 // the league in that category, and Roto points: the best team in a category gets as many points as there are teams,
 // the last one 1 (punted categories do not count). Sorted by any column.
-// pk = { out: [ids], inn: [ids] }: a pickup being checked, applied to my team in the round shown
+// pk = { t, out: [ids], inn: [ids] }: a pickup being checked, applied to team t in the round shown
 function leagueTable(pk = null) {
   const n = Math.max(st.teams, 1);
   const W = weeklyRanks();
@@ -4254,7 +4254,7 @@ function leagueTable(pk = null) {
   // with a pickup: my team loses the released players' lines and gets the added ones' (for that round's numbers)
   const pkOn = pk && (pk.out.length || pk.inn.length);
   const snap = !pkOn ? snap0 : { ...snap0, teams: snap0.teams.map((x, t) => {
-    if (t !== myIdx()) return x;
+    if (t !== pk.t) return x;
     const v = { ...x.v };
     let has = x.has;
     for (const [ids, sign] of [[pk.out, -1], [pk.inn, 1]]) for (const id of ids) {
@@ -4330,7 +4330,7 @@ function leagueTable(pk = null) {
     : (() => { const d = shiftDay(roundWeek(sel).to, 1); return `פורסם ביום ב׳ ${Number(d.slice(8))}.${Number(d.slice(5, 7))} ב־9:00 · ממוצעי 26-27 עד סוף המחזור`; })();
   const pkNames = (ids) => ids.map((id) => PLAYER_BY_ID.get(id)?.name).filter(Boolean).map((x) => `<bdi>${esc(x)}</bdi>`).join(", ");
   return `<section class="cmpsec lgsec"><h3 class="ctr">דירוג עוצמה${pkOn ? " · כולל הפיק אפ" : ""}</h3>
-    ${pkOn ? `<p class="lgpk"><bdi>${esc(teamName(myIdx()))}</bdi>${pk.inn.length ? ` מוסיפה ${pkNames(pk.inn)}` : ""}${pk.out.length ? `${pk.inn.length ? " ו" : " "}מורידה ${pkNames(pk.out)}` : ""}</p>` : ""}
+    ${pkOn ? `<p class="lgpk"><bdi>${esc(teamName(pk.t))}</bdi>${pk.inn.length ? ` מוסיפה ${pkNames(pk.inn)}` : ""}${pk.out.length ? `${pk.inn.length ? " ו" : " "}מורידה ${pkNames(pk.out)}` : ""}</p>` : ""}
     <div class="lgweek"><select data-lground aria-label="איזה מחזור">${rounds.map((k) => `<option value="${k}"${k === sel ? " selected" : ""}>${esc(roundLabel(k))}</option>`).join("")}</select><small>${when}</small></div>
     <div class="tbl-wrap short"><table class="box lgtab"><thead><tr><th class="nosort${key === "pts" ? " sorted" : ""}"><button type="button" class="lsort" data-cmplsort="pts" data-tip="המקום הכללי: לפי המקומות בכל הקטגוריות">#</button></th>
       <th class="nosort" data-tip="${pkOn ? "שינוי במקום הכללי בגלל הפיק אפ" : "שינוי במקום הכללי לעומת השבוע הקודם"}">${pkOn ? "שינוי מהפיק אפ" : "שינוי"}</th><th class="nosort">קבוצה</th>
