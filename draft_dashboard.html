@@ -292,6 +292,18 @@ tr.sel-team td { box-shadow: inset 0 -2px 0 var(--accent), inset 0 2px 0 var(--a
 .dsetup { border: 1px solid var(--line); border-radius: 10px; background: var(--surface); padding: 10px 14px; }
 .dsetup summary { cursor: pointer; font-weight: 700; }
 .tradebox { margin-bottom: 10px; }
+.impbox summary { cursor: pointer; font-weight: 700; }
+.impbody { display: grid; gap: 8px; margin-top: 8px; }
+.impbody .improw { display: flex; gap: 8px; flex-wrap: wrap; }
+.impbody select { font: inherit; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.impbody textarea { width: 100%; box-sizing: border-box; font: inherit; font-size: .86rem; padding: 8px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); resize: vertical; }
+.impbody .impsum { margin: 0; }
+.impbody .impwarn { color: var(--neg); font-weight: 700; }
+.impbody .implist { margin: 0; padding-inline-start: 22px; columns: 2; column-gap: 24px; font-size: .88rem; }
+.impbody .implist small { color: var(--muted); }
+.impbody .impx { border: 0; background: none; color: var(--neg); cursor: pointer; font-weight: 800; padding: 0 4px; }
+.impbody input { flex: 1; min-width: 200px; font: inherit; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+@media (max-width: 700px) { .impbody .implist { columns: 1; } }
 .tgrid { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); gap: 12px; align-items: start; margin: 10px 0; }
 .tswap { align-self: center; font-size: 1.4rem; color: var(--muted); }
 .tside { display: grid; gap: 8px; }
@@ -1877,6 +1889,15 @@ table.box.titab tr.punted td { opacity: .4; }
           </div>
           <div class="dadvice" id="draftAdvice" hidden></div>
         </div>
+        <details class="dsetup tradebox impbox" id="impBox">
+          <summary>ייבוא סגל מאתר הליגה (העתק והדבק)</summary>
+          <div class="impbody">
+            <p class="munote">פתחו באתר הליגה את דף הקבוצה, סמנו את כל הדף (<bdi>Ctrl+A</bdi>, בטלפון: לחיצה ארוכה ואז "בחר הכל"), העתיקו והדביקו כאן. האתר מזהה את שמות השחקנים ומעדכן את הסגל של הקבוצה שבחרתם. <b>הזיהוי מדויק כשאתר הליגה מוצג באנגלית</b>; בעברית הוא משוער, אז כדאי לעבור על הרשימה לפני העדכון.</p>
+            <div class="improw"><select id="impTeam" aria-label="איזו קבוצה"></select><button type="button" class="mact" id="impRead">זיהוי שחקנים</button></div>
+            <textarea id="impText" rows="5" placeholder="הדביקו כאן את הטקסט מדף הקבוצה…"></textarea>
+            <div id="impOut"></div>
+          </div>
+        </details>
         <details class="dsetup tradebox" id="tradeBox">
           <summary>טרייד בין קבוצות</summary>
           <div id="tradeBody"></div>
@@ -6035,6 +6056,130 @@ function renderMine() {
       <span class="v">${pv ? `${sg(v)} → <b class="dz ${d >= 0 ? "up" : "dn"}">${sg(v + d)}</b>` : sg(v)}</span></div>`;
   }).join("");
 }
+
+// ---------- import a roster pasted from the league's site ----------
+// Names are matched in English (full name or "L. Doncic") and in Hebrew (spelled the way Israeli sites write them,
+// from a built-in transliteration of each English name). A name that fits more than one player is left out.
+const IMP_NORM = (s) => s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z\u05d0-\u05ea\s]/g, " ").replace(/\s+/g, " ").trim();
+const HEB_NORM = (s) => s.replace(/[\u05f3\u05f4'"`׳״-]/g, "").replace(/[ךםןףץ]/g, (c) => ({ ך: "כ", ם: "מ", ן: "נ", ף: "פ", ץ: "צ" })[c]);
+function hebrewGuess(word) {
+  // a rough English to Hebrew spelling, enough to tell names apart once the full name is compared
+  let w = word.toLowerCase(), out = "";
+  const pairs = [["sch", "ש"], ["tch", "צ"], ["sh", "ש"], ["ch", "צ"], ["th", "ת"], ["ph", "פ"], ["kh", "ח"], ["zh", "ז"], ["ck", "ק"], ["qu", "קו"],
+    ["oo", "ו"], ["ee", "י"], ["ea", "י"], ["ou", "או"], ["ai", "יי"], ["ay", "יי"], ["ey", "י"], ["ie", "י"], ["oa", "ו"], ["au", "או"],
+    ["a", "א"], ["b", "ב"], ["c", "ק"], ["d", "ד"], ["e", ""], ["f", "פ"], ["g", "ג"], ["h", "ה"], ["i", "י"], ["j", "ג"], ["k", "ק"], ["l", "ל"],
+    ["m", "מ"], ["n", "נ"], ["o", "ו"], ["p", "פ"], ["q", "ק"], ["r", "ר"], ["s", "ס"], ["t", "ט"], ["u", "ו"], ["v", "ב"], ["w", "ו"], ["x", "קס"], ["y", "י"], ["z", "ז"]];
+  for (let i = 0; i < w.length;) {
+    const hit = pairs.find(([a]) => w.startsWith(a, i));
+    if (!hit) { i++; continue; }
+    let h = hit[1];
+    if (hit[0] === "a" && i > 0) h = "";          // a vowel inside a word is mostly left out
+    if (hit[0] === "e" && i === w.length - 1) h = "";
+    out += h; i += hit[0].length;
+  }
+  return out.replace(/(.)\1+/g, "$1");
+}
+// letters only, vowels (א ו י ה) dropped, for a loose comparison of two Hebrew spellings
+const HEB_SKEL = (s) => HEB_NORM(s).replace(/[אויהע\s]/g, "").replace(/[טת]/g, "ת").replace(/[כק]/g, "ק").replace(/[סשצ]/g, "ס").replace(/[בו]/g, "ב");
+function importFind(text) {
+  const T = " " + IMP_NORM(text) + " ";
+  const heWords = HEB_NORM(text).split(/[^\u05d0-\u05ea]+/).filter((x) => x.length > 1);
+  const heSkels = heWords.map(HEB_SKEL);
+  const pool = players.filter((p) => p.team26 || picks.some((x) => x.id === p.id));
+  const found = new Map(), shortSeen = new Map();
+  for (const p of pool) {
+    const base = IMP_NORM(p.name).replace(/ (jr|sr|ii|iii|iv)$/, "");
+    const parts = base.split(" ");
+    let at = T.indexOf(" " + base + " ");
+    if (at < 0 && parts.length > 1) {
+      const short = parts[0][0] + " " + parts.slice(1).join(" ");
+      const j = T.indexOf(" " + short + " ");
+      if (j >= 0) { (shortSeen.get(short) || shortSeen.set(short, []).get(short)).push(p); at = j + 0.5; }
+    }
+    if (at >= 0) found.set(p.id, { p, at });
+  }
+  // a short form that fits two players is not trusted
+  for (const [, list] of shortSeen) if (list.length > 1) for (const p of list) found.delete(p.id);
+  // Hebrew: every two words in a row are compared with each player's first and last name, spelled roughly in Hebrew;
+  // a pair is taken when one player fits it clearly better than any other
+  if (heSkels.length > 1) {
+    const lev = (a, b) => {
+      const m = a.length, n = b.length; if (!m || !n) return Math.max(m, n);
+      let prev = Array.from({ length: n + 1 }, (_, j) => j);
+      for (let i = 1; i <= m; i++) { const cur = [i]; for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = cur; }
+      return prev[n];
+    };
+    const sim = (a, b) => (!a.length || !b.length ? 0 : 1 - lev(a, b) / Math.max(a.length, b.length));
+    const keys = pool.map((p) => {
+      const parts = IMP_NORM(p.name).replace(/ (jr|sr|ii|iii|iv)$/, "").split(" ");
+      const last = parts.slice(1).join("");
+      // "j" is "ג'" in most names and "י" in Balkan ones (Jokic): both spellings are tried
+      return { p, f: [HEB_SKEL(hebrewGuess(parts[0])), HEB_SKEL(hebrewGuess(parts[0].replace(/j/g, "y")))],
+        l: [HEB_SKEL(hebrewGuess(last)), HEB_SKEL(hebrewGuess(last.replace(/j/g, "y")))] };
+    }).filter((k) => k.l[0]);
+    const simBest = (w, opts) => Math.max(...opts.map((o) => sim(w, o)));
+    for (let i = 0; i + 1 < heSkels.length; i++) {
+      // the last name may be one word or two (Murray-Boyles, Alexander-Walker)
+      let took = 0;
+      for (const [last, used] of [[heSkels[i + 1], 1], [heSkels[i + 1] + (heSkels[i + 2] || ""), 2]]) {
+        let best = null, second = 0;
+        for (const k of keys) {
+          const sf = simBest(heSkels[i], k.f), sl = simBest(last, k.l);
+          if (sf < 0.4 || sl < 0.55) continue;
+          const sc = 0.4 * sf + 0.6 * sl;
+          if (!best || sc > best.sc) { second = best ? best.sc : 0; best = { k, sc }; } else if (sc > second) second = sc;
+        }
+        if (best && best.sc >= 0.66 && best.sc - second >= 0.06 && !found.has(best.k.p.id)) { found.set(best.k.p.id, { p: best.k.p, at: 1e6 + i }); took = used; break; }
+      }
+      i += took;  // the words of a name found are not the start of another one
+    }
+  }
+  return [...found.values()].sort((a, b) => a.at - b.at).map((x) => x.p);
+}
+function renderImport() {
+  const sel = $("impTeam");
+  if (!sel) return;
+  const n = Math.max(st.teams, 1), keep = sel.value;
+  sel.innerHTML = Array.from({ length: n }, (_, i) => `<option value="${i}">${esc(teamName(i))}${i === myIdx() ? " (שלי)" : ""}</option>`).join("");
+  sel.value = keep !== "" && Number(keep) < n ? keep : String(myIdx());
+}
+let IMP_FOUND = [];
+function renderImpOut() {
+  const t = Number($("impTeam").value), out = $("impOut");
+  if (!IMP_FOUND.length) { out.innerHTML = `<p class="munote">לא זוהו שחקנים. ודאו שהעתקתם את כל דף הקבוצה.</p>`; return; }
+  const elsewhere = (p) => { const x = picks.find((y) => y.id === p.id && y.team !== t); return x ? teamName(x.team) : null; };
+  out.innerHTML = `<p class="impsum">זוהו <b>${IMP_FOUND.length}</b> שחקנים ל־<b>${esc(teamName(t))}</b>${IMP_FOUND.length !== st.roster ? ` <span class="impwarn">(בסגל ${st.roster}: בדקו שלא חסר או מיותר שחקן)</span>` : ""}</p>
+    <ol class="implist">${IMP_FOUND.map((p) => `<li><button type="button" class="impx" data-impx="${p.id}" aria-label="הסרה">✕</button> <span class="pn">${esc(p.name)}</span> <small>${esc(p.pos || "")} · ${esc(p.team26 || "")}</small>${elsewhere(p) ? ` <small class="impwarn">יעבור מ־${esc(elsewhere(p))}</small>` : ""}</li>`).join("")}</ol>
+    <div class="improw"><input id="impAdd" list="impAll" placeholder="חסר שחקן? הוסיפו אותו כאן…" autocomplete="off"><datalist id="impAll">${players.filter((p) => p.team26 && !IMP_FOUND.includes(p)).map((p) => `<option value="${esc(p.name)}"></option>`).join("")}</datalist></div>
+    <button type="button" class="mact on" id="impApply">עדכון הסגל של ${esc(teamName(t))}</button>`;
+}
+$("impRead").addEventListener("click", () => {
+  const text = $("impText").value;
+  IMP_FOUND = text.trim() ? importFind(text) : [];
+  renderImpOut();
+});
+$("impOut").addEventListener("input", (e) => {
+  const inp = e.target.closest("#impAdd");
+  if (!inp) return;
+  const p = players.find((x) => x.name === inp.value);
+  if (p && !IMP_FOUND.includes(p)) { IMP_FOUND.push(p); renderImpOut(); }
+});
+$("impOut").addEventListener("click", (e) => {
+  const x = e.target.closest("[data-impx]");
+  if (x) { IMP_FOUND = IMP_FOUND.filter((p) => p.id !== Number(x.dataset.impx)); return renderImpOut(); }
+  if (!e.target.closest("#impApply") || !IMP_FOUND.length) return;
+  const t = Number($("impTeam").value), ids = new Set(IMP_FOUND.map((p) => p.id));
+  // the team's roster becomes the players found; a player found on another team moves here
+  const kept = picks.filter((x) => x.team !== t && !ids.has(x.id));
+  picks.length = 0;
+  picks.push(...kept, ...IMP_FOUND.map((p) => ({ id: p.id, team: t })));
+  // IL marks of players no longer on the team go
+  for (const key of ["il", "ilp"]) if (st[key]?.[t]) st[key][t] = st[key][t].filter((id) => ids.has(id));
+  rebuildSets(); saveSettings(); render(); flushPicks();
+  showToast(`הסגל של ${teamName(t)} עודכן: ${IMP_FOUND.length} שחקנים`);
+  $("impOut").innerHTML = ""; $("impText").value = ""; IMP_FOUND = [];
+});
+$("impBox").addEventListener("toggle", () => { if ($("impBox").open) renderImport(); });
 
 // ---------- persistence of picks ----------
 // remote = { save(data) } for the signed-in account: claude.ai db or Supabase
