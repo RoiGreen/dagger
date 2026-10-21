@@ -5179,13 +5179,13 @@ function bestMoves(me, opp, mineP, il, B, base, onlyId = null, forceDrop = null)
   const gamesFrom = (p) => weekDays().filter((d) => d >= from).reduce((a, d) => { const gm = gameOn(p.team26, d); return a + (gm ? playChance(p, gm.g) : 0); }, 0);
   const pool = onlyId != null ? free.filter((p) => p.id === onlyId && muModel(p)).map((p) => ({ p, g: gamesFrom(p) }))
     : free.filter(pickupOk).map((p) => ({ p, g: gamesFrom(p) })).filter((x) => x.g > 0 && muModel(x.p) && ![...MU_NODAYS].some((d) => d >= from && gameOn(x.p.team26, d)))
-      .sort((a, b) => (muValue(b.p) + (st.fmt === "pts" ? 0 : 4)) * b.g - (muValue(a.p) + (st.fmt === "pts" ? 0 : 4)) * a.g).slice(0, forceDrop != null ? 40 : 32);
+      .sort((a, b) => (muValue(b.p) + (st.fmt === "pts" ? 0 : 4)) * b.g - (muValue(a.p) + (st.fmt === "pts" ? 0 : 4)) * a.g).slice(0, forceDrop != null ? 60 : 60);
   const forced = forceDrop != null ? PLAYER_BY_ID.get(forceDrop) : null;
   const active = mineP.filter((p) => !il.has(p.id));
   const open = active.length < st.roster;
-  const weakest = new Set([...active].sort((a, b) => seasonValue(a) - seasonValue(b)).slice(0, 3).map((p) => p.id));  // the 3 least valued
+  const weakest = new Set([...active].sort((a, b) => seasonValue(a) - seasonValue(b)).slice(0, 4).map((p) => p.id));  // the 4 least valued
   const ilFree = ilList("il", me).filter((id) => il.has(id)).length < ilSlots("il");
-  const margin = st.fmt === "pts" ? 3 : 0.75;
+  const margin = st.fmt === "pts" ? 6 : 1.5;
   const out = [];
   for (const { p: X } of pool) {
     const opts = forced ? [{ drop: forced, kind: "drop" }] : open ? [{ drop: null, kind: null }] : [];
