@@ -5664,7 +5664,7 @@ function renderMatchup() {
   };
   const score = st.fmt === "pts"
     ? `<div class="mnum"><span class="num${SO.fa > SO.fb ? " lead" : ""}">${Math.round(SO.fa)}</span><span class="sep">:</span><span class="num${SO.fb > SO.fa ? " lead" : ""}">${Math.round(SO.fb)}</span><small>FPTS · תחזית סוף השבוע</small></div>`
-    : `<div class="mnum"><span class="num${wins > losses ? " lead" : ""}">${wins}</span><span class="sep">:</span><span class="num${losses > wins ? " lead" : ""}">${losses}</span><small>${isLive ? `הערכה לפי הנתונים${cats.length - wins - losses ? ` · ${cats.length - wins - losses} בתיקו` : ""}` : weekLive ? "תחזית מלפני תחילת השבוע" : "תחזית סוף השבוע"}</small></div>`;
+    : `<div class="mnum"><span class="num${wins > losses ? " lead" : ""}">${wins}</span><span class="sep">:</span><span class="num${losses > wins ? " lead" : ""}">${losses}</span><small>${isLive ? `הערכה לפי הנתונים` : weekLive ? "תחזית מלפני תחילת השבוע" : "תחזית סוף השבוע"}</small></div>`;
   const modeSeg = weekLive ? `<div class="seg mumode" role="group" aria-label="לייב או תחזית"><button type="button" data-mumode="live" aria-pressed="${isLive}">לייב</button><button type="button" data-mumode="proj" aria-pressed="${!isLive}">תחזית</button></div>` : "";
   out.innerHTML = `
     <div class="muscore">
