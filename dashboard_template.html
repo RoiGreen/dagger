@@ -670,6 +670,11 @@ table.box.daygrid td.dg.pvgone { color: var(--muted); text-decoration: line-thro
 table.box.daygrid tr.pvin td.pn { box-shadow: inset -3px 0 0 var(--pos); }
 table.box.daygrid tr.pvout td.pn { box-shadow: inset -3px 0 0 var(--neg); }
 table.box.daygrid tr.pvout td.pn .pw > span:not(.pvtag) { text-decoration: line-through; opacity: .7; }
+.muguest { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; margin: 6px 0 8px; font-size: .86rem; }
+.muguest > span:first-child { color: var(--muted); font-weight: 700; }
+.muguest input { flex: 1; min-width: 220px; font: inherit; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.muguest .gchip { display: inline-flex; align-items: center; gap: 4px; padding: 2px 4px 2px 10px; border-radius: 999px; background: color-mix(in srgb, var(--pos) 14%, transparent); font-weight: 700; }
+.muguest .gchip button { border: 0; background: none; color: var(--neg); cursor: pointer; font-weight: 800; }
 .pvtag { display: inline-block; margin-inline-start: 6px; padding: 1px 6px; border-radius: 999px; font-size: .64rem; font-weight: 800; white-space: nowrap; }
 .pvtag.in { color: var(--pos); background: color-mix(in srgb, var(--pos) 14%, transparent); }
 .pvtag.out { color: var(--neg); background: color-mix(in srgb, var(--neg) 14%, transparent); }
@@ -5056,6 +5061,9 @@ const zeroLine = () => Object.fromEntries([...MU_KEYS, "FP"].map((k) => [k, 0]))
 // One roster's week. Days already in the logs: the best lineup of those who played, with what they did.
 // Days to come: the best lineup of those with a game, and what they should add (chance to play x opponent).
 // swap = { add, drop, from, kind }: from that day on, `add` is on the team and `drop` is not.
+const dayGuests = (team, d) => ((st.dayGuests || {})[team]?.[d] || []).map((id) => PLAYER_BY_ID.get(id)).filter(Boolean);
+// the one-day players of a team in the week shown
+const weekGuests = (team) => { const ids = new Set(); for (const d of weekDays()) for (const p of dayGuests(team, d)) ids.add(p.id); return [...ids].map((id) => PLAYER_BY_ID.get(id)); };
 function planWeek(roster, il, team, swap = null) {
   const T = { done: zeroLine(), mean: zeroLine(), v: zeroLine(), covFG: 0, covFT: 0, covF3: 0, starts: 0, played: 0, gamesAll: 0, days: [], cell: new Map() };
   for (const d of weekDays()) {
@@ -5066,6 +5074,8 @@ function planWeek(roster, il, team, swap = null) {
     const sameDay = on && d === swap.from;
     const who = roster.filter((p) => !il.has(p.id) && !(on && p.id === swap.drop && !(sameDay && started(p))));
     if (on && !(sameDay && started(swap.add))) who.push(swap.add);
+    const guests = dayGuests(team, d).filter((p) => !who.includes(p));
+    who.push(...guests);
     const cands = [], all = [];  // all: every scheduled game, injured or not (for the games count only)
     for (const p of who) {
       const past = d <= LOG_END && !MU.pre;
@@ -5085,7 +5095,8 @@ function planWeek(roster, il, team, swap = null) {
     // my own lineup: a player set "on" is placed first, one set "off" stays on the bench (my team only)
     const mineDay = { ...((team === myIdx() ? st.lineup : st.lineupT?.[team])?.[d] || {}) };
     const daySet = st.daySlots?.[d]?.[team];
-    const fixed = daySet ? Object.fromEntries(who.map((p) => [p.id, daySet[p.id] || "BN"])) : {};
+    // a set lineup holds; a one-day player not placed in it fills a slot left open
+    const fixed = daySet ? Object.fromEntries(who.filter((p) => daySet[p.id] || !guests.includes(p)).map((p) => [p.id, daySet[p.id] || "BN"])) : {};
     for (const [id, sl] of Object.entries(fixed)) if (sl === "BN" && !mineDay[id]) mineDay[id] = "off";  // BN: never in the lineup
     const benchLock = cands.filter((c) => mineDay[c.p.id] === "off");
     const pool = cands.filter((c) => mineDay[c.p.id] !== "off").map((c) => (mineDay[c.p.id] === "on" ? { ...c, v: 1e6 + c.v } : c));
@@ -5504,8 +5515,11 @@ function renderMatchup() {
   { const td = etDay(new Date()), days = weekDays();
     if (!MU_DAY || !days.includes(MU_DAY)) MU_DAY = days.includes(td) ? td : days[0]; }
   const pvOn = gridSide === "a" && PV;
-  const G = gridSide === "b" ? { roster: oppP, T: B, il: ilB }
-    : pvOn ? { roster: [PV.X, ...mineP], T: PV.A2, il: ilA } : { roster: mineP, T: A, il: ilA };
+  const gT = gridSide === "b" ? st.muOpp : me;
+  const extra = weekGuests(gT).filter((p) => !(gridSide === "b" ? oppP : mineP).includes(p));
+  const G = gridSide === "b" ? { roster: [...oppP, ...extra], T: B, il: ilB }
+    : pvOn ? { roster: [PV.X, ...mineP, ...extra], T: PV.A2, il: ilA } : { roster: [...mineP, ...extra], T: A, il: ilA };
+  const guestIds = new Set(extra.map((p) => p.id));
   const pvIn = pvOn ? PV.X.id : null, pvOut = pvOn && PV.drop ? PV.drop.id : null, pvFrom = pvOn ? pickupFrom() : null;
   const today = etDay(new Date());
   const pvRank = (p) => (p.id === pvIn ? 0 : p.id === pvOut ? 1 : 2);
@@ -5538,7 +5552,8 @@ function renderMatchup() {
       const click = gridSide === "a" && !c.out ? ` data-lu="${p.id}|${d}" tabindex="0"` : "";
       return `<td class="dg ${cls}${c.lock ? " locked" : ""}${click ? " clk" : ""}" title="${tip}"${click}><span>${esc(opp)}</span>${c.slot ? `<small>${c.slot}</small>` : c.out ? "<small>OUT</small>" : `<small>BN</small>`}</td>`;
     }).join("");
-    const pvTag = p.id === pvIn ? `<small class="pvtag in">פיק אפ - נכנס</small>` : p.id === pvOut ? `<small class="pvtag out">פיק אפ - יוצא</small>` : "";
+    const pvTag = p.id === pvIn ? `<small class="pvtag in">פיק אפ - נכנס</small>` : p.id === pvOut ? `<small class="pvtag out">פיק אפ - יוצא</small>`
+      : guestIds.has(p.id) ? `<small class="pvtag in">ליום אחד</small>` : "";
     return `<tr class="${[G.il.has(p.id) && p.id !== pvOut ? "ilrow" : "", p.id === pvIn ? "pvin" : p.id === pvOut ? "pvout" : ""].filter(Boolean).join(" ")}"><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span>${pvTag}</span>${G.il.has(p.id) ? `<small class="iltag">IL</small>` : ""}</td>${cells}</tr>`;
   }).join("");
   // Why this lineup: what the choice leans on, and who sits on busy days
@@ -5620,7 +5635,11 @@ function renderMatchup() {
         <td>${onIL ? `<bdi>${onILPlus(t, p.id) ? "IL+" : "IL"}</bdi>` : `${g1(w.starts)}/${w.games}`}</td><td class="mslotc">${onIL ? "" : slotSel}</td>${CATS.map((c) => `<td>${onIL ? "" : cell9(w.o, c.k)}</td>`).join("")}<td class="macts">${acts}</td></tr>`;
     }).join("");
     const full = active.length >= st.roster;
-    return `<div class="muroster"><h4>${esc(title)}</h4>
+    const gs = dayGuests(t, d);
+    const guestBox = `<div class="muguest"><span>שחקן ליום ${esc(dayLabel(d))} בלבד</span>
+      ${gs.map((p) => `<span class="gchip"><span class="pn" data-pcard="${p.id}">${esc(p.name)}</span><button type="button" data-muguestx="${t}|${d}|${p.id}" aria-label="הסרה">✕</button></span>`).join("")}
+      <input list="muGuestList" data-muguest="${t}|${d}" placeholder="הוספת שחקן שהיה בקבוצה רק ביום הזה…" autocomplete="off"></div>`;
+    return `<div class="muroster"><h4>${esc(title)}</h4>${guestBox}
       <div class="muauto"><button type="button" class="mact" data-muclear="${t}" title="כל השחקנים לספסל, כדי לבנות את ההרכב מהתחלה">איפוס הרכב</button><button type="button" class="mact${manual ? "" : " on"}" data-muauto="${t}" title="משבץ את השחקנים החזקים ביותר בעמדות שמתאימות להם, כל יום מחדש">בחירה אוטומטית</button></div><table class="box murt"><thead><tr>${rsTh("name", "שחקן")}${rsTh("starts", "הרכב", "משחקים בהרכב מתוך המשחקים שלו השבוע")}<th class="nosort">עמדה</th>${CATS.map((c) => rsTh(c.k, c.l)).join("")}<th class="nosort"></th></tr></thead><tbody>${rows}</tbody></table>
       </div>`;
   };
@@ -5707,6 +5726,7 @@ function renderMatchup() {
       <div class="tbl-wrap short"><table class="box daygrid"><thead><tr><th class="nosort">שחקן</th>${weekDays().map((d, i) => `<th class="nosort${d === today ? " today" : ""}">${esc(dayLabel(d))}${gridSide === "a" ? `<span class="luday">${i ? `<button type="button" class="lubtn" data-lucopy="${d}" title="העתק את ההרכב של אתמול">⤶</button>` : ""}${st.lineup?.[d] && Object.keys(st.lineup[d]).length ? `<button type="button" class="lubtn" data-lureset="${d}" title="אפס להמלצה">↺</button>` : ""}</span>` : ""}</th>`).join("")}</tr></thead><tbody>${gridRows}</tbody><tfoot>${gridFoot}</tfoot></table></div>
       ${lineupWhy()}
     </section>
+    <datalist id="muGuestList">${players.filter((p) => p.team26 && p.L).map((p) => `<option value="${esc(`${p.name} · ${p.team26}`)}"></option>`).join("")}</datalist>
     <datalist id="muFree">${freeList.slice(0, 400).map((p) => `<option value="${esc(`${p.name} · ${p.team26}`)}"></option>`).join("")}</datalist>
     <div class="muday"><span>ההרכב ליום</span>${weekDays().map((d) => `<button type="button" class="mact${d === MU_DAY ? " on" : ""}" data-muday="${d}">${esc(dayLabel(d))}</button>`).join("")}</div>
     <div class="murosterbox">
@@ -5770,6 +5790,8 @@ $("muOut").addEventListener("click", (e) => {
 }, true);
 $("muOut").addEventListener("keydown", (e) => { if (e.key === "Enter" && e.target.closest("[data-lu]")) e.target.click(); });
 $("muOut").addEventListener("input", (e) => {
+  const gq = e.target.closest("[data-muguest]");
+  if (gq) { if (players.some((x) => `${x.name} · ${x.team26}` === gq.value)) gq.dispatchEvent(new Event("change", { bubbles: true })); return; }
   if (e.target.id !== "muSearch") return;
   const id = MU.freeLookup.get(e.target.value);
   if (id != null && id !== MU_SEARCH) { MU_SEARCH = id; MU_PREVIEW = null; MU_PAGE = 0; renderMatchup(); }
@@ -5794,6 +5816,15 @@ $("muOut").addEventListener("change", (e) => {
   }
   const nd = e.target.closest("[data-munoday]");
   if (nd) { if (nd.checked) MU_NODAYS.add(nd.dataset.munoday); else MU_NODAYS.delete(nd.dataset.munoday); MU_PAGE = 0; MU_NODAYS_OPEN = true; return renderMatchup(); }
+  const gin = e.target.closest("[data-muguest]");
+  if (gin) {
+    const [t, d] = gin.dataset.muguest.split("|"), p = players.find((x) => `${x.name} · ${x.team26}` === gin.value);
+    if (!p) return;
+    st.dayGuests = st.dayGuests || {}; st.dayGuests[t] = st.dayGuests[t] || {};
+    const list = st.dayGuests[t][d] || [];
+    if (!list.includes(p.id) && !rosterOf(Number(t)).includes(p)) st.dayGuests[t][d] = [...list, p.id];
+    saveSettings(); return renderMatchup();
+  }
   const fsel = e.target.closest("[data-muforce]");
   if (fsel) { MU_FORCE = fsel.value ? Number(fsel.value) : null; MU_PAGE = 0; MU_DROP.clear(); MU_PREVIEW = null; return renderMatchup(); }
   const sel = e.target.closest("[data-mudropsel]");
@@ -5815,6 +5846,12 @@ $("muOut").addEventListener("click", (e) => {
   const b = e.target.closest("button");
   if (!b) return;
   if (b.dataset.mupvoff) { MU_PREVIEW = -1; return renderMatchup(); }
+  if (b.dataset.muguestx) {
+    const [t, d, id] = b.dataset.muguestx.split("|");
+    const g = st.dayGuests?.[t];
+    if (g?.[d]) { g[d] = g[d].filter((x) => x !== Number(id)); if (!g[d].length) delete g[d]; }
+    saveSettings(); return renderMatchup();
+  }
   if (b.dataset.mupage != null) { MU_PAGE = Math.max(0, Number(b.dataset.mupage)); renderMatchup(); return $("muOut").querySelector(".mupksec")?.scrollIntoView({ block: "start", behavior: "smooth" }); }
   if (b.dataset.mumode) { MU_MODE = { week: (WEEK || weekRange()).from, mode: b.dataset.mumode }; return renderMatchup(); }
   const me = muMe();
