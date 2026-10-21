@@ -4836,10 +4836,25 @@ function weekRange() {
 // Recent form counts only while it is recent (the last regular-season game within three weeks)
 const formFresh = () => !!D.formEnd && Date.now() - new Date(D.formEnd + "T12:00:00Z") < 21 * 864e5;
 // A player's per-game line for projections: 60% the last 14 days (3+ games) and 40% the chosen seasons
+// 2026-27 chosen on its own: the few games so far are mixed with his last full season (2025-26, or 2024-25 when he
+// missed most of it; rookies: their projection), the new season weighing more with every game: 1 game ~10%,
+// 10 games ~half, 20 games all of it
+function seasonBase(p) {
+  if (!onlyCurrent()) return p.s;
+  const cur = p.seasons?.[D.current], gp = cur?.gp || 0;
+  const prev = [2025, 2024].map((y) => p.seasons?.[y]).find((x) => x && x.gp >= 20) || p.seasons?.[2025] || p.seasons?.[2024];
+  const prior = prev?.gp > 0 ? prev.s : p.rookie ? p.proj : null;
+  if (!prior) return cur?.gp ? cur.s : p.s;
+  if (!gp) return prior;
+  const w = Math.min(1, (gp + 1) / 21);
+  return cur.s.map((v, i) => w * v + (1 - w) * prior[i]);
+}
 function blendRaw(p) {
-  if (!p.s) return null;
+  const base = seasonBase(p);
+  if (!base) return null;
   const f = p.form?.["14"];
-  return f && f[0] >= 3 && formFresh() ? { arr: p.s.map((v, i) => 0.4 * v + 0.6 * f[1][i]), recent: true } : { arr: p.s, recent: false };
+  // early in 2026-27 the recent games are the season itself: they already count through seasonBase
+  return f && f[0] >= 3 && formFresh() && !onlyCurrent() ? { arr: base.map((v, i) => 0.4 * v + 0.6 * f[1][i]), recent: true } : { arr: base, recent: false };
 }
 // The games a team still plays this fantasy week
 // Regular-season games of the week not yet in the game logs (a game played after the last update still counts here)
