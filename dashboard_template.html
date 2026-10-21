@@ -301,6 +301,8 @@ tr.sel-team td { box-shadow: inset 0 -2px 0 var(--accent), inset 0 2px 0 var(--a
 .impbody .impwarn { color: var(--neg); font-weight: 700; }
 .impbody .implist { margin: 0; padding-inline-start: 22px; columns: 2; column-gap: 24px; font-size: .88rem; }
 .impbody .implist small { color: var(--muted); }
+.impbody .impslot { display: inline-block; min-width: 2.6em; text-align: center; font-family: var(--font-num); font-size: .72rem; font-weight: 800; padding: 1px 5px; border-radius: 6px; background: color-mix(in srgb, var(--pos) 16%, transparent); color: var(--pos); }
+.impbody .impslot.off { background: var(--sunk); color: var(--muted); }
 .impbody .impx { border: 0; background: none; color: var(--neg); cursor: pointer; font-weight: 800; padding: 0 4px; }
 .impbody input { flex: 1; min-width: 200px; font: inherit; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
 @media (max-width: 700px) { .impbody .implist { columns: 1; } }
@@ -568,6 +570,7 @@ table.mucats tr.punted td { opacity: .4; }
 .muadds { display: inline-flex; align-items: center; gap: 6px; font-size: .85rem; font-weight: 700; color: var(--muted); }
 .muadds input { width: 3.4em; padding: 4px 6px; text-align: center; }
 .muscore .mmid { display: grid; justify-items: center; gap: 8px; min-width: 360px; }
+.muscore .mulivenote { grid-column: 1 / -1; font-size: .74rem; color: #93a0bd; text-align: center; max-width: 520px; line-height: 1.4; }
 .muscore .mupv { font-size: .82rem; color: #ffd38a; display: flex; align-items: center; gap: 6px; flex-wrap: wrap; justify-content: center; text-align: center; }
 .muscore .mupv b { color: #fff; }
 .muscore .mupv .mact { padding: 2px 8px; font-size: .74rem; }
@@ -1892,7 +1895,7 @@ table.box.titab tr.punted td { opacity: .4; }
         <details class="dsetup tradebox impbox" id="impBox">
           <summary>ייבוא סגל מאתר הליגה (העתק והדבק)</summary>
           <div class="impbody">
-            <p class="munote">פתחו באתר הליגה את דף הקבוצה, סמנו את כל הדף (<bdi>Ctrl+A</bdi>, בטלפון: לחיצה ארוכה ואז "בחר הכל"), העתיקו והדביקו כאן. האתר מזהה את שמות השחקנים ומעדכן את הסגל של הקבוצה שבחרתם. <b>הזיהוי מדויק כשאתר הליגה מוצג באנגלית</b>; בעברית הוא משוער, אז כדאי לעבור על הרשימה לפני העדכון.</p>
+            <p class="munote">פתחו באתר הליגה את דף הקבוצה, סמנו את כל הדף (<bdi>Ctrl+A</bdi>, בטלפון: לחיצה ארוכה ואז "בחר הכל"), העתיקו והדביקו כאן. האתר מזהה את שמות השחקנים ומעדכן את הסגל של הקבוצה שבחרתם, וגם את ההרכב של היום (מי בהרכב ומי בספסל) ואת ה־IL כפי שהם מופיעים בדף. <b>הזיהוי מדויק כשאתר הליגה מוצג באנגלית</b>; בעברית הוא משוער, אז כדאי לעבור על הרשימה לפני העדכון.</p>
             <div class="improw"><select id="impTeam" aria-label="איזו קבוצה"></select><button type="button" class="mact" id="impRead">זיהוי שחקנים</button></div>
             <textarea id="impText" rows="5" placeholder="הדביקו כאן את הטקסט מדף הקבוצה…"></textarea>
             <div id="impOut"></div>
@@ -5642,12 +5645,12 @@ function renderMatchup() {
   };
   const score = st.fmt === "pts"
     ? `<div class="mnum"><span class="num${SO.fa > SO.fb ? " lead" : ""}">${Math.round(SO.fa)}</span><span class="sep">:</span><span class="num${SO.fb > SO.fa ? " lead" : ""}">${Math.round(SO.fb)}</span><small>FPTS · תחזית סוף השבוע</small></div>`
-    : `<div class="mnum"><span class="num${wins > losses ? " lead" : ""}">${wins}</span><span class="sep">:</span><span class="num${losses > wins ? " lead" : ""}">${losses}</span><small>${isLive ? `התוצאה כרגע${cats.length - wins - losses ? ` · ${cats.length - wins - losses} בתיקו` : ""}` : weekLive ? "תחזית מלפני תחילת השבוע" : "תחזית סוף השבוע"}</small></div>`;
+    : `<div class="mnum"><span class="num${wins > losses ? " lead" : ""}">${wins}</span><span class="sep">:</span><span class="num${losses > wins ? " lead" : ""}">${losses}</span><small>${isLive ? `הערכה לפי הנתונים${cats.length - wins - losses ? ` · ${cats.length - wins - losses} בתיקו` : ""}` : weekLive ? "תחזית מלפני תחילת השבוע" : "תחזית סוף השבוע"}</small></div>`;
   const modeSeg = weekLive ? `<div class="seg mumode" role="group" aria-label="לייב או תחזית"><button type="button" data-mumode="live" aria-pressed="${isLive}">לייב</button><button type="button" data-mumode="proj" aria-pressed="${!isLive}">תחזית</button></div>` : "";
   out.innerHTML = `
     <div class="muscore">
       <div class="mside">${faces(mineP, ilA)}<b>${esc(myName)}</b><span title="משחקים בהרכב: שוחקו מתוך סך הכול השבוע"><b class="gcount" dir="ltr">${SA.played}/${SA.played + SA.gamesAll}</b></span></div>
-      <div class="mmid">${modeSeg}${PV ? `<div class="mupv">עם הפיק אפ: <b>${esc(PV.X.name)}</b>${PV.drop ? ` במקום <b>${esc(PV.drop.name)}</b>` : ""} · <span dir="ltr">${pctTxt(odds.win)} → ${pctTxt(PV.r.win)}</span> <button type="button" class="mact" data-mupvoff="1">ביטול</button></div>` : ""}${score}<div class="mwin ${oddsKey(SO.win)}"><b>${pctTxt(SO.win)}</b><span>סיכוי לנצח${isLive ? " (לפי התוצאה עד כה והתחזית להמשך)" : ""}</span></div>${leadCols()}</div>
+      <div class="mmid">${modeSeg}${PV ? `<div class="mupv">עם הפיק אפ: <b>${esc(PV.X.name)}</b>${PV.drop ? ` במקום <b>${esc(PV.drop.name)}</b>` : ""} · <span dir="ltr">${pctTxt(odds.win)} → ${pctTxt(PV.r.win)}</span> <button type="button" class="mact" data-mupvoff="1">ביטול</button></div>` : ""}${score}<div class="mwin ${oddsKey(SO.win)}"><b>${pctTxt(SO.win)}</b><span>סיכוי לנצח${isLive ? " (לפי התוצאה עד כה והתחזית להמשך)" : ""}</span></div>${leadCols()}${isLive ? `<div class="mulivenote">לפי הסגל וההרכב ב־<bdi>Dagger</bdi>. שיניתם משהו באתר הליגה? עדכנו כאן (ייבוא סגל בחדר הדראפט, או לחיצה על משבצת בהרכב היומי)</div>` : ""}</div>
       <div class="mside">${faces(oppP, ilB)}<b>${esc(oppName)}</b><span title="משחקים בהרכב: שוחקו מתוך סך הכול השבוע"><b class="gcount" dir="ltr">${B.played}/${B.played + B.gamesAll}</b></span></div>
     </div>
     <div class="mugrid">
@@ -6083,7 +6086,8 @@ function hebrewGuess(word) {
 const HEB_SKEL = (s) => HEB_NORM(s).replace(/[אויהע\s]/g, "").replace(/[טת]/g, "ת").replace(/[כק]/g, "ק").replace(/[סשצ]/g, "ס").replace(/[בו]/g, "ב");
 function importFind(text) {
   const T = " " + IMP_NORM(text) + " ";
-  const heWords = HEB_NORM(text).split(/[^\u05d0-\u05ea]+/).filter((x) => x.length > 1);
+  const heWords = [], heLine = [];
+  text.split(/\r?\n/).forEach((l, li) => { for (const w of HEB_NORM(l).split(/[^\u05d0-\u05ea]+/)) if (w.length > 1) { heWords.push(w); heLine.push(li); } });
   const heSkels = heWords.map(HEB_SKEL);
   const pool = players.filter((p) => p.team26 || picks.some((x) => x.id === p.id));
   const found = new Map(), shortSeen = new Map();
@@ -6129,12 +6133,37 @@ function importFind(text) {
           const sc = 0.4 * sf + 0.6 * sl;
           if (!best || sc > best.sc) { second = best ? best.sc : 0; best = { k, sc }; } else if (sc > second) second = sc;
         }
-        if (best && best.sc >= 0.66 && best.sc - second >= 0.06 && !found.has(best.k.p.id)) { found.set(best.k.p.id, { p: best.k.p, at: 1e6 + i }); took = used; break; }
+        if (best && best.sc >= 0.66 && best.sc - second >= 0.06 && !found.has(best.k.p.id)) { found.set(best.k.p.id, { p: best.k.p, at: 1e6 + i, line: heLine[i] }); took = used; break; }
       }
       i += took;  // the words of a name found are not the start of another one
     }
   }
-  return [...found.values()].sort((a, b) => a.at - b.at).map((x) => x.p);
+  const sorted = [...found.values()].sort((a, b) => a.at - b.at), list = sorted.map((x) => x.p);
+  const heAt = new Map(sorted.filter((x) => x.line != null).map((x) => [x.p.id, x.line]));
+  // his spot on the league's page: the slot label on a line of its own just above his name (PG ... Util, BN, IL, IL+)
+  const lines = text.split(/\r?\n/).map((l) => l.trim());
+  const SLOT = /^(PG|SG|G|SF|PF|F|C|UTIL|BN|IL\+?)$/i;
+  const lineOf = (p) => {
+    if (heAt.has(p.id)) return heAt.get(p.id);
+    const base = IMP_NORM(p.name).replace(/ (jr|sr|ii|iii|iv)$/, ""), parts = base.split(" ");
+    const short = parts.length > 1 ? parts[0][0] + " " + parts.slice(1).join(" ") : base;
+    let i = lines.findIndex((l) => { const n = " " + IMP_NORM(l) + " "; return n.includes(" " + base + " ") || n.includes(" " + short + " "); });
+    if (i < 0) {
+      // Hebrew: the line whose words are closest to his name
+      const want = HEB_SKEL(hebrewGuess(parts.slice(1).join("")));
+      i = lines.findIndex((l) => HEB_NORM(l).split(/[^\u05d0-\u05ea]+/).some((w) => w.length > 1 && HEB_SKEL(w) === want));
+    }
+    return i;
+  };
+  IMP_SLOT = new Map();
+  for (const p of list) {
+    const i = lineOf(p);
+    if (i < 0) continue;
+    for (let j = i - 1; j >= Math.max(0, i - 3); j--) {
+      if (SLOT.test(lines[j])) { IMP_SLOT.set(p.id, lines[j].toUpperCase()); break; }
+    }
+  }
+  return list;
 }
 function renderImport() {
   const sel = $("impTeam");
@@ -6143,13 +6172,13 @@ function renderImport() {
   sel.innerHTML = Array.from({ length: n }, (_, i) => `<option value="${i}">${esc(teamName(i))}${i === myIdx() ? " (שלי)" : ""}</option>`).join("");
   sel.value = keep !== "" && Number(keep) < n ? keep : String(myIdx());
 }
-let IMP_FOUND = [];
+let IMP_FOUND = [], IMP_SLOT = new Map();
 function renderImpOut() {
   const t = Number($("impTeam").value), out = $("impOut");
   if (!IMP_FOUND.length) { out.innerHTML = `<p class="munote">לא זוהו שחקנים. ודאו שהעתקתם את כל דף הקבוצה.</p>`; return; }
   const elsewhere = (p) => { const x = picks.find((y) => y.id === p.id && y.team !== t); return x ? teamName(x.team) : null; };
   out.innerHTML = `<p class="impsum">זוהו <b>${IMP_FOUND.length}</b> שחקנים ל־<b>${esc(teamName(t))}</b>${IMP_FOUND.length !== st.roster ? ` <span class="impwarn">(בסגל ${st.roster}: בדקו שלא חסר או מיותר שחקן)</span>` : ""}</p>
-    <ol class="implist">${IMP_FOUND.map((p) => `<li><button type="button" class="impx" data-impx="${p.id}" aria-label="הסרה">✕</button> <span class="pn">${esc(p.name)}</span> <small>${esc(p.pos || "")} · ${esc(p.team26 || "")}</small>${elsewhere(p) ? ` <small class="impwarn">יעבור מ־${esc(elsewhere(p))}</small>` : ""}</li>`).join("")}</ol>
+    <ol class="implist">${IMP_FOUND.map((p) => `<li><button type="button" class="impx" data-impx="${p.id}" aria-label="הסרה">✕</button>${IMP_SLOT.get(p.id) ? ` <span class="impslot${/^(BN|IL)/.test(IMP_SLOT.get(p.id)) ? " off" : ""}">${esc(IMP_SLOT.get(p.id))}</span>` : ""} <span class="pn">${esc(p.name)}</span> <small>${esc(p.pos || "")} · ${esc(p.team26 || "")}</small>${elsewhere(p) ? ` <small class="impwarn">יעבור מ־${esc(elsewhere(p))}</small>` : ""}</li>`).join("")}</ol>
     <div class="improw"><input id="impAdd" list="impAll" placeholder="חסר שחקן? הוסיפו אותו כאן…" autocomplete="off"><datalist id="impAll">${players.filter((p) => p.team26 && !IMP_FOUND.includes(p)).map((p) => `<option value="${esc(p.name)}"></option>`).join("")}</datalist></div>
     <button type="button" class="mact on" id="impApply">עדכון הסגל של ${esc(teamName(t))}</button>`;
 }
@@ -6173,10 +6202,20 @@ $("impOut").addEventListener("click", (e) => {
   const kept = picks.filter((x) => x.team !== t && !ids.has(x.id));
   picks.length = 0;
   picks.push(...kept, ...IMP_FOUND.map((p) => ({ id: p.id, team: t })));
-  // IL marks of players no longer on the team go
+  // IL marks of players no longer on the team go; the page's IL / IL+ spots are taken as they are
   for (const key of ["il", "ilp"]) if (st[key]?.[t]) st[key][t] = st[key][t].filter((id) => ids.has(id));
+  const slots = [...IMP_SLOT].filter(([id]) => ids.has(id));
+  if (slots.length) {
+    st.il = st.il || {}; st.ilp = st.ilp || {};
+    st.il[t] = slots.filter(([, sl]) => sl === "IL").map(([id]) => id);
+    st.ilp[t] = slots.filter(([, sl]) => sl === "IL+").map(([id]) => id);
+    // today's lineup as on the page: the players in a slot start, the bench sits (the days already played stay)
+    const day = etDay(new Date()), lu = lineupOf(t);
+    lu[day] = {};
+    for (const [id, sl] of slots) if (sl !== "IL" && sl !== "IL+") lu[day][id] = sl === "BN" ? "off" : "on";
+  }
   rebuildSets(); saveSettings(); render(); flushPicks();
-  showToast(`הסגל של ${teamName(t)} עודכן: ${IMP_FOUND.length} שחקנים`);
+  showToast(`הסגל של ${teamName(t)} עודכן: ${IMP_FOUND.length} שחקנים${slots.length ? ", כולל ההרכב של היום וה־IL" : ""}`);
   $("impOut").innerHTML = ""; $("impText").value = ""; IMP_FOUND = [];
 });
 $("impBox").addEventListener("toggle", () => { if ($("impBox").open) renderImport(); });
