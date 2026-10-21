@@ -1658,7 +1658,7 @@ table.box.titab tr.punted td { opacity: .4; }
         </div>
         <div class="row2">
           <div class="field"><label for="myTeam">הקבוצה שלי</label><select id="myTeam"></select></div>
-          <div class="field"><label for="muAddsMax">פיק אפים בשבוע</label><input type="number" id="muAddsMax" min="0" max="14"></div>
+          <div class="field" hidden style="display:none"><label for="muAddsMax">פיק אפים בשבוע</label><input type="number" id="muAddsMax" min="0" max="14"></div>
         </div>
         <div class="row2">
           <div class="field"><label for="ilSlots">מקומות IL</label><input type="number" id="ilSlots" min="0" max="5"></div>
@@ -5385,7 +5385,7 @@ function renderMatchup() {
   }).join("");
 
   // pickups
-  const left = Math.max(0, maxAdds - addsUsed());
+  const left = Infinity;  // no weekly pickup limit
   if (MU_FORCE != null && !mineP.some((p) => p.id === MU_FORCE && !ilA.has(p.id))) MU_FORCE = null;  // he left the roster
   const moves = left > 0 ? bestMoves(me, st.muOpp, mineP, ilA, B, odds, null, MU_FORCE) : [];
   if (MU_SEARCH != null && (picks.some((x) => x.id === MU_SEARCH) || mine.has(MU_SEARCH))) MU_SEARCH = null;  // he was added meanwhile
