@@ -3296,8 +3296,10 @@ function percentileHeat(values) {
 function renderAdv() {
   if (st.tab !== "adv") return;
   const { list, now } = last;
-  const rows = list.filter((p) => passes(p));
-  const heats = Object.fromEntries(["USG", "EFG", "TS", "PACE", "ORTG", "ASTTOV", "TPACE"].map((k) => [k, percentileHeat(list.map((p) => advVal(p, k)))]));
+  // advanced numbers mean little in a few minutes a game: 10+ minutes only (my team and favorites always show)
+  const ADV_MIN = 10, enough = (p) => (p.L?.g.MIN ?? 0) >= ADV_MIN || mine.has(p.id) || fav.has(p.id);
+  const rows = list.filter((p) => passes(p) && enough(p));
+  const heats = Object.fromEntries(["USG", "EFG", "TS", "PACE", "ORTG", "ASTTOV", "TPACE"].map((k) => [k, percentileHeat(list.filter(enough).map((p) => advVal(p, k)))]));
   const key = (p) => st.advSort === "rank" ? now.rank.get(p.id) : st.advSort === "name" ? p.name
     : st.advSort === "gp" ? p.gp : st.advSort === "min" ? p.L.g.MIN : (advVal(p, st.advSort) ?? -Infinity);
   rows.sort((a, b) => {
