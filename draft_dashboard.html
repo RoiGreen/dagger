@@ -5361,7 +5361,9 @@ function renderMatchup() {
   // the week has begun once one of its games is in the logs
   const weekLive = SEASON_DAYS.some((d) => d >= WEEK.from && d <= WEEK.to && d <= LOG_END);
   const muMode = !weekLive ? "proj" : MU_MODE?.week === WEEK.from ? MU_MODE.mode : "live";
-  MU.pre = weekLive && muMode === "proj";
+  // the forecast during the week: what has been played plus the projection of the rest (the same numbers as live,
+  // shown as the expected final score)
+  MU.pre = false;
   const n = Math.max(st.teams, 1), me = muMe();
   const ms = $("muTeam");
   if (ms !== document.activeElement) {
@@ -5664,7 +5666,7 @@ function renderMatchup() {
   };
   const score = st.fmt === "pts"
     ? `<div class="mnum"><span class="num${SO.fa > SO.fb ? " lead" : ""}">${Math.round(SO.fa)}</span><span class="sep">:</span><span class="num${SO.fb > SO.fa ? " lead" : ""}">${Math.round(SO.fb)}</span><small>FPTS · תחזית סוף השבוע</small></div>`
-    : `<div class="mnum"><span class="num${wins > losses ? " lead" : ""}">${wins}</span><span class="sep">:</span><span class="num${losses > wins ? " lead" : ""}">${losses}</span><small>${isLive ? `הערכה לפי הנתונים` : weekLive ? "תחזית מלפני תחילת השבוע" : "תחזית סוף השבוע"}</small></div>`;
+    : `<div class="mnum"><span class="num${wins > losses ? " lead" : ""}">${wins}</span><span class="sep">:</span><span class="num${losses > wins ? " lead" : ""}">${losses}</span><small>${isLive ? `הערכה לפי הנתונים` : weekLive ? "צפי לסוף השבוע, כולל מה ששוחק" : "תחזית סוף השבוע"}</small></div>`;
   const modeSeg = weekLive ? `<div class="seg mumode" role="group" aria-label="לייב או תחזית"><button type="button" data-mumode="live" aria-pressed="${isLive}">לייב</button><button type="button" data-mumode="proj" aria-pressed="${!isLive}">תחזית</button></div>` : "";
   out.innerHTML = `
     <div class="muscore">
