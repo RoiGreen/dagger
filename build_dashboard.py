@@ -672,21 +672,46 @@ def main() -> None:
               str(r.gameId).zfill(10), int(r.gameStatus == 3),
               int(r.homeTeam_score) if r.gameStatus == 3 else None, int(r.awayTeam_score) if r.gameStatus == 3 else None]
              for r in sched_df.itertuples() if isinstance(r.homeTeam_teamTricode, str)]
-    payload = json.dumps({"stats": STATS, "seasons": seasons, "preseason": PRESEASON, "current": CURRENT,
-                          "curMaxGp": cur_max_gp, "players": players,
-                          "teamSeasons": team_seasons, "injUpdated": inj_updated, "vsGames": VS_GAMES, "sched": sched,
-                          "dist": team_distribution(), "box": box_scores(), "logos": team_logos(), "formEnd": form_end, "formEndPre": form_end_pre},
-                         ensure_ascii=False, separators=(",", ":"))
-    OUT.write_text(html.replace("/*__DATA__*/null", payload), encoding="utf-8")
-    # The website loads the photos as separate files (cached, fetched when shown), so the page itself is small
+    data = {"stats": STATS, "seasons": seasons, "preseason": PRESEASON, "current": CURRENT,
+            "curMaxGp": cur_max_gp, "players": players,
+            "teamSeasons": team_seasons, "injUpdated": inj_updated, "vsGames": VS_GAMES, "sched": sched,
+            "dist": team_distribution(), "box": box_scores(), "logos": team_logos(), "formEnd": form_end, "formEndPre": form_end_pre}
     as_json = lambda x: json.dumps(x, ensure_ascii=False, separators=(",", ":"))
-    build_site(html.replace("/*__DATA__*/null", payload.replace(as_json(players), as_json(site_players), 1)))
+    OUT.write_text(html.replace("/*__DATA__*/null", as_json(data)), encoding="utf-8")
+    # The website keeps the page light (a phone opens it fast): photos and logos are separate cached files, the
+    # numbers against each opponent load only when that filter is used, and the preseason form goes once the
+    # regular season has games
+    site_data = {**data, "players": site_light(site_players, drop_pre=cur_max_gp > 0), "logos": site_logos(data["logos"]), "vsLazy": True}
+    build_site(html.replace("/*__DATA__*/null", as_json(site_data)))
     print(f"Saved {OUT.name} ({len(players)} players)")
 
 
 SITE_IMG = SITE_OUT.parent / "img"
 # Visit counting for the website only (roigreen.goatcounter: account "dagger"); the claude.ai copy is private
 GOATCOUNTER = '<script data-goatcounter="https://dagger.goatcounter.com/count" async src="//gc.zgo.at/count.js"></script>'
+
+
+def site_light(players: list[dict], drop_pre: bool) -> list[dict]:
+    """Players for the website without the per-opponent numbers (docs/vs.json, fetched when needed) and, once the
+    regular season has games, without the preseason form."""
+    vs = {p["id"]: p["vs"] for p in players if p.get("vs")}
+    (SITE_OUT.parent / "vs.json").write_text(json.dumps(vs, ensure_ascii=False, separators=(",", ":")), encoding="utf-8")
+    drop = {"vs", "formPre"} if drop_pre else {"vs"}
+    return [{k: v for k, v in p.items() if k not in drop} for p in players]
+
+
+def site_logos(logos: dict) -> dict:
+    """Team logos as files (docs/logos/<team>.svg) instead of inline data."""
+    folder = SITE_OUT.parent / "logos"
+    folder.mkdir(parents=True, exist_ok=True)
+    out = {}
+    for t, uri in logos.items():
+        f = folder / f"{t}.svg"
+        raw = base64.b64decode(uri.split(",", 1)[1])
+        if not f.exists() or f.read_bytes() != raw:
+            f.write_bytes(raw)
+        out[t] = f"logos/{t}.svg"
+    return out
 
 
 def site_images(players: list[dict]) -> list[dict]:

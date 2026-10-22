@@ -6645,7 +6645,14 @@ renderPuntChips();
 const teams = [...new Set(players.map((p) => p.team26).filter(Boolean))].sort();
 $("vsOpp").innerHTML += [...teams].sort((a, b) => (TEAM_NAMES[a] || a).localeCompare(TEAM_NAMES[b] || b))
   .map((t) => `<option value="${t}">${esc(TEAM_NAMES[t] || t)}</option>`).join("");
-$("vsOpp").addEventListener("change", (e) => { st.vsOpp = e.target.value; update(); });
+// the website loads the numbers against each opponent only when this filter is first used (a lighter page)
+let VS_LOADING = null;
+const ensureVs = () => {
+  if (!D.vsLazy || VS_LOADING) return VS_LOADING || Promise.resolve();
+  VS_LOADING = fetch("vs.json").then((r) => r.json()).then((vs) => { for (const p of players) if (vs[p.id]) p.vs = vs[p.id]; }).catch(() => {});
+  return VS_LOADING;
+};
+$("vsOpp").addEventListener("change", async (e) => { st.vsOpp = e.target.value; if (st.vsOpp) await ensureVs(); update(); });
 let MINE_FOLDED = true;
 $("mineFold").addEventListener("click", () => {
   const f = !$("minePanel").classList.contains("folded");
