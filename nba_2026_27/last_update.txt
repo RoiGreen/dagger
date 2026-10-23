@@ -1,13 +1,13 @@
-Pulled 2026-10-22 12:00 UTC
+Pulled 2026-10-23 06:58 UTC
 Rosters: 519 players on a 2026-27 team
 Schedule: 1274 games
 Headshots: 0 new, 0 unavailable, 654 cached
-Injuries: 71 players listed
+Injuries: 78 players listed
 Positions: 1097 players; fallback positions: 16 (0 new)
 Team logos: 0 new, 0 unavailable, 32 cached
 Pre Season: 67 games, 1990 player lines, 2026-10-03 to 2026-10-16 (12 games on 2026-10-16)
 Pre Season advanced: 589 players (12 from per-game logs), 31 teams
-Regular Season: 14 games, 322 player lines, 2026-10-20 to 2026-10-21 (11 games on 2026-10-21)
-Regular Season advanced: 322 players (0 from per-game logs), 28 teams
-Starting lineups: 81 games (0 new)
+Regular Season: 16 games, 367 player lines, 2026-10-20 to 2026-10-22 (2 games on 2026-10-22)
+Regular Season advanced: 345 players (0 from per-game logs), 30 teams
+Starting lineups: 83 games (2 new)
 Birth dates: 654 (0 new)
