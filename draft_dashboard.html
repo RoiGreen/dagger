@@ -4998,13 +4998,15 @@ const PCT_COV = { FG_PCT: "covFG", FT_PCT: "covFT", FG3_PCT: "covF3" };
 const LINEUP = [["PG", ["PG"]], ["SG", ["SG"]], ["G", ["PG", "SG"]], ["SF", ["SF"]], ["PF", ["PF"]], ["F", ["SF", "PF"]],
   ["C", ["C"]], ["UTIL", null], ["UTIL", null], ["UTIL", null]];
 // Two kinds of injured-list spots, each with its own count (league settings):
-// IL takes only players listed OUT; IL+ takes only players who may still play: GTD / Q (50%) and Doubtful (25%)
+// IL takes only players listed OUT; IL+ takes them too, and players who may still play: GTD / Q (50%) and Doubtful (25%)
 const IL_OUT = new Set(["OUT", "OFS"]), IL_PLUS = new Set(["GTD", "QUESTIONABLE", "DOUBTFUL"]);
 const ilKind = (p) => (!p?.hurt ? null : IL_OUT.has(p.hurt.s) ? "il" : IL_PLUS.has(p.hurt.s) ? "ilp" : null);
 const ilSlots = (kind) => (kind === "il" ? st.ilSlots ?? 2 : st.ilpSlots ?? 1);
 const ilList = (kind, t) => ((kind === "il" ? st.il : st.ilp) || {})[t] || [];
 // a free spot of the kind this player fits, or null
-const ilRoom = (p, t) => { const k = ilKind(p); return k && ilList(k, t).filter((id) => ilOf(t).has(id)).length < ilSlots(k) ? k : null; };
+const ilFree = (k, t) => ilList(k, t).filter((id) => ilOf(t).has(id)).length < ilSlots(k);
+// an OUT player takes an IL spot, or an IL+ one when the IL is full; a doubtful one only IL+
+const ilRoom = (p, t) => { const k = ilKind(p); return !k ? null : k === "il" ? (ilFree("il", t) ? "il" : ilFree("ilp", t) ? "ilp" : null) : ilFree("ilp", t) ? "ilp" : null; };
 // The best lineup of one day: the most valuable players first, each one placed if the slots can still hold everyone
 // placed so far (moving earlier players between slots when needed). Greedy is exact here (a transversal matroid).
 const SLOT_CAP = LINEUP.reduce((m, [n]) => ({ ...m, [n]: (m[n] || 0) + 1 }), {});
@@ -5300,7 +5302,7 @@ function bestMoves(me, opp, mineP, il, B, base, onlyId = null, forceDrop = null)
     // a free roster spot: the add comes without a release (another release can still be picked in the row)
     for (const Y of open || forced ? [] : active) {
       const hurtLong = Y.hurt && Y.hurt.s === "OUT";
-      if (hurtLong && ilFree) { opts.push({ drop: Y, kind: "il" }); continue; }
+      if (hurtLong) { const room = ilRoom(Y, me); if (room) { opts.push({ drop: Y, kind: room }); continue; } }
       // a release is suggested only from the weakest of the roster (the usual pickup move); any other release can
       // still be picked by hand in the row
       if (!weakest.has(Y.id)) continue;
@@ -5707,8 +5709,9 @@ function renderMatchup() {
           const k = ilRoom(p, t), kind = ilKind(p);
           if (k) return `<button type="button" class="mact" data-muil="${t}|${p.id}|${k}">${k === "il" ? "IL" : "IL+"}</button>`;
           // he fits a spot but they are taken: say so (the number of spots is in the league settings)
-          if (kind) { const lbl = kind === "il" ? "IL" : "IL+", used = ilList(kind, t).filter((id) => ilOf(t).has(id)).length;
-            return `<button type="button" class="mact" disabled title="כל מקומות ה־${lbl} תפוסים (${used}/${ilSlots(kind)}). אפשר לשנות את מספר המקומות בהגדרות הליגה">${lbl} מלא</button>`; }
+          if (kind) { const lbl = kind === "il" ? "IL ו־IL+" : "IL+", n = (k2) => ilList(k2, t).filter((id) => ilOf(t).has(id)).length;
+            const tip = kind === "il" ? `IL ${n("il")}/${ilSlots("il")}, IL+ ${n("ilp")}/${ilSlots("ilp")}` : `IL+ ${n("ilp")}/${ilSlots("ilp")}`;
+            return `<button type="button" class="mact" disabled title="כל מקומות ה־${lbl} תפוסים (${tip}). אפשר לשנות את מספר המקומות בהגדרות הליגה">${kind === "il" ? "IL" : "IL+"} מלא</button>`; }
           return "";
         })()}<button type="button" class="mact" data-mudrop="${t}|${p.id}" title="שחרור">שחרר</button>`;
       const role = onIL ? "ilrow" : cur === "BN" ? "benchrow" : "startrow";
