@@ -2580,6 +2580,7 @@ function fillZHelp(list, now) {
 }
 let BODY_JOB = 0;  // a newer render stops the batches of the one before
 function render() {
+  try { autoIL(); } catch (e) {}
   if (ROSTERS_CHANGED && last) compute();
   const { list, now } = last;
   fillZHelp(list, now);
@@ -5029,6 +5030,28 @@ const IL_OUT = new Set(["OUT", "OFS"]), IL_PLUS = new Set(["GTD", "QUESTIONABLE"
 const ilKind = (p) => (!p?.hurt ? null : IL_OUT.has(p.hurt.s) ? "il" : IL_PLUS.has(p.hurt.s) ? "ilp" : null);
 const ilSlots = (kind) => (kind === "il" ? st.ilSlots ?? 2 : st.ilpSlots ?? 1);
 const ilList = (kind, t) => ((kind === "il" ? st.il : st.ilp) || {})[t] || [];
+// Every team keeps its injured on the IL by default: OUT players first (IL, then IL+ when the IL is full), then
+// doubtful ones (GTD / Q / D) in the IL+ spots left. A player put there by hand stays; one taken out by hand is not put
+// back until his status changes; one placed here automatically comes back by himself once he is healthy.
+function autoIL() {
+  st.il = st.il || {}; st.ilp = st.ilp || {}; st.ilAuto = st.ilAuto || {}; st.ilOff = st.ilOff || {};
+  for (let t = 0; t < Math.max(st.teams, 1); t++) {
+    const roster = rosterOf(t), ids = new Set(roster.map((p) => p.id)), auto = new Set(st.ilAuto[t] || []);
+    const off = (st.ilOff[t] || []).filter((x) => ids.has(x.id) && PLAYER_BY_ID.get(x.id)?.hurt?.s === x.s);
+    const offIds = new Set(off.map((x) => x.id));
+    const il = (st.il[t] || []).filter((id) => ids.has(id) && !auto.has(id)), ilp = (st.ilp[t] || []).filter((id) => ids.has(id) && !auto.has(id));
+    const held = new Set([...il, ...ilp]), placed = [];
+    // those already on the IL keep their spot (no shuffling between IL and IL+), then the most valuable
+    const was = new Set(st.il[t] || []), stay = (p) => (was.has(p.id) ? 1 : 0);
+    const want = (k) => roster.filter((p) => ilKind(p) === k && !held.has(p.id) && !offIds.has(p.id)).sort((a, b) => stay(b) - stay(a) || seasonValue(b) - seasonValue(a));
+    for (const p of want("il")) {
+      if (il.length < ilSlots("il")) il.push(p.id); else if (ilp.length < ilSlots("ilp")) ilp.push(p.id); else continue;
+      placed.push(p.id);
+    }
+    for (const p of want("ilp")) if (ilp.length < ilSlots("ilp")) { ilp.push(p.id); placed.push(p.id); }
+    st.il[t] = il; st.ilp[t] = ilp; st.ilAuto[t] = placed; st.ilOff[t] = off;
+  }
+}
 // a free spot of the kind this player fits, or null
 const ilFree = (k, t) => ilList(k, t).filter((id) => ilOf(t).has(id)).length < ilSlots(k);
 // an OUT player takes an IL spot, or an IL+ one when the IL is full; a doubtful one only IL+
@@ -5392,6 +5415,7 @@ function muMove(team, addId, dropId, kind) {
   if (dropId && (kind === "il" || kind === "ilp")) {
     const box = kind === "ilp" ? st.ilp : st.il;
     box[team] = [...new Set([...(box[team] || []), dropId])];
+    if (st.ilAuto?.[team]) st.ilAuto[team] = st.ilAuto[team].filter((id) => id !== dropId);
   } else if (dropId) {
     // a release with an add takes the same board cell, so the draft board keeps its shape
     const i = picks.findIndex((x) => x.id === dropId && x.team === team);
@@ -5419,6 +5443,8 @@ function liveNote(p) {
 }
 function muFromIL(team, id) {
   st.il[team] = (st.il[team] || []).filter((x) => x !== id);
+  st.ilOff = st.ilOff || {}; st.ilOff[team] = [...(st.ilOff[team] || []).filter((x) => x.id !== id), { id, s: PLAYER_BY_ID.get(id)?.hurt?.s || null }];
+  if (st.ilAuto?.[team]) st.ilAuto[team] = st.ilAuto[team].filter((x) => x !== id);
   if (st.ilp) st.ilp[team] = (st.ilp[team] || []).filter((x) => x !== id);
   const over = rosterOf(team).filter((p) => !ilOf(team).has(p.id)).length - st.roster;
   if (over > 0) showToast(`הסגל מלא ב־${over}. במצ'אפ מופיעה המלצה את מי לשחרר.`);
@@ -6538,7 +6564,7 @@ $("drOut").addEventListener("click", (e) => {
   if (!e.target.closest("#drApply") || !DR) return;
   const n = DR.teams.length;
   if (picks.length && !confirm(`הליגה בחדר הדראפט תוחלף בדראפט שהודבק: ${n} קבוצות ו־${DR.rows.filter((x) => x.p).length} שחקנים. אפשר לבטל אחר כך. להמשיך?`)) return;
-  const keys = ["teams", "teamNames", "roster", "snake", "myPos", "tags", "il", "ilp", "txLast", "txUndo", "txHist", "teamMap"];
+  const keys = ["teams", "teamNames", "roster", "snake", "myPos", "tags", "il", "ilp", "ilAuto", "ilOff", "txLast", "txUndo", "txHist", "teamMap"];
   DR_UNDO = { picks: picks.map((x) => ({ ...x })), st: JSON.parse(JSON.stringify(Object.fromEntries(keys.map((k) => [k, st[k] ?? null])))) };
   const seen = new Set();
   picks.length = 0;
@@ -6547,7 +6573,7 @@ $("drOut").addEventListener("click", (e) => {
   st.teams = n; st.teamNames = DR.teams.slice(); st.snake = DR.snake;
   st.roster = Math.max(5, Math.min(20, Math.ceil(DR.picks.length / n)));
   if (DR.mine != null) st.myPos = DR.mine + 1;
-  st.tags = {}; st.il = {}; st.ilp = {}; st.txLast = null; st.txUndo = null; st.txHist = []; st.teamMap = {};
+  st.tags = {}; st.il = {}; st.ilp = {}; st.ilAuto = {}; st.ilOff = {}; st.txLast = null; st.txUndo = null; st.txHist = []; st.teamMap = {};
   rebuildSets(); saveSettings(); update(false); flushPicks(); renderDr();
   showToast(`הליגה עודכנה: ${n} קבוצות, ${picks.length} שחקנים`);
 });
