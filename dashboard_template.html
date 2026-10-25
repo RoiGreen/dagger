@@ -6486,12 +6486,15 @@ function txBuild() {
       if (known.length && new Set(known).size === 1) for (const m of moves) if (m.to == null && m.p) m.to = known[0] === t ? t2 : t;
     } else {
       const two = c.rows.length >= 2;
-      moves = c.rows.map((r, i) => ({ ...r, dir: two ? (i === 0 ? "in" : "out") : (t != null && r.p && where.get(r.p.id) === t ? "out" : "in"), on: true }));
+      // one player: only a free agent can be added, so a player on any team here (this one or, by an old mistake,
+      // another) is the one released; a player on no team is the one added
+      moves = c.rows.map((r, i) => ({ ...r, dir: two ? (i === 0 ? "in" : "out") : (r.p && where.has(r.p.id) ? "out" : "in"),
+        elsewhere: !two && r.p && where.has(r.p.id) && where.get(r.p.id) !== t ? where.get(r.p.id) : null, on: true }));
     }
     if (!old) for (const m of moves) {
       if (!m.p) continue;
       if (m.dir === "in") where.set(m.p.id, t);
-      else if (m.dir === "out" && where.get(m.p.id) === t) where.delete(m.p.id);
+      else if (m.dir === "out" && where.has(m.p.id)) where.delete(m.p.id);
       else if (m.dir === "trade" && m.to != null) where.set(m.p.id, m.to);
     }
     return { ...c, t, t2, old, moves };
@@ -6512,7 +6515,7 @@ function renderTx() {
     <ol class="txlist">${TX.map((c, ci) => `<li class="${c.old ? "old" : ""}"><div class="txh"><span>${fmt(c.ts)}</span> <b>${esc(c.t != null ? teamName(c.t) : c.team)}</b>${c.trade ? ` ⇄ <b>${esc(c.t2 != null ? teamName(c.t2) : c.team2 || "?")}</b> <small>(טרייד)</small>` : ""}${c.old ? ` <small>(כבר יובאה)</small>` : ""}</div>
       ${c.moves.map((m, mi) => `<div class="txm${m.on && !c.old ? "" : " off"}"><label><input type="checkbox" data-txon="${ci}|${mi}"${m.on && !c.old ? " checked" : ""}></label>
         <button type="button" class="txdir ${m.dir}" data-txdir="${ci}|${mi}" title="לחיצה: הפוך כיוון">${m.dir === "in" ? "▲ נכנס" : m.dir === "out" ? "▼ יוצא" : `⇄ ל־${m.to != null ? esc(teamName(m.to)) : "?"}`}</button>
-        ${m.p ? `<span class="pn">${esc(m.p.name)}</span>` : `<span class="impwarn">לא זוהה</span>`} <small>${esc(m.raw)}</small>
+        ${m.p ? `<span class="pn">${esc(m.p.name)}</span>` : `<span class="impwarn">לא זוהה</span>`} <small>${esc(m.raw)}</small>${m.elsewhere != null ? ` <small class="impwarn">(ב־Dagger הוא אצל ${esc(teamName(m.elsewhere))})</small>` : ""}
         <select class="txfix" data-txpick="${ci}|${mi}" aria-label="איזה שחקן זה">${(() => {
           const opts = txRank(m.raw); if (m.p && !opts.includes(m.p)) opts.unshift(m.p);
           return `<option value="">${m.p ? "תיקון…" : "בחרו שחקן…"}</option>` + opts.map((x) => `<option value="${x.id}"${m.p === x ? " selected" : ""}>${esc(x.name)} · ${esc(x.team26 || "")}</option>`).join("") + `<option value="other">שחקן אחר…</option>`;
@@ -6578,9 +6581,11 @@ $("txOut").addEventListener("click", (e) => {
       const i = picks.findIndex((x) => x.id === m.p.id);
       if (m.dir === "trade") { if (m.to == null) continue; if (i >= 0) picks.splice(i, 1); picks.push({ id: m.p.id, team: m.to }); n++; continue; }
       if (m.dir === "in") { if (i >= 0) picks.splice(i, 1); picks.push({ id: m.p.id, team: c.t }); n++; }
-      else if (i >= 0 && picks[i].team === c.t) {
+      else if (i >= 0) {
+        // released: off the team (also when Dagger had him on another team by mistake: he is a free agent now)
+        const from = picks[i].team;
         picks.splice(i, 1); n++;
-        for (const key of ["il", "ilp"]) if (st[key]?.[c.t]) st[key][c.t] = st[key][c.t].filter((id) => id !== m.p.id);
+        for (const key of ["il", "ilp"]) if (st[key]?.[from]) st[key][from] = st[key][from].filter((id) => id !== m.p.id);
       }
     }
     last = Math.max(last, c.ts);
