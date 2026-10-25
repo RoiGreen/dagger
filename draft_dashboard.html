@@ -5570,7 +5570,7 @@ function renderMatchup() {
     const opts = activeMine.map((p) => {
       const A2 = planWeek(mineP.filter((x) => x.id !== p.id), ilA, me);
       return { p, r: muOdds(A2, B) };
-    }).sort((a, b) => b.r.win - a.r.win || seasonValue(a.p) - seasonValue(b.p)).slice(0, 5);
+    }).sort((a, b) => b.r.win - a.r.win || seasonValue(a.p) - seasonValue(b.p));  // every player on the roster
     dropRows = opts.map((x, i) => {
       const moved = x.r.cats.map((c, j) => ({ l: c.l, d: c.q - odds.cats[j].q, punt: st.punts.has(c.k) })).filter((u) => !u.punt && Math.abs(u.d) >= 0.005);
       const downs = moved.filter((u) => u.d < 0).sort((a, b) => a.d - b.d).slice(0, 3);
