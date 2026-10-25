@@ -6496,7 +6496,9 @@ function drBuild() {
   // a name two players fit about as well: not one already drafted, else the better known one
   const used = new Set(rows.filter((x) => x.p).map((x) => x.p.id));
   for (const x of rows) if (!x.p) { x.p = txClosest(x.raw, (p) => (used.has(p.id) ? -1e9 : seasonValue(p))); if (x.p) used.add(x.p.id); }
+  const prev = DR;
   DR = { ...src, rows };
+  if (prev?.mineAsked && prev.teams.join("|") === src.teams.join("|")) { DR.mine = prev.mine; DR.mineAsked = true; }  // the team picked by hand stays
 }
 function renderDr() {
   const out = $("drOut");
@@ -6504,16 +6506,18 @@ function renderDr() {
   const n = DR.teams.length, miss = DR.rows.filter((x) => !x.p), rounds = Math.ceil(DR.picks.length / n);
   const dup = new Set(), seen = new Set();
   for (const x of DR.rows) if (x.p) { if (seen.has(x.p.id)) dup.add(x.p.id); seen.add(x.p.id); }
-  out.innerHTML = `<p class="impsum">זוהו <b>${n}</b> קבוצות ו־<b>${DR.rows.length}</b> בחירות (${rounds} סיבובים${DR.snake ? ", סנייק" : ""}).${DR.mine != null ? ` הקבוצה שלך: <b>${esc(DR.teams[DR.mine])}</b>.` : ` <span class="txguess">הקבוצה שלך לא סומנה בהדבקה: בחרו אותה בהגדרות הליגה אחרי העדכון.</span>`}
+  out.innerHTML = `<p class="impsum">זוהו <b>${n}</b> קבוצות ו־<b>${DR.rows.length}</b> בחירות (${rounds} סיבובים${DR.snake ? ", סנייק" : ""}).${DR.mine != null && !DR.mineAsked ? ` הקבוצה שלך: <b>${esc(DR.teams[DR.mine])}</b>.` : ""}
       ${miss.length ? `<br><span class="impwarn">${miss.length} שחקנים לא זוהו ולא ייכנסו (חסרים בנתונים, או שתבחרו להם שחקן מהרשימה):</span>` : ""}</p>
     ${miss.length ? `<ol class="txlist">${miss.map((x) => `<li><div class="txm"><span class="impwarn">לא זוהה</span> <small>${esc(x.raw)}</small> <small>(${esc(DR.teams[x.t])})</small>
       <select class="txfix" data-drpick="${x.k}" aria-label="איזה שחקן זה"><option value="">בחרו שחקן…</option>${txRank(x.raw).map((p) => `<option value="${p.id}">${esc(p.name)} · ${esc(p.team26 || "")}</option>`).join("")}</select></div></li>`).join("")}</ol>` : ""}
     ${dup.size ? `<p class="impwarn">שחקן זוהה פעמיים: ${[...dup].map((id) => esc(PLAYER_BY_ID.get(id).name)).join(", ")}. בדקו את השמות לפני העדכון.</p>` : ""}
     <details class="drteams"><summary>הקבוצות לפי הסדר</summary><ol>${DR.teams.map((t, i) => `<li>${esc(t)} <small>(${DR.rows.filter((x) => x.t === i && x.p).length} שחקנים)</small></li>`).join("")}</ol></details>
-    <button type="button" class="mact on" id="drApply">עדכון הליגה לפי הדראפט</button>${DR_UNDO ? ` <button type="button" class="mact" id="drUndo">ביטול הייבוא</button>` : ""}`;
+    ${DR.mine == null || DR.mineAsked ? `<div class="improw"><b>${DR.mine == null ? "איזו קבוצה שלך?" : "הקבוצה שלך:"}</b> <select id="drMine" aria-label="הקבוצה שלי"><option value="">בחרו…</option>${DR.teams.map((t, i) => `<option value="${i}"${DR.mine === i ? " selected" : ""}>${esc(t)}</option>`).join("")}</select></div>` : ""}
+    <button type="button" class="mact on" id="drApply"${DR.mine == null ? " disabled" : ""}>עדכון הליגה לפי הדראפט${DR.mine == null ? " (קודם בחרו את הקבוצה שלכם)" : ""}</button>${DR_UNDO ? ` <button type="button" class="mact" id="drUndo">ביטול הייבוא</button>` : ""}`;
 }
 $("drRead").addEventListener("click", () => { drBuild(); renderDr(); });
 $("drOut").addEventListener("change", (e) => {
+  if (e.target.id === "drMine") { DR.mine = e.target.value === "" ? null : Number(e.target.value); DR.mineAsked = true; return renderDr(); }
   const s = e.target.closest("[data-drpick]");
   if (!s) return;
   const x = DR.rows.find((r) => r.k === Number(s.dataset.drpick)), p = PLAYER_BY_ID.get(Number(s.value));
