@@ -2003,6 +2003,14 @@ table.box.titab tr.punted td { opacity: .4; }
             </span>
           </span>
         </div>
+        <details class="dsetup tradebox impbox" id="muImpBox">
+          <summary>ייבוא תוצאת המצ'אפ מאתר הליגה</summary>
+          <div class="impbody">
+            <p class="munote">באתר הליגה פתחו את עמוד המצ'אפ, סמנו הכל (<bdi>Ctrl+A</bdi>), העתיקו והדביקו כאן (<bdi>Ctrl+V</bdi>). מה שכבר שוחק נלקח מאתר הליגה כמו שהוא, לשתי הקבוצות, ו־Dagger מחשב תחזית רק למשחקים שעוד לא התחילו. כדאי להדביק שוב מדי פעם במהלך השבוע.</p>
+            <textarea id="muImpText" rows="3" placeholder="הדביקו כאן את עמוד המצ'אפ…"></textarea>
+            <div class="improw"><button type="button" class="mact on" id="muImpRead">עדכון התוצאה</button><button type="button" class="mact" id="muImpClear" hidden>חזרה לחישוב של Dagger</button><small id="muImpNote" class="munote"></small></div>
+          </div>
+        </details>
         <div id="muOut"></div>
       </section>
 
@@ -5224,8 +5232,41 @@ function dayFormer(team, d, roster) {
   return [...ids].filter((id) => !roster.some((p) => p.id === id)).map((id) => PLAYER_BY_ID.get(id)).filter((p) => p && heldOn(team, p, d) === true);
 }
 const weekFormer = (team, roster) => { const ids = new Set(); for (const d of weekDays()) for (const p of dayFormer(team, d, roster)) ids.add(p.id); return [...ids].map((id) => PLAYER_BY_ID.get(id)); };
+// The league's own score for the week: the matchup page's table of totals (a team name, then PTS, FGM/A, FG%, FTM/A,
+// FT%, 3PTM, REB, AST, STL, BLK, TOV). Kept per week with the time it was pasted; what was played up to then is taken
+// as it is, and only games that start later are projected.
+function muParse(text) {
+  const L = text.split(/\r?\n/).map((l) => l.trim());
+  const h = L.findIndex((l) => /\t/.test(l) && /\bPTS\b/.test(l) && /\bREB\b/.test(l));
+  if (h < 0) return null;
+  const head = L[h].split("\t").map((x) => x.trim()).slice(1);
+  const out = {};
+  let name = null;
+  for (let i = h + 1; i < L.length; i++) {
+    const l = L[i];
+    if (!l) continue;
+    if (/\t/.test(l) && /\bPTS\b/.test(l)) break;  // the next table (the projection)
+    if (!/\t/.test(l)) { name = l; continue; }
+    const v = l.split("\t").map((x) => x.trim()), row = {};
+    head.forEach((k, j) => {
+      const x = v[j];
+      if (x == null || x === "") return;
+      const pair = x.match(/^(\d+)\/(\d+)$/);
+      if (k === "FGM/A" && pair) { row.FGM = +pair[1]; row.FGA = +pair[2]; }
+      else if (k === "FTM/A" && pair) { row.FTM = +pair[1]; row.FTA = +pair[2]; }
+      else if (k === "3PTM" || k === "3PM") row.FG3M = +x;
+      else if (["PTS", "REB", "AST", "STL", "BLK", "TOV"].includes(k)) row[k] = +x;
+    });
+    if (name && Object.keys(row).length >= 6) out[name] = row;
+    name = null;
+  }
+  return Object.keys(out).length ? out : null;
+}
+// the league's score for this team in the week shown, when one was pasted for it
+const muActual = (team) => { const a = st.muActual; return a && a.week === weekDays()[0] ? a.teams?.[team] || null : null; };
 function planWeek(roster, il, team, swap = null) {
   const T = { done: zeroLine(), mean: zeroLine(), v: zeroLine(), covFG: 0, covFT: 0, covF3: 0, starts: 0, played: 0, gamesAll: 0, days: [], cell: new Map() };
+  const act = muActual(team);
   for (const d of weekDays()) {
     // A pickup counts from the moment it is made, except a game already under way: the added player misses it,
     // and the released one (who cannot be dropped mid-game) still has it
@@ -5248,6 +5289,7 @@ function planWeek(roster, il, team, swap = null) {
       } else {
         const gm = gameOn(p.team26, d);
         if (!gm) continue;
+        if (act && new Date(gm.g.t).getTime() <= st.muActual.ts) continue;  // in the league's score already
         const ch = playChance(p, gm.g);
         if (ch <= 0) { T.cell.set(`${p.id}|${d}`, { gm, out: true }); continue; }
         const v = muVal(p, oppFactor(p.team26, gm.opp));
@@ -5292,6 +5334,13 @@ function planWeek(roster, il, team, swap = null) {
     const empty = [...LINEUP.map((x) => x[0])];
     for (const v of slot.values()) empty.splice(empty.indexOf(v), 1);
     T.days.push({ d, started: slot.size, playing: cands.length, empty, past: d <= LOG_END && !MU.pre });
+  }
+  if (act) {
+    // what was played: the league's own numbers; the games after the paste are the projection added on top. The days
+    // in the logs but after the paste would be counted twice, so the logs' part is replaced as a whole
+    for (const k of Object.keys(act)) T.done[k] = act[k];
+    T.done.FP = fpts(T.done);
+    T.actual = true;
   }
   return T;
 }
@@ -6488,6 +6537,24 @@ $("impOut").addEventListener("click", (e) => {
   $("impOut").innerHTML = ""; $("impText").value = ""; IMP_FOUND = [];
 });
 $("impBox").addEventListener("toggle", () => { if ($("impBox").open) renderImport(); });
+const muImpNote = () => {
+  const a = st.muActual, on = !!(a && a.week === weekDays()[0]);
+  $("muImpClear").hidden = !on;
+  $("muImpNote").textContent = on ? `התוצאה עד ${new Date(a.ts).toLocaleString("he-IL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" })} נלקחה מאתר הליגה (${Object.keys(a.teams).map((t) => teamName(Number(t))).join(", ")})` : "";
+};
+$("muImpRead").addEventListener("click", () => {
+  const got = muParse($("muImpText").value);
+  if (!got) { $("muImpNote").textContent = "לא נמצאה טבלת התוצאה. ודאו שהעתקתם את כל עמוד המצ'אפ."; return; }
+  const teams = {}, miss = [];
+  for (const [nm, row] of Object.entries(got)) { const t = txTeam(nm); if (t == null) miss.push(nm); else teams[t] = row; }
+  if (!Object.keys(teams).length) { $("muImpNote").textContent = `שמות הקבוצות (${miss.join(", ")}) לא תואמים לשמות כאן. עדכנו את שמות הקבוצות בהגדרות הליגה.`; return; }
+  st.muActual = { week: weekDays()[0], ts: Date.now(), teams };
+  saveSettings(); MU = null; renderMatchup(); muImpNote();
+  $("muImpText").value = "";
+  showToast(`התוצאה עודכנה מאתר הליגה${miss.length ? ` (לא זוהו: ${miss.join(", ")})` : ""}`);
+});
+$("muImpClear").addEventListener("click", () => { st.muActual = null; saveSettings(); MU = null; renderMatchup(); muImpNote(); });
+$("muImpBox").addEventListener("toggle", () => { if ($("muImpBox").open) muImpNote(); });
 // ---------- import a whole draft from the league's site ----------
 // The draft summary's pick board: the teams in draft order (mine marked) and a column of picks under each team, round
 // by round (in a snake draft every second round is picked from the last column back, which the board's arrows show). Read from the page's layout when it
