@@ -6446,8 +6446,8 @@ $("impOut").addEventListener("click", (e) => {
 });
 $("impBox").addEventListener("toggle", () => { if ($("impBox").open) renderImport(); });
 // ---------- import a whole draft from the league's site ----------
-// The draft summary's pick board: the teams in draft order (mine marked), then every pick in the order made (in a
-// snake draft every second round runs backwards, which the board's arrows show). Read from the page's layout when it
+// The draft summary's pick board: the teams in draft order (mine marked) and a column of picks under each team, round
+// by round (in a snake draft every second round is picked from the last column back, which the board's arrows show). Read from the page's layout when it
 // was pasted with it, else from the plain text (team names, then "round.pick" and the player's name twice).
 let DR = null, DR_HTML = null, DR_HTML_TEXT = null, DR_UNDO = null;
 function drFromHtml(html) {
@@ -6489,10 +6489,12 @@ function drBuild() {
   const src = DR_HTML && DR_HTML_TEXT === $("drText").value ? DR_HTML : drFromText($("drText").value);
   if (!src) { DR = null; return; }
   const n = src.teams.length;
+  // the board has a column per team: a pick belongs to its column's team in every round. In a snake draft the even
+  // rounds are picked from the last column back, which only sets the order the picks are kept in here
   const rows = src.picks.map((raw, k) => {
     const r = Math.floor(k / n), i = k % n;
-    return { raw, k, t: src.snake && r % 2 === 1 ? n - 1 - i : i, p: raw ? txPlayer(raw) : null };
-  }).filter((x) => x.raw);
+    return { raw, k, t: i, seq: r * n + (src.snake && r % 2 === 1 ? n - 1 - i : i), p: raw ? txPlayer(raw) : null };
+  }).filter((x) => x.raw).sort((a, b) => a.seq - b.seq);
   // a name two players fit about as well: not one already drafted, else the better known one
   const used = new Set(rows.filter((x) => x.p).map((x) => x.p.id));
   for (const x of rows) if (!x.p) { x.p = txClosest(x.raw, (p) => (used.has(p.id) ? -1e9 : seasonValue(p))); if (x.p) used.add(x.p.id); }
