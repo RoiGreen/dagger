@@ -5776,9 +5776,16 @@ function renderMatchup() {
   // a sortable header cell of the roster table; the arrow shows the order in use
   const rsTh = (k, l, tip = "") => `<th class="nosort${MU_RSORT?.k === k ? " sorted" : ""}"${tip ? ` data-tip="${esc(tip)}"` : ""}><button type="button" class="rsort" data-murs="${k}">${l}${MU_RSORT?.k === k ? (MU_RSORT.asc ? " ▲" : " ▼") : ""}</button></th>`;
   const rosterTable = (side, t, roster, T, il, title) => {
-    const active = roster.filter((p) => !il.has(p.id));
-    // the lineup shown: the one I set, or the strongest one (each slot filled once, the rest on the bench)
     const d = MU_DAY;
+    // the roster of that day (from the moves' dates): one let go later is still in it, one added later is not yet
+    const gone = dayFormer(t, d, roster), goneIds = new Set(gone.map((p) => p.id));
+    const notYet = new Set(roster.filter((p) => heldOn(t, p, d) === false).map((p) => p.id));
+    const activeNow = roster.filter((p) => !il.has(p.id));
+    const dayRoster = [...roster.filter((p) => !notYet.has(p.id)), ...gone];
+    const active = dayRoster.filter((p) => !il.has(p.id));
+    const leftOn = (p) => { const e = (st.txHist || []).filter((x) => x.t === t && x.id === p.id && x.dir === "out").sort((a, b) => a.ts - b.ts).find((x) => x.ts > Date.parse(`${d}T00:00:00-04:00`));
+      return e ? new Date(e.ts).toLocaleString("he-IL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" }) : ""; };
+    // the lineup shown: the one I set, or the strongest one (each slot filled once, the rest on the bench)
     const manual = !!st.daySlots?.[d]?.[t];
     const shown = slotsOf(t, active, d, T);
     const used = {};
@@ -5786,7 +5793,7 @@ function renderMatchup() {
     // in lineup order, like the league app: PG SG G SF PF F C C UTIL UTIL, then the bench, then IL
     const ORDER = ["PG", "SG", "G", "SF", "PF", "F", "C", "UTIL", "BN"];
     const at = (p) => (il.has(p.id) ? 99 : ORDER.indexOf(shown[p.id] || "BN"));
-    const W = new Map(roster.map((p) => [p.id, playerWeek(p, T)]));
+    const W = new Map(dayRoster.map((p) => [p.id, playerWeek(p, T)]));
     const colVal = (p, k) => {
       const w = W.get(p.id), pp = PCT_PARTS[k];
       return k === "starts" ? w.starts : pp ? (w.o[pp[1]] ? w.o[pp[0]] / w.o[pp[1]] : -1) : w.o[k] ?? 0;
@@ -5795,7 +5802,7 @@ function renderMatchup() {
     const order = rs ? (a, b) => (il.has(a.id) - il.has(b.id)) || (rs.k === "name" ? a.name.localeCompare(b.name) * (rs.asc ? 1 : -1)
       : (colVal(a, rs.k) - colVal(b, rs.k)) * (rs.asc ? 1 : -1))
       : (a, b) => at(a) - at(b) || muValue(b) - muValue(a);
-    const rows = [...roster].sort(order).map((p) => {
+    const rows = [...dayRoster].sort(order).map((p) => {
       const w = W.get(p.id), onIL = il.has(p.id);
       const cur = shown[p.id] || "BN";
       const cd = T.cell.get(`${p.id}|${d}`), plays = !!cd && !cd.out;  // no game that day: bench only
@@ -5804,7 +5811,8 @@ function renderMatchup() {
       const full = (n) => n !== "BN" && n !== cur && (used[n] || 0) >= SLOT_CAP[n];
       const slotSel = `<select class="mslot${manual ? " set" : ""}" data-muslot="${t}|${p.id}" aria-label="עמדה בהרכב" title="איפה הוא משובץ בהרכב">
         ${[...can, "BN"].filter((n) => !full(n)).map((n) => `<option value="${n}"${n === cur ? " selected" : ""}>${n}</option>`).join("")}</select>`;
-      const acts = onIL ? `<button type="button" class="mact" data-muback="${t}|${p.id}">חזרה מ־<bdi>${onILPlus(t, p.id) ? "IL+" : "IL"}</bdi></button>`
+      const acts = goneIds.has(p.id) ? `<small class="pvtag out" title="שוחרר ${esc(leftOn(p))}">עזב ${esc(leftOn(p).split(",")[0])}</small>`
+        : onIL ? `<button type="button" class="mact" data-muback="${t}|${p.id}">חזרה מ־<bdi>${onILPlus(t, p.id) ? "IL+" : "IL"}</bdi></button>`
         : `${(() => {
           const k = ilRoom(p, t), kind = ilKind(p);
           if (k) return `<button type="button" class="mact" data-muil="${t}|${p.id}|${k}">${k === "il" ? "IL" : "IL+"}</button>`;
@@ -5819,7 +5827,7 @@ function renderMatchup() {
         return c?.out ? `<small class="pday out">OUT</small>` : c ? `<small class="pday">${esc(c.gm ? `${c.gm.g.h === p.team26 ? "" : "@"}${c.gm.opp}` : c.r ? `${c.r[2] ? "" : "@"}${c.r[1]}` : "")}</small>` : `<small class="pday none">אין משחק</small>`; })()}${p.hurt ? injuryPill(p) : ""}</td>
         <td>${onIL ? `<bdi>${onILPlus(t, p.id) ? "IL+" : "IL"}</bdi>` : `${g1(w.starts)}/${w.games}`}</td><td class="mslotc">${onIL ? "" : slotSel}</td>${CATS.map((c) => `<td>${onIL ? "" : cell9(w.o, c.k)}</td>`).join("")}<td class="macts">${acts}</td></tr>`;
     }).join("");
-    const full = active.length >= st.roster;
+    const full = activeNow.length >= st.roster;
     const gs = dayGuests(t, d);
     const guestBox = `<div class="muguest"><span>שחקן ליום ${esc(dayLabel(d))} בלבד</span>
       ${gs.map((p) => `<span class="gchip"><span class="pn" data-pcard="${p.id}">${esc(p.name)}</span><button type="button" data-muguestx="${t}|${d}|${p.id}" aria-label="הסרה">✕</button></span>`).join("")}
