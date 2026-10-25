@@ -6485,8 +6485,13 @@ function txBuild() {
     const t = txTeam(c.team), t2 = c.team2 ? txTeam(c.team2) : null, old = !!(st.txLast && c.ts <= st.txLast);
     let moves;
     if (c.trade) {
-      // a trade: a player now on one team goes to the other ("to" = the team he goes to)
-      moves = c.rows.map((r) => {
+      // a trade: the league's page lists what the first team gets, then what the second one gets (as with a free
+      // agent move: in first, out second), so an even trade splits in half. An odd one (2 for 1) is read from the
+      // rosters here: a player now on one team goes to the other ("to" = the team he goes to)
+      if (c.rows.length % 2 === 0) {
+        const half = c.rows.length / 2;
+        moves = c.rows.map((r, i) => ({ ...r, dir: "trade", to: i < half ? t : t2, on: true }));
+      } else moves = c.rows.map((r) => {
         const at = r.p ? where.get(r.p.id) : null;
         const to = at === t ? t2 : at === t2 ? t : null;
         return { ...r, dir: "trade", to, on: true };
