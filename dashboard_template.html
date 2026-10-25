@@ -6372,6 +6372,28 @@ function txPlayer(raw) {
   const found = importFind(raw);
   return found.length === 1 ? found[0] : null;
 }
+// the players closest to a Hebrew name, best first (for the pick list next to each move)
+function txRank(raw, n = 8) {
+  const words = HEB_NORM(raw).split(/[^א-ת]+/).filter((w) => w.length > 1);
+  if (!words.length) return [];
+  const lev = (a, b) => {
+    const m = a.length, k = b.length; if (!m || !k) return Math.max(m, k);
+    let prev = Array.from({ length: k + 1 }, (_, j) => j);
+    for (let i = 1; i <= m; i++) { const cur = [i]; for (let j = 1; j <= k; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = cur; }
+    return prev[k];
+  };
+  const sim = (a, b) => (!a.length || !b.length ? 0 : 1 - lev(a, b) / Math.max(a.length, b.length));
+  let ws = words.filter((w, i) => i === 0 || !/^(גוניור|גוניר|הבן|השני|השלישי)$/.test(w));
+  if (ws.length >= 3 && ws[0].length <= 2 && ws[1].length <= 3) ws = [ws[0] + ws[1], ...ws.slice(2)];
+  const f = HEB_SKEL(ws[0]), l = HEB_SKEL(ws.slice(1).join("") || ws[0]);
+  return players.filter((x) => x.team26 || x.L).map((p) => {
+    const parts = IMP_NORM(p.name).replace(/ (jr|sr|ii|iii|iv)$/, "").split(" ");
+    const last = parts.slice(1).join("") || parts[0];
+    const sf = Math.max(sim(f, HEB_SKEL(hebrewGuess(parts[0]))), sim(f, HEB_SKEL(hebrewGuess(parts[0].replace(/j/g, "y")))));
+    const sl = Math.max(sim(l, HEB_SKEL(hebrewGuess(last))), sim(l, HEB_SKEL(hebrewGuess(last.replace(/j/g, "y")))));
+    return { p, sc: 0.4 * sf + 0.6 * sl };
+  }).sort((a, b) => b.sc - a.sc).slice(0, n).map((x) => x.p);
+}
 function txClosest(raw) {
   const words = HEB_NORM(raw).split(/[^א-ת]+/).filter((w) => w.length > 1);
   const en = IMP_NORM(raw).split(" ").filter((w) => /[a-z]/.test(w));
@@ -6491,7 +6513,10 @@ function renderTx() {
       ${c.moves.map((m, mi) => `<div class="txm${m.on && !c.old ? "" : " off"}"><label><input type="checkbox" data-txon="${ci}|${mi}"${m.on && !c.old ? " checked" : ""}></label>
         <button type="button" class="txdir ${m.dir}" data-txdir="${ci}|${mi}" title="לחיצה: הפוך כיוון">${m.dir === "in" ? "▲ נכנס" : m.dir === "out" ? "▼ יוצא" : `⇄ ל־${m.to != null ? esc(teamName(m.to)) : "?"}`}</button>
         ${m.p ? `<span class="pn">${esc(m.p.name)}</span>` : `<span class="impwarn">לא זוהה</span>`} <small>${esc(m.raw)}</small>
-        <input class="txfix" list="impAll2" data-txfix="${ci}|${mi}" placeholder="${m.p ? "תיקון…" : "בחרו שחקן…"}" autocomplete="off"></div>`).join("")}</li>`).join("")}</ol>
+        <select class="txfix" data-txpick="${ci}|${mi}" aria-label="איזה שחקן זה">${(() => {
+          const opts = txRank(m.raw); if (m.p && !opts.includes(m.p)) opts.unshift(m.p);
+          return `<option value="">${m.p ? "תיקון…" : "בחרו שחקן…"}</option>` + opts.map((x) => `<option value="${x.id}"${m.p === x ? " selected" : ""}>${esc(x.name)} · ${esc(x.team26 || "")}</option>`).join("") + `<option value="other">שחקן אחר…</option>`;
+        })()}</select>${m.other ? `<input class="txfix" list="impAll2" data-txfix="${ci}|${mi}" placeholder="שם באנגלית…" autocomplete="off">` : ""}</div>`).join("")}</li>`).join("")}</ol>
     <datalist id="impAll2">${players.filter((p) => p.team26).map((p) => `<option value="${esc(p.name)}"></option>`).join("")}</datalist>
     <button type="button" class="mact on" id="txApply"${unmapped.length ? " disabled" : ""}>עדכון הסגלים${unmapped.length ? " (קודם שייכו את הקבוצות)" : ""}</button>`;
 }
@@ -6499,6 +6524,17 @@ $("txRead").addEventListener("click", () => { txBuild(); renderTx(); });
 $("txOut").addEventListener("change", (e) => {
   const mp = e.target.closest("[data-txmap]");
   if (mp) { st.teamMap = st.teamMap || {}; if (mp.value === "") delete st.teamMap[mp.dataset.txmap]; else st.teamMap[mp.dataset.txmap] = Number(mp.value); saveSettings(); txBuild(); return renderTx(); }
+  const pk = e.target.closest("[data-txpick]");
+  if (pk) {
+    const [ci, mi] = pk.dataset.txpick.split("|").map(Number), m = TX[ci].moves[mi];
+    if (pk.value === "other") { m.other = true; return renderTx(); }
+    const p = PLAYER_BY_ID.get(Number(pk.value));
+    if (!p) return;
+    m.p = p; m.other = false;
+    // remember: this spelling is this player from now on
+    st.nameAlias = st.nameAlias || {}; st.nameAlias[aliasKey(m.raw)] = p.id; saveSettings();
+    return renderTx();
+  }
   const on = e.target.closest("[data-txon]");
   if (on) { const [ci, mi] = on.dataset.txon.split("|").map(Number); TX[ci].moves[mi].on = on.checked; if (on.checked) TX[ci].old = false; return renderTx(); }
 });
