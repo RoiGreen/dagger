@@ -5232,7 +5232,9 @@ function planWeek(roster, il, team, swap = null) {
     const started = (p) => { const gm = gameOn(p.team26, d); return !!gm && gm.g.t <= new Date(); };
     const on = swap && d >= swap.from;
     const sameDay = on && d === swap.from;
-    const who = roster.filter((p) => !il.has(p.id) && heldOn(team, p, d) !== false && !(on && p.id === swap.drop && !(sameDay && started(p))));
+    // a player put on the IL automatically (by his injury now) still counts for the days already played: he was active then
+    const dayPast = d <= LOG_END && !MU.pre, autoIL = new Set(st.ilAuto?.[team] || []);
+    const who = roster.filter((p) => (!il.has(p.id) || (dayPast && autoIL.has(p.id))) && heldOn(team, p, d) !== false && !(on && p.id === swap.drop && !(sameDay && started(p))));
     if (on && !(sameDay && started(swap.add))) who.push(swap.add);
     const guests = [...dayGuests(team, d), ...dayFormer(team, d, roster)].filter((p, i, L) => !who.includes(p) && L.indexOf(p) === i);
     who.push(...guests);
