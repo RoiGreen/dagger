@@ -5140,6 +5140,42 @@ const zeroLine = () => Object.fromEntries([...MU_KEYS, "FP"].map((k) => [k, 0]))
 const dayGuests = (team, d) => ((st.dayGuests || {})[team]?.[d] || []).map((id) => PLAYER_BY_ID.get(id)).filter(Boolean);
 // the one-day players of a team in the week shown
 const weekGuests = (team) => { const ids = new Set(); for (const d of weekDays()) for (const p of dayGuests(team, d)) ids.add(p.id); return [...ids].map((id) => PLAYER_BY_ID.get(id)); };
+// Roster history: every move with its time (from the league's transactions page, or a move made here), so a week's
+// matchup counts each player only for the games he was on the team: one picked up on Wednesday counts from then, one
+// let go on Thursday still counts until then. A game counts for the team that held him when it tipped off.
+const TXH_DAYS = 35;
+function txHistAdd(id, t, dir, ts = Date.now()) {
+  const cut = Date.now() - TXH_DAYS * 864e5;
+  st.txHist = [...(st.txHist || []).filter((e) => e.ts >= cut && !(e.id === id && e.t === t && e.ts === ts)), { id, t, dir, ts }];
+}
+const gameMoment = (p, d) => { const g = MU?.games?.get(`${p.team26}|${d}`); return g ? new Date(g.t).getTime() : Date.parse(`${d}T23:59:00-04:00`); };
+// the moves by team and player, sorted by time (built again whenever the history changes)
+let TXH_REF = null, TXH_IX = new Map();
+function txhIndex() {
+  if (TXH_REF === st.txHist) return TXH_IX;
+  TXH_REF = st.txHist; TXH_IX = new Map();
+  for (const e of [...(st.txHist || [])].sort((a, b) => a.ts - b.ts)) {
+    const k = `${e.t}|${e.id}`;
+    (TXH_IX.get(k) || TXH_IX.set(k, []).get(k)).push(e);
+  }
+  return TXH_IX;
+}
+// on the team at that moment: true / false, or null when no move of his says (then the roster as it is decides)
+function heldAt(team, id, at) {
+  const ev = txhIndex().get(`${team}|${id}`);
+  if (!ev) return null;
+  let last = null;
+  for (const e of ev) if (e.ts <= at) last = e;
+  return last ? last.dir === "in" : ev[0].dir === "out";
+}
+const heldOn = (team, p, d) => (txhIndex().has(`${team}|${p.id}`) ? heldAt(team, p.id, gameMoment(p, d)) : null);
+// players let go during the week, on the days they were still on the team
+function dayFormer(team, d, roster) {
+  if (!st.txHist?.length) return [];
+  const ids = new Set(st.txHist.filter((e) => e.t === team).map((e) => e.id));
+  return [...ids].filter((id) => !roster.some((p) => p.id === id)).map((id) => PLAYER_BY_ID.get(id)).filter((p) => p && heldOn(team, p, d) === true);
+}
+const weekFormer = (team, roster) => { const ids = new Set(); for (const d of weekDays()) for (const p of dayFormer(team, d, roster)) ids.add(p.id); return [...ids].map((id) => PLAYER_BY_ID.get(id)); };
 function planWeek(roster, il, team, swap = null) {
   const T = { done: zeroLine(), mean: zeroLine(), v: zeroLine(), covFG: 0, covFT: 0, covF3: 0, starts: 0, played: 0, gamesAll: 0, days: [], cell: new Map() };
   for (const d of weekDays()) {
@@ -5148,9 +5184,9 @@ function planWeek(roster, il, team, swap = null) {
     const started = (p) => { const gm = gameOn(p.team26, d); return !!gm && gm.g.t <= new Date(); };
     const on = swap && d >= swap.from;
     const sameDay = on && d === swap.from;
-    const who = roster.filter((p) => !il.has(p.id) && !(on && p.id === swap.drop && !(sameDay && started(p))));
+    const who = roster.filter((p) => !il.has(p.id) && heldOn(team, p, d) !== false && !(on && p.id === swap.drop && !(sameDay && started(p))));
     if (on && !(sameDay && started(swap.add))) who.push(swap.add);
-    const guests = dayGuests(team, d).filter((p) => !who.includes(p));
+    const guests = [...dayGuests(team, d), ...dayFormer(team, d, roster)].filter((p, i, L) => !who.includes(p) && L.indexOf(p) === i);
     who.push(...guests);
     const cands = [], all = [];  // all: every scheduled game, injured or not (for the games count only)
     for (const p of who) {
@@ -5336,12 +5372,14 @@ function muMove(team, addId, dropId, kind) {
     const i = picks.findIndex((x) => x.id === dropId && x.team === team);
     if (i >= 0 && addId) { picks[i] = { id: addId, team }; addId = null; }
     else if (i >= 0) picks.splice(i, 1);
+    txHistAdd(dropId, team, "out");
     if (team === me && st.tags[dropId] === "m") delete st.tags[dropId];
     st.il[team] = (st.il[team] || []).filter((id) => id !== dropId);
     st.ilp[team] = (st.ilp[team] || []).filter((id) => id !== dropId);
   }
   if (addId) picks.push({ id: addId, team });
   if (added) {
+    txHistAdd(added, team, "in");
     delete st.tags[added];  // a table mark of the newcomer would contradict his new team
     if (added) setAdds(team, addsUsed(team) + 1);
   }
@@ -5594,7 +5632,10 @@ function renderMatchup() {
     if (!MU_DAY || !days.includes(MU_DAY)) MU_DAY = days.includes(td) ? td : days[0]; }
   const pvOn = gridSide === "a" && PV;
   const gT = gridSide === "b" ? st.muOpp : me;
-  const extra = weekGuests(gT).filter((p) => !(gridSide === "b" ? oppP : mineP).includes(p));
+  const gRoster = gridSide === "b" ? oppP : mineP;
+  const former = new Set(weekFormer(gT, gRoster).map((p) => p.id));
+  const extra = [...weekGuests(gT), ...weekFormer(gT, gRoster)].filter((p, i, L) => !gRoster.includes(p) && L.indexOf(p) === i);
+  const joined = (p) => (st.txHist || []).some((e) => e.t === gT && e.id === p.id && e.dir === "in" && weekDays().includes(etDay(new Date(e.ts))));
   const G = gridSide === "b" ? { roster: [...oppP, ...extra], T: B, il: ilB }
     : pvOn ? { roster: [PV.X, ...mineP, ...extra], T: PV.A2, il: ilA } : { roster: [...mineP, ...extra], T: A, il: ilA };
   const guestIds = new Set(extra.map((p) => p.id));
@@ -5631,7 +5672,7 @@ function renderMatchup() {
       return `<td class="dg ${cls}${c.lock ? " locked" : ""}${click ? " clk" : ""}" title="${tip}"${click}><span>${esc(opp)}</span>${c.slot ? `<small>${c.slot}</small>` : c.out ? "<small>OUT</small>" : `<small>BN</small>`}</td>`;
     }).join("");
     const pvTag = p.id === pvIn ? `<small class="pvtag in">פיק אפ - נכנס</small>` : p.id === pvOut ? `<small class="pvtag out">פיק אפ - יוצא</small>`
-      : guestIds.has(p.id) ? `<small class="pvtag in">ליום אחד</small>` : "";
+      : former.has(p.id) ? `<small class="pvtag out">עזב</small>` : guestIds.has(p.id) ? `<small class="pvtag in">ליום אחד</small>` : joined(p) ? `<small class="pvtag in">נוסף</small>` : "";
     return `<tr class="${[G.il.has(p.id) && p.id !== pvOut ? "ilrow" : "", p.id === pvIn ? "pvin" : p.id === pvOut ? "pvout" : ""].filter(Boolean).join(" ")}"><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span>${pvTag}</span>${G.il.has(p.id) ? `<small class="iltag">IL</small>` : ""}</td>${cells}</tr>`;
   }).join("");
   // Why this lineup: what the choice leans on, and who sits on busy days
@@ -6191,10 +6232,13 @@ const HEB_NORM = (s) => s.replace(/[\u05f3\u05f4'"`׳״’‘-]/g, "").replace(/
 function hebrewGuess(word) {
   // a rough English to Hebrew spelling, enough to tell names apart once the full name is compared
   let w = word.toLowerCase(), out = "";
+  // initials ("CJ", "PJ", "RJ"): said letter by letter, as Hebrew writes them
+  const LETTER = { a: "איי", b: "בי", c: "סי", d: "די", g: "גי", j: "גיי", k: "קיי", o: "או", p: "פי", r: "אר", t: "טי" };
+  if (/^[a-z]{2}$/.test(w) && !/[aeiou]/.test(w.slice(1)) && [...w].every((c) => LETTER[c])) return [...w].map((c) => LETTER[c]).join("");
   const pairs = [["sch", "ש"], ["tch", "צ"], ["sh", "ש"], ["ch", "צ"], ["th", "ת"], ["ph", "פ"], ["kh", "ח"], ["zh", "ז"], ["ck", "ק"], ["qu", "קו"],
     ["oo", "ו"], ["ee", "י"], ["ea", "י"], ["ou", "או"], ["ai", "יי"], ["ay", "יי"], ["ey", "י"], ["ie", "י"], ["oa", "ו"], ["au", "או"],
-    ["a", "א"], ["b", "ב"], ["c", "ק"], ["d", "ד"], ["e", ""], ["f", "פ"], ["g", "ג"], ["h", "ה"], ["i", "י"], ["j", "ג"], ["k", "ק"], ["l", "ל"],
-    ["m", "מ"], ["n", "נ"], ["o", "ו"], ["p", "פ"], ["q", "ק"], ["r", "ר"], ["s", "ס"], ["t", "ט"], ["u", "ו"], ["v", "ב"], ["w", "ו"], ["x", "קס"], ["y", "י"], ["z", "ז"]];
+    ["ce", "ס"], ["ci", "סי"], ["cy", "סי"], ["a", "א"], ["b", "ב"], ["c", "ק"], ["d", "ד"], ["e", ""], ["f", "פ"], ["g", "ג"], ["h", "ה"], ["i", "י"], ["j", "ג"], ["k", "ק"], ["l", "ל"],
+    ["m", "מ"], ["n", "נ"], ["o", "ו"], ["p", "פ"], ["q", "ק"], ["r", "ר"], ["s", "ס"], ["t", "ט"], ["u", "ו"], ["v", "ו"], ["w", "ו"], ["x", "קס"], ["y", "י"], ["z", "ז"]];
   for (let i = 0; i < w.length;) {
     const hit = pairs.find(([a]) => w.startsWith(a, i));
     if (!hit) { i++; continue; }
@@ -6433,7 +6477,9 @@ function txClosest(raw) {
     const last = parts.slice(1).join("");
     const sf = Math.max(sim(f, HEB_SKEL(hebrewGuess(parts[0]))), sim(f, HEB_SKEL(hebrewGuess(parts[0].replace(/j/g, "y")))));
     const sl = Math.max(sim(l, HEB_SKEL(hebrewGuess(last))), sim(l, HEB_SKEL(hebrewGuess(last.replace(/j/g, "y")))));
-    if (sl < 0.75) continue;  // the last name has to be close
+    // a short first name ("Nic", "Alex") is the start of the full one
+    const fg = HEB_SKEL(hebrewGuess(parts[0])), pre = f.length >= 2 && fg.length >= 2 && (f.startsWith(fg) || fg.startsWith(f));
+    if (sl < 0.75 || (sf < 0.6 && !pre)) continue;  // the last name has to be close, and the first name too (a namesake missing from the data is not another player)
     const sc = 0.4 * sf + 0.6 * sl;
     if (!best || sc > best.sc) { second = best ? best.sc : 0; best = { p, sc }; } else if (sc > second) second = sc;
   }
@@ -6642,18 +6688,21 @@ $("txOut").addEventListener("click", (e) => {
       picks.length = 0; picks.push(...u.picks.map((x) => ({ ...x })));
       st.il = JSON.parse(JSON.stringify(u.il || {})); st.ilp = JSON.parse(JSON.stringify(u.ilp || {}));
       if (u.tags) st.tags = { ...u.tags };
+      if (u.txHist) st.txHist = [...u.txHist];
       st.txLast = u.txLast || null; st.txUndo = null;
       rebuildSets(); render(); flushPicks();
     } else st.txLast = null;
     saveSettings(); txBuild(); txNote(); return renderTx();
   }
   if (!e.target.closest("#txApply")) return;
-  st.txUndo = { picks: picks.map((x) => ({ ...x })), il: JSON.parse(JSON.stringify(st.il || {})), ilp: JSON.parse(JSON.stringify(st.ilp || {})), tags: { ...(st.tags || {}) }, txLast: st.txLast || null };
+  st.txUndo = { picks: picks.map((x) => ({ ...x })), il: JSON.parse(JSON.stringify(st.il || {})), ilp: JSON.parse(JSON.stringify(st.ilp || {})), tags: { ...(st.tags || {}) }, txHist: [...(st.txHist || [])], txLast: st.txLast || null };
   let n = 0, last = st.txLast || 0;
   // a player who changes team leaves his old team's IL, and his table mark ("mine" / "taken") goes: it would keep
   // him on my roster after he was released, or contradict his new team
-  const leave = (id, from, to) => {
+  const leave = (id, from, to, ts) => {
     delete st.tags[id];
+    if (from != null && from !== to) txHistAdd(id, from, "out", ts);
+    if (to != null && to !== from) txHistAdd(id, to, "in", ts);
     if (from == null || from === to) return;
     for (const key of ["il", "ilp"]) if (st[key]?.[from]) st[key][from] = st[key][from].filter((x) => x !== id);
   };
@@ -6664,12 +6713,12 @@ $("txOut").addEventListener("click", (e) => {
       if (c.old) continue;
       const i = picks.findIndex((x) => x.id === m.p.id);
       const from = i >= 0 ? picks[i].team : null;
-      if (m.dir === "trade") { if (m.to == null) continue; if (i >= 0) picks.splice(i, 1); picks.push({ id: m.p.id, team: m.to }); leave(m.p.id, from, m.to); n++; continue; }
-      if (m.dir === "in") { if (i >= 0) picks.splice(i, 1); picks.push({ id: m.p.id, team: c.t }); leave(m.p.id, from, c.t); n++; }
+      if (m.dir === "trade") { if (m.to == null) continue; if (i >= 0) picks.splice(i, 1); picks.push({ id: m.p.id, team: m.to }); leave(m.p.id, from, m.to, c.ts); n++; continue; }
+      if (m.dir === "in") { if (i >= 0) picks.splice(i, 1); picks.push({ id: m.p.id, team: c.t }); leave(m.p.id, from, c.t, c.ts); if (from === c.t) txHistAdd(m.p.id, c.t, "in", c.ts); n++; }
       else if (i >= 0 || st.tags[m.p.id]) {
         // released: off the team (also when Dagger had him on another team by mistake: he is a free agent now)
         if (i >= 0) picks.splice(i, 1);
-        leave(m.p.id, from, null); n++;
+        leave(m.p.id, from ?? c.t, null, c.ts); n++;
       }
     }
     last = Math.max(last, c.ts);
