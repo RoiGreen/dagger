@@ -6331,6 +6331,10 @@ $("impOut").addEventListener("click", (e) => {
   const t = Number($("impTeam").value), ids = new Set(IMP_FOUND.map((p) => p.id));
   // the team's roster becomes the players found; a player found on another team moves here
   const kept = picks.filter((x) => x.team !== t && !ids.has(x.id));
+  // a player found here leaves his old team's IL; table marks of the found players, and my "mine" marks when this is
+  // my team, go (a mark would keep a player on my roster who is no longer there)
+  for (const x of picks) if (ids.has(x.id) && x.team !== t) for (const key of ["il", "ilp"]) if (st[key]?.[x.team]) st[key][x.team] = st[key][x.team].filter((id) => id !== x.id);
+  for (const id of Object.keys(st.tags)) if (ids.has(Number(id)) || (t === myIdx() && st.tags[id] === "m")) delete st.tags[id];
   picks.length = 0;
   picks.push(...kept, ...IMP_FOUND.map((p) => ({ id: p.id, team: t })));
   // IL marks of players no longer on the team go; the page's IL / IL+ spots are taken as they are
@@ -6637,27 +6641,35 @@ $("txOut").addEventListener("click", (e) => {
     if (u) {
       picks.length = 0; picks.push(...u.picks.map((x) => ({ ...x })));
       st.il = JSON.parse(JSON.stringify(u.il || {})); st.ilp = JSON.parse(JSON.stringify(u.ilp || {}));
+      if (u.tags) st.tags = { ...u.tags };
       st.txLast = u.txLast || null; st.txUndo = null;
       rebuildSets(); render(); flushPicks();
     } else st.txLast = null;
     saveSettings(); txBuild(); txNote(); return renderTx();
   }
   if (!e.target.closest("#txApply")) return;
-  st.txUndo = { picks: picks.map((x) => ({ ...x })), il: JSON.parse(JSON.stringify(st.il || {})), ilp: JSON.parse(JSON.stringify(st.ilp || {})), txLast: st.txLast || null };
+  st.txUndo = { picks: picks.map((x) => ({ ...x })), il: JSON.parse(JSON.stringify(st.il || {})), ilp: JSON.parse(JSON.stringify(st.ilp || {})), tags: { ...(st.tags || {}) }, txLast: st.txLast || null };
   let n = 0, last = st.txLast || 0;
+  // a player who changes team leaves his old team's IL, and his table mark ("mine" / "taken") goes: it would keep
+  // him on my roster after he was released, or contradict his new team
+  const leave = (id, from, to) => {
+    delete st.tags[id];
+    if (from == null || from === to) return;
+    for (const key of ["il", "ilp"]) if (st[key]?.[from]) st[key][from] = st[key][from].filter((x) => x !== id);
+  };
   for (const c of TX) {
     if (c.t == null) continue;
     for (const m of c.moves) {
       if (!m.on || !m.p || (c.old && !m.on)) continue;
       if (c.old) continue;
       const i = picks.findIndex((x) => x.id === m.p.id);
-      if (m.dir === "trade") { if (m.to == null) continue; if (i >= 0) picks.splice(i, 1); picks.push({ id: m.p.id, team: m.to }); n++; continue; }
-      if (m.dir === "in") { if (i >= 0) picks.splice(i, 1); picks.push({ id: m.p.id, team: c.t }); n++; }
-      else if (i >= 0) {
+      const from = i >= 0 ? picks[i].team : null;
+      if (m.dir === "trade") { if (m.to == null) continue; if (i >= 0) picks.splice(i, 1); picks.push({ id: m.p.id, team: m.to }); leave(m.p.id, from, m.to); n++; continue; }
+      if (m.dir === "in") { if (i >= 0) picks.splice(i, 1); picks.push({ id: m.p.id, team: c.t }); leave(m.p.id, from, c.t); n++; }
+      else if (i >= 0 || st.tags[m.p.id]) {
         // released: off the team (also when Dagger had him on another team by mistake: he is a free agent now)
-        const from = picks[i].team;
-        picks.splice(i, 1); n++;
-        for (const key of ["il", "ilp"]) if (st[key]?.[from]) st[key][from] = st[key][from].filter((id) => id !== m.p.id);
+        if (i >= 0) picks.splice(i, 1);
+        leave(m.p.id, from, null); n++;
       }
     }
     last = Math.max(last, c.ts);
