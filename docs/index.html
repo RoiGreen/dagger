@@ -5687,6 +5687,13 @@ function renderMatchup() {
   const former = new Set(weekFormer(gT, gRoster).map((p) => p.id));
   const extra = [...weekGuests(gT), ...weekFormer(gT, gRoster)].filter((p, i, L) => !gRoster.includes(p) && L.indexOf(p) === i);
   const joined = (p) => (st.txHist || []).some((e) => e.t === gT && e.id === p.id && e.dir === "in" && weekDays().includes(etDay(new Date(e.ts))));
+  // the tag says when: "נוסף 20.10" / "עזב 22.10", and every move of his with this team (date and hour) on hover
+  const when = (ts, hour) => new Date(ts).toLocaleString("he-IL", hour ? { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" } : { day: "numeric", month: "numeric" });
+  const moveTag = (p, dir) => {
+    const ev = (st.txHist || []).filter((e) => e.t === gT && e.id === p.id).sort((a, b) => a.ts - b.ts), last = ev.filter((e) => e.dir === dir).pop();
+    const tip = ev.map((e) => `${e.dir === "in" ? "נוסף" : "עזב"} ${when(e.ts, true)}`).join(" · ");
+    return `<small class="pvtag ${dir}" title="${esc(tip)}">${dir === "in" ? "נוסף" : "עזב"}${last ? ` ${when(last.ts)}` : ""}</small>`;
+  };
   const G = gridSide === "b" ? { roster: [...oppP, ...extra], T: B, il: ilB }
     : pvOn ? { roster: [PV.X, ...mineP, ...extra], T: PV.A2, il: ilA } : { roster: [...mineP, ...extra], T: A, il: ilA };
   const guestIds = new Set(extra.map((p) => p.id));
@@ -5723,7 +5730,7 @@ function renderMatchup() {
       return `<td class="dg ${cls}${c.lock ? " locked" : ""}${click ? " clk" : ""}" title="${tip}"${click}><span>${esc(opp)}</span>${c.slot ? `<small>${c.slot}</small>` : c.out ? "<small>OUT</small>" : `<small>BN</small>`}</td>`;
     }).join("");
     const pvTag = p.id === pvIn ? `<small class="pvtag in">פיק אפ - נכנס</small>` : p.id === pvOut ? `<small class="pvtag out">פיק אפ - יוצא</small>`
-      : former.has(p.id) ? `<small class="pvtag out">עזב</small>` : guestIds.has(p.id) ? `<small class="pvtag in">ליום אחד</small>` : joined(p) ? `<small class="pvtag in">נוסף</small>` : "";
+      : former.has(p.id) ? moveTag(p, "out") : guestIds.has(p.id) ? `<small class="pvtag in">ליום אחד</small>` : joined(p) ? moveTag(p, "in") : "";
     return `<tr class="${[G.il.has(p.id) && p.id !== pvOut ? "ilrow" : "", p.id === pvIn ? "pvin" : p.id === pvOut ? "pvout" : ""].filter(Boolean).join(" ")}"><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span>${pvTag}</span>${G.il.has(p.id) ? `<small class="iltag">IL</small>` : ""}</td>${cells}</tr>`;
   }).join("");
   // Why this lineup: what the choice leans on, and who sits on busy days
