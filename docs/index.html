@@ -6459,6 +6459,9 @@ function txBuild() {
         const to = at === t ? t2 : at === t2 ? t : null;
         return { ...r, dir: "trade", to, on: true };
       });
+      // a player not on either team here goes the other way from the ones that are known (the two sides swap)
+      const known = moves.filter((m) => m.to != null).map((m) => m.to);
+      if (known.length && new Set(known).size === 1) for (const m of moves) if (m.to == null && m.p) m.to = known[0] === t ? t2 : t;
     } else {
       const two = c.rows.length >= 2;
       moves = c.rows.map((r, i) => ({ ...r, dir: two ? (i === 0 ? "in" : "out") : (t != null && r.p && where.get(r.p.id) === t ? "out" : "in"), on: true }));
@@ -6481,7 +6484,9 @@ function renderTx() {
   const teamSel = (nm) => `<select data-txmap="${esc(nm)}"><option value="">איזו קבוצה זו?</option>${Array.from({ length: n }, (_, i) => `<option value="${i}"${txTeam(nm) === i ? " selected" : ""}>${esc(teamName(i))}</option>`).join("")}</select>`;
   const fresh = TX.filter((c) => !c.old);
   out.innerHTML = `${unmapped.length ? `<div class="txmap"><b>שייכו את שמות הקבוצות מאתר הליגה לקבוצות כאן (פעם אחת):</b>${unmapped.map((nm) => `<div class="improw"><span class="txteam">${esc(nm)}</span>${teamSel(nm)}</div>`).join("")}</div>` : ""}
-    <p class="impsum">זוהו <b>${TX.length}</b> העברות${st.txLast ? `, מתוכן <b>${fresh.length}</b> חדשות מאז הייבוא הקודם (${fmt(st.txLast)})` : ""}.</p>
+    <p class="impsum">זוהו <b>${TX.length}</b> העברות${st.txLast ? `, מתוכן <b>${fresh.length}</b> חדשות מאז הייבוא הקודם (${fmt(st.txLast)})` : ""}.
+      ${st.txLast ? `<button type="button" class="mact" id="txReset" title="${st.txUndo ? "הסגלים חוזרים למה שהיו לפני הייבוא הקודם, וההעברות נקראות מחדש" : "כל ההעברות בעמוד ייקראו מחדש"}">${st.txUndo ? "ביטול הייבוא הקודם וקריאה מחדש" : "ייבוא מחדש של הכל"}</button>` : ""}</p>
+    ${st.txLast && !fresh.length ? `<p class="munote">כל ההעברות בעמוד כבר יובאו, ולכן הן מסומנות באפור. הסגלים כבר מעודכנים לפיהן. אם הייבוא הקודם לא היה נכון, לחצו על הכפתור שלמעלה.</p>` : ""}
     <ol class="txlist">${TX.map((c, ci) => `<li class="${c.old ? "old" : ""}"><div class="txh"><span>${fmt(c.ts)}</span> <b>${esc(c.t != null ? teamName(c.t) : c.team)}</b>${c.trade ? ` ⇄ <b>${esc(c.t2 != null ? teamName(c.t2) : c.team2 || "?")}</b> <small>(טרייד)</small>` : ""}${c.old ? ` <small>(כבר יובאה)</small>` : ""}</div>
       ${c.moves.map((m, mi) => `<div class="txm${m.on && !c.old ? "" : " off"}"><label><input type="checkbox" data-txon="${ci}|${mi}"${m.on && !c.old ? " checked" : ""}></label>
         <button type="button" class="txdir ${m.dir}" data-txdir="${ci}|${mi}" title="לחיצה: הפוך כיוון">${m.dir === "in" ? "▲ נכנס" : m.dir === "out" ? "▼ יוצא" : `⇄ ל־${m.to != null ? esc(teamName(m.to)) : "?"}`}</button>
@@ -6515,7 +6520,19 @@ $("txOut").addEventListener("click", (e) => {
     if (m.dir === "trade") m.to = m.to === c.t ? c.t2 : c.t; else m.dir = m.dir === "in" ? "out" : "in";
     return renderTx();
   }
+  if (e.target.closest("#txReset")) {
+    // back to the rosters as they were before the last import, so the moves are read again from the right start
+    const u = st.txUndo;
+    if (u) {
+      picks.length = 0; picks.push(...u.picks.map((x) => ({ ...x })));
+      st.il = JSON.parse(JSON.stringify(u.il || {})); st.ilp = JSON.parse(JSON.stringify(u.ilp || {}));
+      st.txLast = u.txLast || null; st.txUndo = null;
+      rebuildSets(); render(); flushPicks();
+    } else st.txLast = null;
+    saveSettings(); txBuild(); txNote(); return renderTx();
+  }
   if (!e.target.closest("#txApply")) return;
+  st.txUndo = { picks: picks.map((x) => ({ ...x })), il: JSON.parse(JSON.stringify(st.il || {})), ilp: JSON.parse(JSON.stringify(st.ilp || {})), txLast: st.txLast || null };
   let n = 0, last = st.txLast || 0;
   for (const c of TX) {
     if (c.t == null) continue;
