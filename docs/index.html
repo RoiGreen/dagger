@@ -7513,13 +7513,14 @@ $("showSeg").addEventListener("click", (e) => {
   const b = e.target.closest("[data-show]");
   if (!b) return;
   const v = b.dataset.show;
-  // "all" clears the choice; the others add to or leave the selection (none left = everyone)
-  st.show = v === "all" ? [] : st.show.includes(v) ? st.show.filter((x) => x !== v) : [...st.show, v];
+  // one choice at a time: "all" is everyone, any other shows only that group
+  st.show = v === "all" ? [] : [v];
   update(false);
 });
 for (const id of ["onlyMoved", "noHurt"]) $(id).addEventListener("change", (e) => { st[id] = e.target.checked; update(false); });
 
 st.availSeasons = st.availSeasons.filter((i) => SEASONS[i] !== D.preseason);  // the preseason is no longer a choice
+if (st.show.length > 1) st.show = st.show.slice(0, 1);  // a saved choice of several groups, from when it was allowed
 if (!st.availSeasons.length) st.availSeasons = [SEASONS.indexOf(2025)];
 st.availSeasons = st.availSeasons.filter((i) => SEASONS[i] != null);
 if (!st.availSeasons.length) st.availSeasons = [2];
