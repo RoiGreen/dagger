@@ -3,19 +3,16 @@
 # Game logs come from stats.nba.com, which blocks GitHub's servers, so those stay on the daily
 # run on Roi's computer (run_daily.py). Times are UTC: 16:00 / 19:00 / 23:00 =
 # 18:00 / 21:00 / 01:00 Israel winter time (19:00 / 22:00 / 02:00 until the clocks change on Oct 25).
-# Scores: 03:30 / 04:15 / 05:00 / 06:30 / 08:00 UTC = 06:30 / 07:15 / 08:00 / 09:30 / 11:00 Israel summer time
-# (05:30 / 06:15 / 07:00 / 08:30 / 10:00 in winter), after the early games, the late ones and any very late finish.
+# Scores and box scores: every half hour from 23:00 to 06:30 UTC (01:00-08:30 Israel winter time, while the games
+# are played and right after), and 08:00 UTC for any very late finish. The page itself shows live scores from ESPN.
 name: Injury update
 
 on:
   schedule:
     - cron: "0 16 * * *"
     - cron: "0 19 * * *"
-    - cron: "0 23 * * *"
-    - cron: "30 3 * * *"
-    - cron: "15 4 * * *"
-    - cron: "0 5 * * *"
-    - cron: "30 6 * * *"
+    - cron: "0,30 23 * * *"
+    - cron: "0,30 0-6 * * *"
     - cron: "0 8 * * *"
   workflow_dispatch:
   push:

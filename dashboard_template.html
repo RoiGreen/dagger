@@ -748,6 +748,9 @@ table.box.murt .injpill { font-size: .66rem; padding: 0 6px; }
 .injpill[data-tip] { cursor: help; }
 th[data-tip] { text-decoration: underline dotted color-mix(in srgb, var(--muted) 60%, transparent); text-underline-offset: 4px; }
 table.dboard tfoot td { font-weight: 700; font-family: var(--font-num); border-top: 2px solid var(--line); }
+#ticker .game.inplay .time { color: var(--neg); font-weight: 800; }
+#ticker .livedot { display: inline-block; width: 6px; height: 6px; border-radius: 50%; background: var(--neg); margin-inline-end: 4px; vertical-align: middle; animation: livepulse 1.4s infinite; }
+@keyframes livepulse { 50% { opacity: .25; } }
 .toast { position: fixed; bottom: calc(18px + env(safe-area-inset-bottom, 0px)); inset-inline: 0; margin: 0 auto; width: fit-content; max-width: 90%;
   z-index: 60; background: var(--ink); color: var(--surface); padding: 10px 16px; border-radius: 10px; font-weight: 600; direction: rtl; }
 .vsnote { margin: 0; padding: 8px 12px; border-radius: 8px; font-weight: 600; background: color-mix(in srgb, var(--accent) 14%, transparent); color: var(--ink); }
@@ -2929,10 +2932,51 @@ function renderTicker() {
       <button type="button" class="dbtn" data-tday="${next || ""}" ${next ? "" : "disabled"} aria-label="יום הבא" title="יום הבא">‹</button>
       <button type="button" class="dbtn cal" data-tcal aria-label="Pick a date" title="Pick a date" aria-expanded="${!calPop.hidden}"><svg viewBox="0 0 16 16" width="14" height="14" fill="none" stroke="currentColor" stroke-width="1.6" aria-hidden="true"><rect x="2" y="3" width="12" height="11" rx="2"/><path d="M2 7h12M5.5 1.5v3M10.5 1.5v3"/></svg></button>
       ${day !== defaultTickerDay() ? `<button type="button" class="dbtn today" data-tday="${defaultTickerDay()}">היום</button>` : ""}
-    </span>` + games.map((g) => `<button type="button" class="game${g.fin ? " fin" : ""}" data-gid="${g.id}">` +
-      side(g.a, g.fin ? g.as : null, g.fin && g.as > g.hs) + `<span class="at">VS</span>` + side(g.h, g.fin ? g.hs : null, g.fin && g.hs > g.as) +
-      `<span class="time">${g.fin ? "FINAL" : g.t.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" })}</span></button>`).join("");
+    </span>` + games.map((g) => {
+      const v = gameNow(g), on = v.fin || v.live;
+      return `<button type="button" class="game${v.fin ? " fin" : ""}${v.live ? " inplay" : ""}" data-gid="${g.id}">` +
+        side(g.a, on ? v.as : null, v.fin && v.as > v.hs) + `<span class="at">VS</span>` + side(g.h, on ? v.hs : null, v.fin && v.hs > v.as) +
+        `<span class="time">${v.fin ? "FINAL" : v.live ? `<i class="livedot"></i>${esc(v.live)}` : g.t.toLocaleTimeString("he-IL", { hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" })}</span></button>`;
+    }).join("");
+  liveScoresFor(day);
 }
+// Live scores straight from ESPN's scoreboard (open to any site), so a result shows as soon as it happens and not
+// at the next update of the site. Games in play refresh every minute while the page is on screen.
+const ESPN_ABBR = { GS: "GSW", NY: "NYK", SA: "SAS", NO: "NOP", UTAH: "UTA", WSH: "WAS" };
+const LIVE = new Map();  // game id -> { fin, live, hs, as }
+const gameNow = (g) => (g.fin ? { fin: true, hs: g.hs, as: g.as } : LIVE.get(g.id) || {});
+const LIVE_AT = new Map();  // day -> when it was fetched
+let liveTimer = null;
+async function liveScoresFor(day) {
+  const games = GAMES.filter((g) => g.d === day && !g.fin);
+  // only a night that has started and is not over (already-final nights come with the site)
+  if (!games.length || Math.min(...games.map((g) => g.t.getTime())) > Date.now() + 10 * 60e3) return;
+  if (Date.now() - (LIVE_AT.get(day) || 0) < 55e3) return;
+  LIVE_AT.set(day, Date.now());
+  try {
+    const r = await fetch(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=${day.replace(/-/g, "")}`);
+    const js = await r.json();
+    let changed = false;
+    for (const ev of js.events || []) {
+      const c = ev.competitions?.[0], st8 = c?.status?.type || ev.status?.type;
+      const side = (ha) => c?.competitors?.find((x) => x.homeAway === ha);
+      const H = side("home"), A = side("away");
+      if (!H || !A || !st8) continue;
+      const ab = (x) => ESPN_ABBR[x.team.abbreviation] || x.team.abbreviation;
+      const g = games.find((x) => x.h === ab(H) && x.a === ab(A));
+      if (!g || st8.state === "pre") continue;
+      const v = { fin: st8.state === "post", live: st8.state === "in" ? (st8.shortDetail || "LIVE") : null, hs: Number(H.score), as: Number(A.score) };
+      const old = LIVE.get(g.id);
+      if (!old || old.hs !== v.hs || old.as !== v.as || old.live !== v.live || old.fin !== v.fin) { LIVE.set(g.id, v); changed = true; }
+    }
+    if (changed && (tickerDay || defaultTickerDay()) === day) renderTicker();
+  } catch (e) {}
+  clearTimeout(liveTimer);
+  if (GAMES.some((g) => g.d === day && !g.fin && !LIVE.get(g.id)?.fin)) {
+    liveTimer = setTimeout(() => { if (document.visibilityState === "visible") liveScoresFor(tickerDay || defaultTickerDay()); }, 60e3);
+  }
+}
+document.addEventListener("visibilitychange", () => { if (document.visibilityState === "visible") liveScoresFor(tickerDay || defaultTickerDay()); });
 $("ticker").addEventListener("click", (e) => {
   const cal = e.target.closest("[data-tcal]");
   if (cal) {
@@ -3009,12 +3053,13 @@ function injuryList(team) {
 function openGame(gid) {
   const g = GAMES.find((x) => x.id === gid);
   if (!g) return;
+  const gv = gameNow(g);
   const box = (D.box || {})[gid];
   const when = g.t.toLocaleString("he-IL", { weekday: "long", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
   const head = `<div class="ghead">
-      <div class="gteam ga">${g.fin ? `<b class="gsc${g.as > g.hs ? " won" : ""}">${g.as}</b>` : ""}<span>${esc(g.a)}</span>${teamLogo(g.a)}</div>
-      <div class="gmid">${g.fin ? "FINAL" : esc(when)}</div>
-      <div class="gteam gh">${teamLogo(g.h)}<span>${esc(g.h)}</span>${g.fin ? `<b class="gsc${g.hs > g.as ? " won" : ""}">${g.hs}</b>` : ""}</div>
+      <div class="gteam ga">${gv.fin || gv.live ? `<b class="gsc${gv.fin && gv.as > gv.hs ? " won" : ""}">${gv.as}</b>` : ""}<span>${esc(g.a)}</span>${teamLogo(g.a)}</div>
+      <div class="gmid">${gv.fin ? "FINAL" : gv.live ? esc(gv.live) : esc(when)}</div>
+      <div class="gteam gh">${teamLogo(g.h)}<span>${esc(g.h)}</span>${gv.fin || gv.live ? `<b class="gsc${gv.fin && gv.hs > gv.as ? " won" : ""}">${gv.hs}</b>` : ""}</div>
     </div>`;
   let body;
   if (g.fin && box) {
@@ -3024,6 +3069,8 @@ function openGame(gid) {
       teams.map((t, i) => boxTable(t, box[t]).replace(`data-gbox="${t}"`, `data-gbox="${t}"${i ? " hidden" : ""}`)).join("");
   } else if (g.fin) {
     body = `<p class="gnote">ה־Box Score של המשחק הזה כבר לא שמור באתר</p>`;
+  } else if (gv.fin || gv.live) {
+    body = `<p class="gnote">${gv.live ? "המשחק בעיצומו" : "המשחק הסתיים"}. ה־Box Score יופיע אחרי העדכון הבא של האתר.</p>`;
   } else {
     const A = previewTeam(g.a), H = previewTeam(g.h);
     const who = (x) => x.p ? `<span class="pn">${esc(x.p.name)}</span>${x.p.hurt ? injuryPill(x.p) : ""}` : "–";
