@@ -6481,7 +6481,11 @@ function txClosest(raw) {
     const sl = Math.max(sim(l, HEB_SKEL(hebrewGuess(last))), sim(l, HEB_SKEL(hebrewGuess(last.replace(/j/g, "y")))));
     // a short first name ("Nic", "Alex") is the start of the full one
     const fg = HEB_SKEL(hebrewGuess(parts[0])), pre = f.length >= 2 && fg.length >= 2 && (f.startsWith(fg) || fg.startsWith(f));
-    if (sl < 0.75 || (sf < 0.6 && !pre)) continue;  // the last name has to be close, and the first name too (a namesake missing from the data is not another player)
+    // and starts with the same letter, unless almost the same ("פורטר" is not Huerter: a player missing from the data
+    // gets no one rather than someone else)
+    const lg = HEB_SKEL(hebrewGuess(last)), lgy = HEB_SKEL(hebrewGuess(last.replace(/j/g, "y")));
+    const head = l[0] && (l[0] === lg[0] || l[0] === lgy[0]);
+    if (sl < 0.75 || (!head && sl < 0.9) || (sf < 0.6 && !pre)) continue;  // the last name has to be close, and the first name too (a namesake missing from the data is not another player)
     const sc = 0.4 * sf + 0.6 * sl;
     if (!best || sc > best.sc) { second = best ? best.sc : 0; best = { p, sc }; } else if (sc > second) second = sc;
   }
