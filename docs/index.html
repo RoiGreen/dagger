@@ -6832,7 +6832,7 @@ function renderTx() {
     <p class="impsum">${TX_HTML && TX_HTML_TEXT === $("txText").value ? `<span class="txsure">✓ הכיוונים נקראו מהסימנים (+ / −) של אתר הליגה</span> ` : ""}${(() => { const g = TX.filter((c) => !c.old).flatMap((c) => c.moves).filter((m) => !m.sure && m.dir !== "trade").length;
       return g ? `<span class="txguess">ב־${g} העברות של שחקן בודד הכיוון הוא ניחוש (מסומן ב־?), כי הסימנים + / − לא הועתקו. בדקו אותן, או העתיקו מהמחשב: Ctrl+A, Ctrl+C, ואז Ctrl+V כאן.</span><br>` : ""; })()}זוהו <b>${TX.length}</b> העברות${st.txLast ? `, מתוכן <b>${fresh.length}</b> חדשות מאז הייבוא הקודם (${fmt(st.txLast)})` : ""}.
       ${st.txLast ? `<button type="button" class="mact" id="txReset" title="${st.txUndo ? "הסגלים חוזרים למה שהיו לפני הייבוא הקודם, וההעברות נקראות מחדש" : "כל ההעברות בעמוד ייקראו מחדש"}">${st.txUndo ? "ביטול הייבוא הקודם וקריאה מחדש" : "ייבוא מחדש של הכל"}</button>` : ""}</p>
-    ${st.txLast && !fresh.length ? `<p class="munote">כל ההעברות בעמוד כבר יובאו, ולכן הן מסומנות באפור. הסגלים כבר מעודכנים לפיהן. אם הייבוא הקודם לא היה נכון, לחצו על הכפתור שלמעלה.</p>` : ""}
+    ${st.txLast && !fresh.length ? `<p class="munote">כל ההעברות בעמוד כבר יובאו, ולכן הן מסומנות באפור. הסגלים כבר מעודכנים לפיהן. לחיצה על "עדכון הסגלים" שומרת את התאריך והשעה של כל אחת מהן למצ'אפ (מי נספר באיזה יום), בלי לשנות את הסגלים. אם הייבוא הקודם לא היה נכון, לחצו על הכפתור שלמעלה.</p>` : ""}
     <ol class="txlist">${TX.map((c, ci) => `<li class="${c.old ? "old" : ""}"><div class="txh"><span>${fmt(c.ts)}</span> <b>${esc(c.t != null ? teamName(c.t) : c.team)}</b>${c.trade ? ` ⇄ <b>${esc(c.t2 != null ? teamName(c.t2) : c.team2 || "?")}</b> <small>(טרייד)</small>` : ""}${c.old ? ` <small>(כבר יובאה)</small>` : ""}</div>
       ${c.moves.map((m, mi) => `<div class="txm${m.on && !c.old ? "" : " off"}"><label><input type="checkbox" data-txon="${ci}|${mi}"${m.on && !c.old ? " checked" : ""}></label>
         <button type="button" class="txdir ${m.dir}${m.sure ? "" : " guess"}" data-txdir="${ci}|${mi}" title="${m.sure ? "לחיצה: הפוך כיוון" : "ניחוש: אין באתר הליגה סימן שהועתק. בדקו ולחצו כדי להפוך"}">${m.dir === "in" ? "▲ נכנס" : m.dir === "out" ? "▼ יוצא" : `⇄ ל־${m.to != null ? esc(teamName(m.to)) : "?"}`}${m.sure ? "" : "?"}</button>
@@ -6904,7 +6904,7 @@ $("txOut").addEventListener("click", (e) => {
   }
   if (!e.target.closest("#txApply")) return;
   st.txUndo = { picks: picks.map((x) => ({ ...x })), il: JSON.parse(JSON.stringify(st.il || {})), ilp: JSON.parse(JSON.stringify(st.ilp || {})), tags: { ...(st.tags || {}) }, txHist: [...(st.txHist || [])], txLast: st.txLast || null };
-  let n = 0, last = st.txLast || 0;
+  let n = 0, dated = 0, last = st.txLast || 0;
   // a player who changes team leaves his old team's IL, and his table mark ("mine" / "taken") goes: it would keep
   // him on my roster after he was released, or contradict his new team
   const leave = (id, from, to, ts) => {
@@ -6918,7 +6918,13 @@ $("txOut").addEventListener("click", (e) => {
     if (c.t == null) continue;
     for (const m of c.moves) {
       if (!m.on || !m.p || (c.old && !m.on)) continue;
-      if (c.old) continue;
+      // a move imported before: the rosters already have it; only its date and hour are kept for the matchup (when
+      // its direction is certain), so games are counted for the team that held the player then
+      if (c.old) {
+        if (m.dir === "trade" && m.to != null) { txHistAdd(m.p.id, m.to === c.t ? c.t2 : c.t, "out", c.ts); txHistAdd(m.p.id, m.to, "in", c.ts); dated++; }
+        else if (m.sure && (m.dir === "in" || m.dir === "out")) { txHistAdd(m.p.id, c.t, m.dir, c.ts); dated++; }
+        continue;
+      }
       const i = picks.findIndex((x) => x.id === m.p.id);
       const from = i >= 0 ? picks[i].team : null;
       if (m.dir === "trade") { if (m.to == null) continue; if (i >= 0) picks.splice(i, 1); picks.push({ id: m.p.id, team: m.to }); leave(m.p.id, from, m.to, c.ts); n++; continue; }
@@ -6933,7 +6939,7 @@ $("txOut").addEventListener("click", (e) => {
   }
   st.txLast = last;
   rebuildSets(); saveSettings(); render(); flushPicks();
-  showToast(`עודכנו ${n} שינויים בסגלים`);
+  showToast(`עודכנו ${n} שינויים בסגלים${dated ? `, ונשמרו התאריכים של ${dated} העברות קודמות` : ""}`);
   TX = []; $("txOut").innerHTML = ""; $("txText").value = ""; txNote();
 });
 const txNote = () => { $("txLastNote").textContent = st.txLast ? `ייבוא אחרון: העברות עד ${new Date(st.txLast).toLocaleString("he-IL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" })}` : ""; };
