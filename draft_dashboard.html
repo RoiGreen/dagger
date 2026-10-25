@@ -313,6 +313,7 @@ tr.sel-team td { box-shadow: inset 0 -2px 0 var(--accent), inset 0 2px 0 var(--a
 .txlist .txm small { color: var(--muted); }
 .txlist .txdir { border: 0; border-radius: 999px; padding: 2px 10px; font: inherit; font-size: .76rem; font-weight: 800; cursor: pointer; }
 .txlist .txdir.in { background: color-mix(in srgb, var(--pos) 16%, transparent); color: var(--pos); }
+.txlist .txdir.trade { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
 .txlist .txdir.out { background: color-mix(in srgb, var(--neg) 14%, transparent); color: var(--neg); }
 .txlist .txfix { flex: 0 1 170px; min-width: 120px; font: inherit; font-size: .8rem; padding: 3px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
 .txmap { display: grid; gap: 6px; padding: 8px 10px; border-radius: 10px; border: 1px dashed var(--accent); }
@@ -6175,7 +6176,7 @@ function renderMine() {
 // Names are matched in English (full name or "L. Doncic") and in Hebrew (spelled the way Israeli sites write them,
 // from a built-in transliteration of each English name). A name that fits more than one player is left out.
 const IMP_NORM = (s) => s.replace(/['’`]/g, "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z\u05d0-\u05ea\s]/g, " ").replace(/\s+/g, " ").trim();
-const HEB_NORM = (s) => s.replace(/[\u05f3\u05f4'"`׳״-]/g, "").replace(/[ךםןףץ]/g, (c) => ({ ך: "כ", ם: "מ", ן: "נ", ף: "פ", ץ: "צ" })[c]);
+const HEB_NORM = (s) => s.replace(/[\u05f3\u05f4'"`׳״’‘-]/g, "").replace(/[ךםןףץ]/g, (c) => ({ ך: "כ", ם: "מ", ן: "נ", ף: "פ", ץ: "צ" })[c]);
 function hebrewGuess(word) {
   // a rough English to Hebrew spelling, enough to tell names apart once the full name is compared
   let w = word.toLowerCase(), out = "";
@@ -6384,7 +6385,9 @@ function txClosest(raw) {
   };
   const sim = (a, b) => (!a.length || !b.length ? 0 : 1 - lev(a, b) / Math.max(a.length, b.length));
   // "ג'וניור" and the like are a suffix, not part of the last name
-  const ws = words.filter((w, i) => i === 0 || !/^(גוניור|גוניר|הבן|השני|השלישי)$/.test(w));
+  let ws = words.filter((w, i) => i === 0 || !/^(גוניור|גוניר|הבן|השני|השלישי)$/.test(w));
+  // initials spelled out ("סי גי מקולום" = CJ McCollum): the two short words are the first name
+  if (ws.length >= 3 && ws[0].length <= 2 && ws[1].length <= 3) ws = [ws[0] + ws[1], ...ws.slice(2)];
   const f = HEB_SKEL(ws[0]), l = HEB_SKEL(ws.slice(1).join(""));
   let best = null, second = 0;
   for (const p of players.filter((x) => x.team26 || x.L)) {
@@ -6399,22 +6402,31 @@ function txClosest(raw) {
   }
   return best && best.sc >= 0.5 && best.sc - second >= 0.04 ? best.p : null;
 }
+// the page's own words that are not part of a move (ads, menus)
+const TX_NOISE = /פרסומת|בחסות|winner|advert|sponsored/i;
 function txParse(text) {
   const lines = text.split(/\r?\n/).map((l) => l.replace(/\s+/g, " ").trim()).filter(Boolean);
   const cards = [];
-  let cur = null;
+  let cur = null, prev = "";
   for (const l of lines) {
     const ts = txDate(l);
-    if (ts != null && !TX_LABEL.test(l)) { cur = { ts, team: null, trade: false, rows: [] }; cards.push(cur); continue; }
-    if (!cur) continue;
+    if (ts != null && !TX_LABEL.test(l)) { cur = { ts, team: null, team2: null, trade: false, rows: [] }; cards.push(cur); prev = ""; continue; }
+    if (!cur || TX_NOISE.test(l)) continue;
     if (TX_LABEL.test(l)) {
       cur.trade = /טרייד|trade/i.test(l);
       const rest = l.replace(TX_LABEL, "").trim();
-      if (rest) cur.team = rest; else cur.wantTeam = true;
+      if (rest) cur.team = rest; else cur.wantTeam = cur.trade ? 2 : 1;
       continue;
     }
-    if (cur.wantTeam && !cur.team) { cur.team = l; cur.wantTeam = false; continue; }
+    // the team (a trade names two, one a line)
+    if (cur.wantTeam) {
+      if (!cur.team) { cur.team = l; if (cur.wantTeam === 1) cur.wantTeam = 0; continue; }
+      if (cur.trade && !cur.team2) { cur.team2 = l; cur.wantTeam = 0; continue; }
+    }
     if (POS_ONLY.test(l)) continue;
+    // each name shows twice (the photo's caption and the name): one row
+    if (l === prev) continue;
+    prev = l;
     const p = txPlayer(l);
     cur.rows.push({ raw: l.replace(/\s*\b(PG|SG|SF|PF|C|G|F)\b(\s*,\s*\b(PG|SG|SF|PF|C|G|F)\b)*\s*$/i, "").trim(), p });
   }
@@ -6434,25 +6446,45 @@ function txTeam(name) {
 let TX = [];
 function txBuild() {
   const cards = txParse($("txText").value).sort((a, b) => a.ts - b.ts);
+  // the moves are read in order of time on a copy of the rosters here, so a player added and later released by the
+  // same team reads right (in, then out)
+  const where = new Map(picks.map((x) => [x.id, x.team]));
   TX = cards.map((c) => {
-    const t = txTeam(c.team), two = c.rows.length >= 2;
-    return { ...c, t, old: !!(st.txLast && c.ts <= st.txLast),
-      moves: c.rows.map((r, i) => ({ ...r, dir: two ? (i === 0 ? "in" : "out") : (t != null && r.p && picks.some((x) => x.id === r.p.id && x.team === t) ? "out" : "in"), on: true })) };
+    const t = txTeam(c.team), t2 = c.team2 ? txTeam(c.team2) : null, old = !!(st.txLast && c.ts <= st.txLast);
+    let moves;
+    if (c.trade) {
+      // a trade: a player now on one team goes to the other ("to" = the team he goes to)
+      moves = c.rows.map((r) => {
+        const at = r.p ? where.get(r.p.id) : null;
+        const to = at === t ? t2 : at === t2 ? t : null;
+        return { ...r, dir: "trade", to, on: true };
+      });
+    } else {
+      const two = c.rows.length >= 2;
+      moves = c.rows.map((r, i) => ({ ...r, dir: two ? (i === 0 ? "in" : "out") : (t != null && r.p && where.get(r.p.id) === t ? "out" : "in"), on: true }));
+    }
+    if (!old) for (const m of moves) {
+      if (!m.p) continue;
+      if (m.dir === "in") where.set(m.p.id, t);
+      else if (m.dir === "out" && where.get(m.p.id) === t) where.delete(m.p.id);
+      else if (m.dir === "trade" && m.to != null) where.set(m.p.id, m.to);
+    }
+    return { ...c, t, t2, old, moves };
   });
 }
 function renderTx() {
   const out = $("txOut");
   if (!TX.length) { out.innerHTML = `<p class="munote">לא זוהו העברות. ודאו שהעתקתם את כל עמוד ההעברות.</p>`; return; }
   const n = Math.max(st.teams, 1), fmt = (ts) => new Date(ts).toLocaleString("he-IL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" });
-  const names = [...new Set(TX.map((c) => c.team))];
+  const names = [...new Set(TX.flatMap((c) => [c.team, c.team2].filter(Boolean)))];
   const unmapped = names.filter((nm) => txTeam(nm) == null);
   const teamSel = (nm) => `<select data-txmap="${esc(nm)}"><option value="">איזו קבוצה זו?</option>${Array.from({ length: n }, (_, i) => `<option value="${i}"${txTeam(nm) === i ? " selected" : ""}>${esc(teamName(i))}</option>`).join("")}</select>`;
   const fresh = TX.filter((c) => !c.old);
   out.innerHTML = `${unmapped.length ? `<div class="txmap"><b>שייכו את שמות הקבוצות מאתר הליגה לקבוצות כאן (פעם אחת):</b>${unmapped.map((nm) => `<div class="improw"><span class="txteam">${esc(nm)}</span>${teamSel(nm)}</div>`).join("")}</div>` : ""}
     <p class="impsum">זוהו <b>${TX.length}</b> העברות${st.txLast ? `, מתוכן <b>${fresh.length}</b> חדשות מאז הייבוא הקודם (${fmt(st.txLast)})` : ""}.</p>
-    <ol class="txlist">${TX.map((c, ci) => `<li class="${c.old ? "old" : ""}"><div class="txh"><span>${fmt(c.ts)}</span> <b>${esc(c.t != null ? teamName(c.t) : c.team)}</b>${c.trade ? ` <span class="impwarn">טרייד: בדקו ידנית</span>` : ""}${c.old ? ` <small>(כבר יובאה)</small>` : ""}</div>
+    <ol class="txlist">${TX.map((c, ci) => `<li class="${c.old ? "old" : ""}"><div class="txh"><span>${fmt(c.ts)}</span> <b>${esc(c.t != null ? teamName(c.t) : c.team)}</b>${c.trade ? ` ⇄ <b>${esc(c.t2 != null ? teamName(c.t2) : c.team2 || "?")}</b> <small>(טרייד)</small>` : ""}${c.old ? ` <small>(כבר יובאה)</small>` : ""}</div>
       ${c.moves.map((m, mi) => `<div class="txm${m.on && !c.old ? "" : " off"}"><label><input type="checkbox" data-txon="${ci}|${mi}"${m.on && !c.old ? " checked" : ""}></label>
-        <button type="button" class="txdir ${m.dir}" data-txdir="${ci}|${mi}" title="לחיצה: הפוך כיוון">${m.dir === "in" ? "▲ נכנס" : "▼ יוצא"}</button>
+        <button type="button" class="txdir ${m.dir}" data-txdir="${ci}|${mi}" title="לחיצה: הפוך כיוון">${m.dir === "in" ? "▲ נכנס" : m.dir === "out" ? "▼ יוצא" : `⇄ ל־${m.to != null ? esc(teamName(m.to)) : "?"}`}</button>
         ${m.p ? `<span class="pn">${esc(m.p.name)}</span>` : `<span class="impwarn">לא זוהה</span>`} <small>${esc(m.raw)}</small>
         <input class="txfix" list="impAll2" data-txfix="${ci}|${mi}" placeholder="${m.p ? "תיקון…" : "בחרו שחקן…"}" autocomplete="off"></div>`).join("")}</li>`).join("")}</ol>
     <datalist id="impAll2">${players.filter((p) => p.team26).map((p) => `<option value="${esc(p.name)}"></option>`).join("")}</datalist>
@@ -6478,7 +6510,11 @@ $("txOut").addEventListener("input", (e) => {
 });
 $("txOut").addEventListener("click", (e) => {
   const d = e.target.closest("[data-txdir]");
-  if (d) { const [ci, mi] = d.dataset.txdir.split("|").map(Number), m = TX[ci].moves[mi]; m.dir = m.dir === "in" ? "out" : "in"; return renderTx(); }
+  if (d) {
+    const [ci, mi] = d.dataset.txdir.split("|").map(Number), c = TX[ci], m = c.moves[mi];
+    if (m.dir === "trade") m.to = m.to === c.t ? c.t2 : c.t; else m.dir = m.dir === "in" ? "out" : "in";
+    return renderTx();
+  }
   if (!e.target.closest("#txApply")) return;
   let n = 0, last = st.txLast || 0;
   for (const c of TX) {
@@ -6487,6 +6523,7 @@ $("txOut").addEventListener("click", (e) => {
       if (!m.on || !m.p || (c.old && !m.on)) continue;
       if (c.old) continue;
       const i = picks.findIndex((x) => x.id === m.p.id);
+      if (m.dir === "trade") { if (m.to == null) continue; if (i >= 0) picks.splice(i, 1); picks.push({ id: m.p.id, team: m.to }); n++; continue; }
       if (m.dir === "in") { if (i >= 0) picks.splice(i, 1); picks.push({ id: m.p.id, team: c.t }); n++; }
       else if (i >= 0 && picks[i].team === c.t) {
         picks.splice(i, 1); n++;
