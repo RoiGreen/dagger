@@ -313,6 +313,8 @@ tr.sel-team td { box-shadow: inset 0 -2px 0 var(--accent), inset 0 2px 0 var(--a
 .txlist .txm small { color: var(--muted); }
 .txlist .txdir { border: 0; border-radius: 999px; padding: 2px 10px; font: inherit; font-size: .76rem; font-weight: 800; cursor: pointer; }
 .txlist .txdir.in { background: color-mix(in srgb, var(--pos) 16%, transparent); color: var(--pos); }
+.txlist .txdir.guess { outline: 2px dashed var(--warn, #d08700); outline-offset: 1px; }
+.impbody .txguess { color: var(--warn, #b26a00); font-weight: 700; }
 .impbody .txsure { color: var(--pos); font-weight: 800; margin-inline-end: 6px; }
 .txlist .txdir.trade { background: color-mix(in srgb, var(--accent) 16%, transparent); color: var(--accent); }
 .txlist .txdir.out { background: color-mix(in srgb, var(--neg) 14%, transparent); color: var(--neg); }
@@ -6541,10 +6543,14 @@ function txFromHtml(html) {
     // the name without its position line
     return txt(row).replace(/\b(PG|SG|SF|PF|C|G|F)\b(\s*,\s*\b(PG|SG|SF|PF|C|G|F)\b)*\s*$/i, "").trim();
   };
+  // the league's icons are all the same size: the red minus (a gradient named "drop-grad", a straight line, red stops)
+  // marks the one released; the green plus of a pickup or a waiver claim the one added
   const iconDir = (row) => {
-    const svg = row.querySelector("svg"), vb = svg?.getAttribute("viewBox") || "";
-    if (/0 0 17 13/.test(vb)) return "out";
-    if (/0 0 31 31/.test(vb)) return "in";
+    const svg = row.querySelector("svg");
+    if (!svg) return null;
+    const h = svg.outerHTML;
+    if (/drop-grad|M8\.45508 15\.5H22|#?FF6D6D|#?F50E61|0 0 17 13/i.test(h)) return "out";
+    if (/pickup-grad|waiver-grad|M7\.81683/i.test(h)) return "in";
     return null;
   };
   const cards = [];
@@ -6610,7 +6616,9 @@ function txBuild() {
       const two = c.rows.length >= 2;
       // one player: only a free agent can be added, so a player on any team here (this one or, by an old mistake,
       // another) is the one released; a player on no team is the one added
-      moves = c.rows.map((r, i) => ({ ...r, sure: !!r.dir, dir: r.dir || (two ? (i === 0 ? "in" : "out") : (r.p && where.has(r.p.id) ? "out" : "in")),
+      // two players: the league's page always lists the one added first, so the order says it. One player with no
+      // sign: a guess, shown as one
+      moves = c.rows.map((r, i) => ({ ...r, sure: !!r.dir || two, dir: r.dir || (two ? (i === 0 ? "in" : "out") : (r.p && where.has(r.p.id) ? "out" : "in")),
         elsewhere: !two && r.p && where.has(r.p.id) && where.get(r.p.id) !== t ? where.get(r.p.id) : null, on: true }));
     }
     if (!old) for (const m of moves) {
@@ -6631,12 +6639,13 @@ function renderTx() {
   const teamSel = (nm) => `<select data-txmap="${esc(nm)}"><option value="">איזו קבוצה זו?</option>${Array.from({ length: n }, (_, i) => `<option value="${i}"${txTeam(nm) === i ? " selected" : ""}>${esc(teamName(i))}</option>`).join("")}</select>`;
   const fresh = TX.filter((c) => !c.old);
   out.innerHTML = `${unmapped.length ? `<div class="txmap"><b>שייכו את שמות הקבוצות מאתר הליגה לקבוצות כאן (פעם אחת):</b>${unmapped.map((nm) => `<div class="improw"><span class="txteam">${esc(nm)}</span>${teamSel(nm)}</div>`).join("")}</div>` : ""}
-    <p class="impsum">${TX_HTML && TX_HTML_TEXT === $("txText").value ? `<span class="txsure">✓ הכיוונים נקראו מהסימנים (+ / −) של אתר הליגה</span> ` : ""}זוהו <b>${TX.length}</b> העברות${st.txLast ? `, מתוכן <b>${fresh.length}</b> חדשות מאז הייבוא הקודם (${fmt(st.txLast)})` : ""}.
+    <p class="impsum">${TX_HTML && TX_HTML_TEXT === $("txText").value ? `<span class="txsure">✓ הכיוונים נקראו מהסימנים (+ / −) של אתר הליגה</span> ` : ""}${(() => { const g = TX.filter((c) => !c.old).flatMap((c) => c.moves).filter((m) => !m.sure && m.dir !== "trade").length;
+      return g ? `<span class="txguess">ב־${g} העברות של שחקן בודד הכיוון הוא ניחוש (מסומן ב־?), כי הסימנים + / − לא הועתקו. בדקו אותן, או העתיקו מהמחשב: Ctrl+A, Ctrl+C, ואז Ctrl+V כאן.</span><br>` : ""; })()}זוהו <b>${TX.length}</b> העברות${st.txLast ? `, מתוכן <b>${fresh.length}</b> חדשות מאז הייבוא הקודם (${fmt(st.txLast)})` : ""}.
       ${st.txLast ? `<button type="button" class="mact" id="txReset" title="${st.txUndo ? "הסגלים חוזרים למה שהיו לפני הייבוא הקודם, וההעברות נקראות מחדש" : "כל ההעברות בעמוד ייקראו מחדש"}">${st.txUndo ? "ביטול הייבוא הקודם וקריאה מחדש" : "ייבוא מחדש של הכל"}</button>` : ""}</p>
     ${st.txLast && !fresh.length ? `<p class="munote">כל ההעברות בעמוד כבר יובאו, ולכן הן מסומנות באפור. הסגלים כבר מעודכנים לפיהן. אם הייבוא הקודם לא היה נכון, לחצו על הכפתור שלמעלה.</p>` : ""}
     <ol class="txlist">${TX.map((c, ci) => `<li class="${c.old ? "old" : ""}"><div class="txh"><span>${fmt(c.ts)}</span> <b>${esc(c.t != null ? teamName(c.t) : c.team)}</b>${c.trade ? ` ⇄ <b>${esc(c.t2 != null ? teamName(c.t2) : c.team2 || "?")}</b> <small>(טרייד)</small>` : ""}${c.old ? ` <small>(כבר יובאה)</small>` : ""}</div>
       ${c.moves.map((m, mi) => `<div class="txm${m.on && !c.old ? "" : " off"}"><label><input type="checkbox" data-txon="${ci}|${mi}"${m.on && !c.old ? " checked" : ""}></label>
-        <button type="button" class="txdir ${m.dir}" data-txdir="${ci}|${mi}" title="לחיצה: הפוך כיוון">${m.dir === "in" ? "▲ נכנס" : m.dir === "out" ? "▼ יוצא" : `⇄ ל־${m.to != null ? esc(teamName(m.to)) : "?"}`}</button>
+        <button type="button" class="txdir ${m.dir}${m.sure ? "" : " guess"}" data-txdir="${ci}|${mi}" title="${m.sure ? "לחיצה: הפוך כיוון" : "ניחוש: אין באתר הליגה סימן שהועתק. בדקו ולחצו כדי להפוך"}">${m.dir === "in" ? "▲ נכנס" : m.dir === "out" ? "▼ יוצא" : `⇄ ל־${m.to != null ? esc(teamName(m.to)) : "?"}`}${m.sure ? "" : "?"}</button>
         ${m.p ? `<span class="pn">${esc(m.p.name)}</span>` : `<span class="impwarn">לא זוהה</span>`} <small>${esc(m.raw)}</small>${m.elsewhere != null ? ` <small class="impwarn">(ב־Dagger הוא אצל ${esc(teamName(m.elsewhere))})</small>` : ""}
         <select class="txfix" data-txpick="${ci}|${mi}" aria-label="איזה שחקן זה">${(() => {
           const opts = txRank(m.raw); if (m.p && !opts.includes(m.p)) opts.unshift(m.p);
@@ -6679,6 +6688,7 @@ $("txOut").addEventListener("click", (e) => {
   if (d) {
     const [ci, mi] = d.dataset.txdir.split("|").map(Number), c = TX[ci], m = c.moves[mi];
     if (m.dir === "trade") m.to = m.to === c.t ? c.t2 : c.t; else m.dir = m.dir === "in" ? "out" : "in";
+    m.sure = true;
     return renderTx();
   }
   if (e.target.closest("#txReset")) {
