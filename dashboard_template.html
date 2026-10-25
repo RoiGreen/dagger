@@ -5703,7 +5703,14 @@ function renderMatchup() {
       const slotSel = `<select class="mslot${manual ? " set" : ""}" data-muslot="${t}|${p.id}" aria-label="עמדה בהרכב" title="איפה הוא משובץ בהרכב">
         ${[...can, "BN"].filter((n) => !full(n)).map((n) => `<option value="${n}"${n === cur ? " selected" : ""}>${n}</option>`).join("")}</select>`;
       const acts = onIL ? `<button type="button" class="mact" data-muback="${t}|${p.id}">חזרה מ־<bdi>${onILPlus(t, p.id) ? "IL+" : "IL"}</bdi></button>`
-        : `${(() => { const k = ilRoom(p, t); return k ? `<button type="button" class="mact" data-muil="${t}|${p.id}|${k}">${k === "il" ? "IL" : "IL+"}</button>` : ""; })()}<button type="button" class="mact" data-mudrop="${t}|${p.id}" title="שחרור">שחרר</button>`;
+        : `${(() => {
+          const k = ilRoom(p, t), kind = ilKind(p);
+          if (k) return `<button type="button" class="mact" data-muil="${t}|${p.id}|${k}">${k === "il" ? "IL" : "IL+"}</button>`;
+          // he fits a spot but they are taken: say so (the number of spots is in the league settings)
+          if (kind) { const lbl = kind === "il" ? "IL" : "IL+", used = ilList(kind, t).filter((id) => ilOf(t).has(id)).length;
+            return `<button type="button" class="mact" disabled title="כל מקומות ה־${lbl} תפוסים (${used}/${ilSlots(kind)}). אפשר לשנות את מספר המקומות בהגדרות הליגה">${lbl} מלא</button>`; }
+          return "";
+        })()}<button type="button" class="mact" data-mudrop="${t}|${p.id}" title="שחרור">שחרר</button>`;
       const role = onIL ? "ilrow" : cur === "BN" ? "benchrow" : "startrow";
       return `<tr class="${role}"><td class="pn"><span class="pw" data-pcard="${p.id}">${p.img ? `<img class="bimg" src="${p.img}" alt="" loading="lazy" decoding="async">` : ""}<span>${esc(p.name)}</span></span><small class="ppos">${esc(p.pos || "")}</small>${onIL ? "" : (() => { const c = T.cell.get(`${p.id}|${d}`);
         return c?.out ? `<small class="pday out">OUT</small>` : c ? `<small class="pday">${esc(c.gm ? `${c.gm.g.h === p.team26 ? "" : "@"}${c.gm.opp}` : c.r ? `${c.r[2] ? "" : "@"}${c.r[1]}` : "")}</small>` : `<small class="pday none">אין משחק</small>`; })()}${p.hurt ? injuryPill(p) : ""}</td>
