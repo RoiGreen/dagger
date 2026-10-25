@@ -1923,7 +1923,7 @@ table.box.titab tr.punted td { opacity: .4; }
           <div class="impbody">
             <p class="munote">פתחו באתר הליגה את עמוד ההעברות, סמנו הכל (<bdi>Ctrl+A</bdi>), העתיקו והדביקו כאן (<bdi>Ctrl+V</bdi>, כך שגם סימני ה־+ וה־− עוברים). האתר מזהה כל העברה ומעדכן את הסגלים. אפשר להדביק את כל העמוד בכל פעם: העברות שכבר יובאו לא נספרות שוב.</p>
             <textarea id="txText" rows="5" placeholder="הדביקו כאן את עמוד ההעברות…"></textarea>
-            <div class="improw"><button type="button" class="mact on" id="txRead">זיהוי העברות</button><small id="txLastNote" class="munote"></small></div>
+            <div class="improw"><button type="button" class="mact on" id="txRead">זיהוי העברות</button><button type="button" class="mact" id="txSave" title="שומר קובץ עם מה שהודבק בדיוק, כדי לבדוק למה העברה זוהתה לא נכון">שמירת ההדבקה לבדיקה</button><small id="txLastNote" class="munote"></small></div>
             <div id="txOut"></div>
           </div>
         </details>
@@ -6532,7 +6532,7 @@ let TX = [];
 // What was pasted keeps the page's own layout (the clipboard's HTML copy): each move card says exactly who came in
 // (the green "+" icon, a 31x31 drawing) and who went out (the red "-", 17x13), and a trade's two columns say who goes
 // to which team (the first column to the first team). Read from there when it is there; else from the plain text.
-let TX_HTML = null, TX_HTML_TEXT = null;
+let TX_HTML = null, TX_HTML_TEXT = null, TX_RAW = "";
 function txFromHtml(html) {
   if (!html || !/txn-card/.test(html)) return null;
   const doc = new DOMParser().parseFromString(html, "text/html");
@@ -6582,7 +6582,7 @@ function txFromHtml(html) {
 $("txText").addEventListener("paste", (e) => {
   const html = e.clipboardData?.getData("text/html");
   const cards = txFromHtml(html);
-  TX_HTML = cards; TX_HTML_TEXT = null;
+  TX_HTML = cards; TX_HTML_TEXT = null; TX_RAW = html || "";
   // the plain text is pasted as usual; it is remembered so a later edit of the box goes back to reading the text
   setTimeout(() => { TX_HTML_TEXT = $("txText").value; }, 0);
 });
@@ -6655,6 +6655,14 @@ function renderTx() {
     <button type="button" class="mact on" id="txApply"${unmapped.length ? " disabled" : ""}>עדכון הסגלים${unmapped.length ? " (קודם שייכו את הקבוצות)" : ""}</button>`;
 }
 $("txRead").addEventListener("click", () => { txBuild(); renderTx(); });
+$("txSave").addEventListener("click", () => {
+  const body = `<!-- dagger tx paste ${new Date().toISOString()} | html: ${TX_RAW ? TX_RAW.length : 0} chars | used: ${TX_HTML && TX_HTML_TEXT === $("txText").value ? "html" : "text"} -->
+${TX_RAW || ""}
+<pre id="plain">${esc($("txText").value)}</pre>`;
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(new Blob([body], { type: "text/html" }));
+  a.download = "dagger-transactions-paste.html"; document.body.append(a); a.click(); a.remove();
+});
 $("txOut").addEventListener("change", (e) => {
   const mp = e.target.closest("[data-txmap]");
   if (mp) { st.teamMap = st.teamMap || {}; if (mp.value === "") delete st.teamMap[mp.dataset.txmap]; else st.teamMap[mp.dataset.txmap] = Number(mp.value); saveSettings(); txBuild(); return renderTx(); }
