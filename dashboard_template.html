@@ -303,6 +303,20 @@ tr.sel-team td { box-shadow: inset 0 -2px 0 var(--accent), inset 0 2px 0 var(--a
 .impbody .implist small { color: var(--muted); }
 .impbody .impslot { display: inline-block; min-width: 2.6em; text-align: center; font-family: var(--font-num); font-size: .72rem; font-weight: 800; padding: 1px 5px; border-radius: 6px; background: color-mix(in srgb, var(--pos) 16%, transparent); color: var(--pos); }
 .impbody .impslot.off { background: var(--sunk); color: var(--muted); }
+.txlist { margin: 0; padding: 0; list-style: none; display: grid; gap: 8px; }
+.txlist > li { border: 1px solid var(--line); border-radius: 10px; padding: 8px 10px; display: grid; gap: 4px; }
+.txlist > li.old { opacity: .55; }
+.txlist .txh { font-size: .84rem; color: var(--muted); }
+.txlist .txh b { color: var(--ink); }
+.txlist .txm { display: flex; align-items: center; gap: 8px; flex-wrap: wrap; font-size: .88rem; }
+.txlist .txm.off { opacity: .5; }
+.txlist .txm small { color: var(--muted); }
+.txlist .txdir { border: 0; border-radius: 999px; padding: 2px 10px; font: inherit; font-size: .76rem; font-weight: 800; cursor: pointer; }
+.txlist .txdir.in { background: color-mix(in srgb, var(--pos) 16%, transparent); color: var(--pos); }
+.txlist .txdir.out { background: color-mix(in srgb, var(--neg) 14%, transparent); color: var(--neg); }
+.txlist .txfix { flex: 0 1 170px; min-width: 120px; font: inherit; font-size: .8rem; padding: 3px 8px; border-radius: 8px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
+.txmap { display: grid; gap: 6px; padding: 8px 10px; border-radius: 10px; border: 1px dashed var(--accent); }
+.txmap .txteam { font-weight: 800; min-width: 140px; }
 .impbody .impx { border: 0; background: none; color: var(--neg); cursor: pointer; font-weight: 800; padding: 0 4px; }
 .impbody input { flex: 1; min-width: 200px; font: inherit; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
 @media (max-width: 700px) { .impbody .implist { columns: 1; } }
@@ -1900,6 +1914,15 @@ table.box.titab tr.punted td { opacity: .4; }
           </div>
           <div class="dadvice" id="draftAdvice" hidden></div>
         </div>
+        <details class="dsetup tradebox impbox" id="txBox">
+          <summary>ייבוא העברות מהליגה (כל הליגה בהדבקה אחת)</summary>
+          <div class="impbody">
+            <p class="munote">פתחו באתר הליגה את עמוד ההעברות, סמנו הכל (<bdi>Ctrl+A</bdi>), העתיקו והדביקו כאן. האתר מזהה כל העברה ומעדכן את הסגלים. אפשר להדביק את כל העמוד בכל פעם: העברות שכבר יובאו לא נספרות שוב.</p>
+            <textarea id="txText" rows="5" placeholder="הדביקו כאן את עמוד ההעברות…"></textarea>
+            <div class="improw"><button type="button" class="mact on" id="txRead">זיהוי העברות</button><small id="txLastNote" class="munote"></small></div>
+            <div id="txOut"></div>
+          </div>
+        </details>
         <details class="dsetup tradebox impbox" id="impBox">
           <summary>ייבוא סגל מאתר הליגה (העתק והדבק)</summary>
           <div class="impbody">
@@ -6151,7 +6174,7 @@ function renderMine() {
 // ---------- import a roster pasted from the league's site ----------
 // Names are matched in English (full name or "L. Doncic") and in Hebrew (spelled the way Israeli sites write them,
 // from a built-in transliteration of each English name). A name that fits more than one player is left out.
-const IMP_NORM = (s) => s.normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z\u05d0-\u05ea\s]/g, " ").replace(/\s+/g, " ").trim();
+const IMP_NORM = (s) => s.replace(/['’`]/g, "").normalize("NFKD").replace(/[\u0300-\u036f]/g, "").toLowerCase().replace(/[^a-z\u05d0-\u05ea\s]/g, " ").replace(/\s+/g, " ").trim();
 const HEB_NORM = (s) => s.replace(/[\u05f3\u05f4'"`׳״-]/g, "").replace(/[ךםןףץ]/g, (c) => ({ ך: "כ", ם: "מ", ן: "נ", ף: "פ", ץ: "צ" })[c]);
 function hebrewGuess(word) {
   // a rough English to Hebrew spelling, enough to tell names apart once the full name is compared
@@ -6171,13 +6194,13 @@ function hebrewGuess(word) {
   return out.replace(/(.)\1+/g, "$1");
 }
 // letters only, vowels (א ו י ה) dropped, for a loose comparison of two Hebrew spellings
-const HEB_SKEL = (s) => HEB_NORM(s).replace(/[אויהע\s]/g, "").replace(/[טת]/g, "ת").replace(/[כק]/g, "ק").replace(/[סשצ]/g, "ס").replace(/[בו]/g, "ב");
+const HEB_SKEL = (s) => HEB_NORM(s).replace(/[אויהע\s]/g, "").replace(/[טת]/g, "ת").replace(/[כק]/g, "ק").replace(/[סשצז]/g, "ס").replace(/[בו]/g, "ב");
 function importFind(text) {
   const T = " " + IMP_NORM(text) + " ";
   const heWords = [], heLine = [];
   text.split(/\r?\n/).forEach((l, li) => { for (const w of HEB_NORM(l).split(/[^\u05d0-\u05ea]+/)) if (w.length > 1) { heWords.push(w); heLine.push(li); } });
   const heSkels = heWords.map(HEB_SKEL);
-  const pool = players.filter((p) => p.team26 || picks.some((x) => x.id === p.id));
+  const pool = players.filter((p) => p.team26 || p.L || picks.some((x) => x.id === p.id));
   const found = new Map(), shortSeen = new Map();
   for (const p of pool) {
     const base = IMP_NORM(p.name).replace(/ (jr|sr|ii|iii|iv)$/, "");
@@ -6194,7 +6217,15 @@ function importFind(text) {
   for (const [, list] of shortSeen) if (list.length > 1) for (const p of list) found.delete(p.id);
   // Hebrew: every two words in a row are compared with each player's first and last name, spelled roughly in Hebrew;
   // a pair is taken when one player fits it clearly better than any other
-  if (heSkels.length > 1) {
+  // Hebrew, line by line first: a line that is a name (as the league's pages show one player a line), matched to the
+  // closest player (alias learned, else the closest name); the word-pair scan below catches the rest
+  text.split(/\r?\n/).forEach((l, li) => {
+    const name = l.replace(/\b(PG|SG|SF|PF|C|G|F|UTIL|BN|IL\+?)\b[\s,]*/gi, " ").replace(/\s+/g, " ").trim();
+    if (!/[\u05d0-\u05ea]/.test(name) || name.split(" ").length < 2 || name.split(" ").length > 4) return;
+    const p = txPlayer(name);
+    if (p && !found.has(p.id)) found.set(p.id, { p, at: 5e5 + li, line: li });
+  });
+  if (false && heSkels.length > 1) {
     const lev = (a, b) => {
       const m = a.length, n = b.length; if (!m || !n) return Math.max(m, n);
       let prev = Array.from({ length: n + 1 }, (_, j) => j);
@@ -6307,6 +6338,170 @@ $("impOut").addEventListener("click", (e) => {
   $("impOut").innerHTML = ""; $("impText").value = ""; IMP_FOUND = [];
 });
 $("impBox").addEventListener("toggle", () => { if ($("impBox").open) renderImport(); });
+
+// ---------- import the league's transactions page ----------
+// Each move is a card: its date and time, "free agent move" (or a trade) and the team, then the players. The +/- signs
+// do not survive copying, so the direction is read from the card: with two players the first comes in and the second
+// goes out (the order the league's site shows them); a single player goes out when he is on that team here, else he
+// comes in. Every move can be flipped or left out before it is applied. Moves already imported (by date) are skipped.
+const HE_MONTHS = { ינואר: 0, פברואר: 1, מרץ: 2, מרס: 2, אפריל: 3, מאי: 4, יוני: 5, יולי: 6, אוגוסט: 7, ספטמבר: 8, אוקטובר: 9, נובמבר: 10, דצמבר: 11 };
+const EN_MONTHS = ["jan", "feb", "mar", "apr", "may", "jun", "jul", "aug", "sep", "oct", "nov", "dec"];
+function txDate(line) {
+  let m = line.match(/(\d{1,2})\s+ב?([\u05d0-\u05ea]+)\s+(\d{4})(?:\D+(\d{1,2}):(\d{2}))?/);
+  if (m && HE_MONTHS[m[2]] != null) return new Date(+m[3], HE_MONTHS[m[2]], +m[1], +(m[4] || 0), +(m[5] || 0)).getTime();
+  m = line.match(/([A-Za-z]{3,})\.?\s+(\d{1,2}),?\s+(\d{4})(?:\D+(\d{1,2}):(\d{2})\s*(am|pm)?)?/i);
+  if (m && EN_MONTHS.includes(m[1].slice(0, 3).toLowerCase())) {
+    let h = +(m[4] || 0); if (m[6]) h = (h % 12) + (/pm/i.test(m[6]) ? 12 : 0);
+    return new Date(+m[3], EN_MONTHS.indexOf(m[1].slice(0, 3).toLowerCase()), +m[2], h, +(m[5] || 0)).getTime();
+  }
+  m = line.match(/(\d{1,2})[./](\d{1,2})[./](\d{2,4})(?:\D+(\d{1,2}):(\d{2}))?/);
+  if (m) return new Date(+m[3] < 100 ? 2000 + +m[3] : +m[3], +m[2] - 1, +m[1], +(m[4] || 0), +(m[5] || 0)).getTime();
+  return null;
+}
+const TX_LABEL = /(העברה חופשית|העברת שחקן חופשי|טרייד|free agent move|free agent|waiver|trade)/i;
+const POS_ONLY = /^[\s,|·/]*((PG|SG|SF|PF|C|G|F|UTIL)[\s,|·/]*)+$/i;
+const aliasKey = (t) => IMP_NORM(HEB_NORM(t)).replace(/\b(PG|SG|SF|PF|C|G|F)\b/gi, "").trim();
+function txPlayer(raw) {
+  const k = aliasKey(raw);
+  if (!k) return null;
+  const al = (st.nameAlias || {})[k];
+  if (al != null && PLAYER_BY_ID.get(al)) return PLAYER_BY_ID.get(al);
+  // a line that is one player's name: in English the exact name, in Hebrew the closest one when clearly the closest
+  if (/[א-ת]/.test(raw)) return txClosest(raw);
+  const found = importFind(raw);
+  return found.length === 1 ? found[0] : null;
+}
+function txClosest(raw) {
+  const words = HEB_NORM(raw).split(/[^א-ת]+/).filter((w) => w.length > 1);
+  const en = IMP_NORM(raw).split(" ").filter((w) => /[a-z]/.test(w));
+  if (!words.length && en.length) return null;
+  if (words.length < 2) return null;
+  const lev = (a, b) => {
+    const m = a.length, n = b.length; if (!m || !n) return Math.max(m, n);
+    let prev = Array.from({ length: n + 1 }, (_, j) => j);
+    for (let i = 1; i <= m; i++) { const cur = [i]; for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = cur; }
+    return prev[n];
+  };
+  const sim = (a, b) => (!a.length || !b.length ? 0 : 1 - lev(a, b) / Math.max(a.length, b.length));
+  // "ג'וניור" and the like are a suffix, not part of the last name
+  const ws = words.filter((w, i) => i === 0 || !/^(גוניור|גוניר|הבן|השני|השלישי)$/.test(w));
+  const f = HEB_SKEL(ws[0]), l = HEB_SKEL(ws.slice(1).join(""));
+  let best = null, second = 0;
+  for (const p of players.filter((x) => x.team26 || x.L)) {
+    const parts = IMP_NORM(p.name).replace(/ (jr|sr|ii|iii|iv)$/, "").split(" ");
+    if (parts.length < 2) continue;
+    const last = parts.slice(1).join("");
+    const sf = Math.max(sim(f, HEB_SKEL(hebrewGuess(parts[0]))), sim(f, HEB_SKEL(hebrewGuess(parts[0].replace(/j/g, "y")))));
+    const sl = Math.max(sim(l, HEB_SKEL(hebrewGuess(last))), sim(l, HEB_SKEL(hebrewGuess(last.replace(/j/g, "y")))));
+    if (sl < 0.75) continue;  // the last name has to be close
+    const sc = 0.4 * sf + 0.6 * sl;
+    if (!best || sc > best.sc) { second = best ? best.sc : 0; best = { p, sc }; } else if (sc > second) second = sc;
+  }
+  return best && best.sc >= 0.5 && best.sc - second >= 0.04 ? best.p : null;
+}
+function txParse(text) {
+  const lines = text.split(/\r?\n/).map((l) => l.replace(/\s+/g, " ").trim()).filter(Boolean);
+  const cards = [];
+  let cur = null;
+  for (const l of lines) {
+    const ts = txDate(l);
+    if (ts != null && !TX_LABEL.test(l)) { cur = { ts, team: null, trade: false, rows: [] }; cards.push(cur); continue; }
+    if (!cur) continue;
+    if (TX_LABEL.test(l)) {
+      cur.trade = /טרייד|trade/i.test(l);
+      const rest = l.replace(TX_LABEL, "").trim();
+      if (rest) cur.team = rest; else cur.wantTeam = true;
+      continue;
+    }
+    if (cur.wantTeam && !cur.team) { cur.team = l; cur.wantTeam = false; continue; }
+    if (POS_ONLY.test(l)) continue;
+    const p = txPlayer(l);
+    cur.rows.push({ raw: l.replace(/\s*\b(PG|SG|SF|PF|C|G|F)\b(\s*,\s*\b(PG|SG|SF|PF|C|G|F)\b)*\s*$/i, "").trim(), p });
+  }
+  return cards.filter((c) => c.team && c.rows.length);
+}
+// a 9CAT team name to a team here: the name chosen before, else the same name, else none yet
+function txTeam(name) {
+  const map = st.teamMap || {};
+  if (map[name] != null && map[name] < Math.max(st.teams, 1)) return map[name];
+  const n = IMP_NORM(HEB_NORM(name));
+  for (let i = 0; i < Math.max(st.teams, 1); i++) {
+    const t = IMP_NORM(HEB_NORM(teamName(i)));
+    if (t && (t === n || n.includes(t) || t.includes(n))) return i;
+  }
+  return null;
+}
+let TX = [];
+function txBuild() {
+  const cards = txParse($("txText").value).sort((a, b) => a.ts - b.ts);
+  TX = cards.map((c) => {
+    const t = txTeam(c.team), two = c.rows.length >= 2;
+    return { ...c, t, old: !!(st.txLast && c.ts <= st.txLast),
+      moves: c.rows.map((r, i) => ({ ...r, dir: two ? (i === 0 ? "in" : "out") : (t != null && r.p && picks.some((x) => x.id === r.p.id && x.team === t) ? "out" : "in"), on: true })) };
+  });
+}
+function renderTx() {
+  const out = $("txOut");
+  if (!TX.length) { out.innerHTML = `<p class="munote">לא זוהו העברות. ודאו שהעתקתם את כל עמוד ההעברות.</p>`; return; }
+  const n = Math.max(st.teams, 1), fmt = (ts) => new Date(ts).toLocaleString("he-IL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" });
+  const names = [...new Set(TX.map((c) => c.team))];
+  const unmapped = names.filter((nm) => txTeam(nm) == null);
+  const teamSel = (nm) => `<select data-txmap="${esc(nm)}"><option value="">איזו קבוצה זו?</option>${Array.from({ length: n }, (_, i) => `<option value="${i}"${txTeam(nm) === i ? " selected" : ""}>${esc(teamName(i))}</option>`).join("")}</select>`;
+  const fresh = TX.filter((c) => !c.old);
+  out.innerHTML = `${unmapped.length ? `<div class="txmap"><b>שייכו את שמות הקבוצות מאתר הליגה לקבוצות כאן (פעם אחת):</b>${unmapped.map((nm) => `<div class="improw"><span class="txteam">${esc(nm)}</span>${teamSel(nm)}</div>`).join("")}</div>` : ""}
+    <p class="impsum">זוהו <b>${TX.length}</b> העברות${st.txLast ? `, מתוכן <b>${fresh.length}</b> חדשות מאז הייבוא הקודם (${fmt(st.txLast)})` : ""}.</p>
+    <ol class="txlist">${TX.map((c, ci) => `<li class="${c.old ? "old" : ""}"><div class="txh"><span>${fmt(c.ts)}</span> <b>${esc(c.t != null ? teamName(c.t) : c.team)}</b>${c.trade ? ` <span class="impwarn">טרייד: בדקו ידנית</span>` : ""}${c.old ? ` <small>(כבר יובאה)</small>` : ""}</div>
+      ${c.moves.map((m, mi) => `<div class="txm${m.on && !c.old ? "" : " off"}"><label><input type="checkbox" data-txon="${ci}|${mi}"${m.on && !c.old ? " checked" : ""}></label>
+        <button type="button" class="txdir ${m.dir}" data-txdir="${ci}|${mi}" title="לחיצה: הפוך כיוון">${m.dir === "in" ? "▲ נכנס" : "▼ יוצא"}</button>
+        ${m.p ? `<span class="pn">${esc(m.p.name)}</span>` : `<span class="impwarn">לא זוהה</span>`} <small>${esc(m.raw)}</small>
+        <input class="txfix" list="impAll2" data-txfix="${ci}|${mi}" placeholder="${m.p ? "תיקון…" : "בחרו שחקן…"}" autocomplete="off"></div>`).join("")}</li>`).join("")}</ol>
+    <datalist id="impAll2">${players.filter((p) => p.team26).map((p) => `<option value="${esc(p.name)}"></option>`).join("")}</datalist>
+    <button type="button" class="mact on" id="txApply"${unmapped.length ? " disabled" : ""}>עדכון הסגלים${unmapped.length ? " (קודם שייכו את הקבוצות)" : ""}</button>`;
+}
+$("txRead").addEventListener("click", () => { txBuild(); renderTx(); });
+$("txOut").addEventListener("change", (e) => {
+  const mp = e.target.closest("[data-txmap]");
+  if (mp) { st.teamMap = st.teamMap || {}; if (mp.value === "") delete st.teamMap[mp.dataset.txmap]; else st.teamMap[mp.dataset.txmap] = Number(mp.value); saveSettings(); txBuild(); return renderTx(); }
+  const on = e.target.closest("[data-txon]");
+  if (on) { const [ci, mi] = on.dataset.txon.split("|").map(Number); TX[ci].moves[mi].on = on.checked; if (on.checked) TX[ci].old = false; return renderTx(); }
+});
+$("txOut").addEventListener("input", (e) => {
+  const fx = e.target.closest("[data-txfix]");
+  if (!fx) return;
+  const p = players.find((x) => x.name === fx.value);
+  if (!p) return;
+  const [ci, mi] = fx.dataset.txfix.split("|").map(Number), m = TX[ci].moves[mi];
+  m.p = p;
+  // remember: this spelling is this player from now on
+  st.nameAlias = st.nameAlias || {}; st.nameAlias[aliasKey(m.raw)] = p.id; saveSettings();
+  renderTx();
+});
+$("txOut").addEventListener("click", (e) => {
+  const d = e.target.closest("[data-txdir]");
+  if (d) { const [ci, mi] = d.dataset.txdir.split("|").map(Number), m = TX[ci].moves[mi]; m.dir = m.dir === "in" ? "out" : "in"; return renderTx(); }
+  if (!e.target.closest("#txApply")) return;
+  let n = 0, last = st.txLast || 0;
+  for (const c of TX) {
+    if (c.t == null) continue;
+    for (const m of c.moves) {
+      if (!m.on || !m.p || (c.old && !m.on)) continue;
+      if (c.old) continue;
+      const i = picks.findIndex((x) => x.id === m.p.id);
+      if (m.dir === "in") { if (i >= 0) picks.splice(i, 1); picks.push({ id: m.p.id, team: c.t }); n++; }
+      else if (i >= 0 && picks[i].team === c.t) {
+        picks.splice(i, 1); n++;
+        for (const key of ["il", "ilp"]) if (st[key]?.[c.t]) st[key][c.t] = st[key][c.t].filter((id) => id !== m.p.id);
+      }
+    }
+    last = Math.max(last, c.ts);
+  }
+  st.txLast = last;
+  rebuildSets(); saveSettings(); render(); flushPicks();
+  showToast(`עודכנו ${n} שינויים בסגלים`);
+  TX = []; $("txOut").innerHTML = ""; $("txText").value = ""; txNote();
+});
+const txNote = () => { $("txLastNote").textContent = st.txLast ? `ייבוא אחרון: העברות עד ${new Date(st.txLast).toLocaleString("he-IL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" })}` : ""; };
+$("txBox").addEventListener("toggle", () => { if ($("txBox").open) txNote(); });
 
 // ---------- persistence of picks ----------
 // remote = { save(data) } for the signed-in account: claude.ai db or Supabase
