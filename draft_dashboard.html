@@ -1918,6 +1918,15 @@ table.box.titab tr.punted td { opacity: .4; }
           </div>
           <div class="dadvice" id="draftAdvice" hidden></div>
         </div>
+        <details class="dsetup tradebox impbox" id="drBox">
+          <summary>ייבוא דראפט מאתר הליגה (כל הליגה בהדבקה אחת)</summary>
+          <div class="impbody">
+            <p class="munote">לליגה חדשה: באתר הליגה פתחו דראפט ← סיכום הדראפט ← <b>לוח בחירות</b>, סמנו הכל (<bdi>Ctrl+A</bdi>), העתיקו והדביקו כאן (<bdi>Ctrl+V</bdi>). האתר בונה את כל הליגה: הקבוצות, הסדר, הקבוצה שלכם וכל הבחירות. אחר כך ייבאו את עמוד ההעברות כדי לעדכן את מה שהשתנה מאז הדראפט.</p>
+            <textarea id="drText" rows="4" placeholder="הדביקו כאן את לוח הבחירות…"></textarea>
+            <div class="improw"><button type="button" class="mact on" id="drRead">זיהוי הדראפט</button></div>
+            <div id="drOut"></div>
+          </div>
+        </details>
         <details class="dsetup tradebox impbox" id="txBox">
           <summary>ייבוא העברות מהליגה (כל הליגה בהדבקה אחת)</summary>
           <div class="impbody">
@@ -6266,7 +6275,29 @@ function hebrewGuess(word) {
   return out.replace(/(.)\1+/g, "$1");
 }
 // letters only, vowels (א ו י ה) dropped, for a loose comparison of two Hebrew spellings
-const HEB_SKEL = (s) => HEB_NORM(s).replace(/[אויהע\s]/g, "").replace(/[טת]/g, "ת").replace(/[כק]/g, "ק").replace(/[סשצז]/g, "ס").replace(/[בו]/g, "ב");
+const HEB_SKEL = (s) => HEB_NORM(s).replace(/[אויהע\s]/g, "").replace(/[טת]/g, "ת").replace(/[כק]/g, "ק").replace(/[סשצז]/g, "ס").replace(/[בו]/g, "ב").replace(/(.)\1+/g, "$1");
+// Each player's first and last name, spelled in Hebrew every common way: v as ו or ב (אבדיה), c as ק or ס (יוקיץ'),
+// j as ג, י or ח (חאקז), a final ch as ק (זאק). Kept per player, built once.
+const NAME_SKELS = new Map();
+function nameSkels(p) {
+  let v = NAME_SKELS.get(p.id);
+  if (v) return v;
+  let parts = IMP_NORM(p.name).replace(/ (jr|sr|ii|iii|iv)$/, "").split(" ");
+  while (parts.length > 2 && parts[0].length === 1 && parts[1].length === 1) parts = [parts[0] + parts[1], ...parts.slice(2)];  // "P.J."
+  const ways = [(w) => w.replace(/j/g, "y"), (w) => w.replace(/j/g, "kh"), (w) => w.replace(/v/g, "b"), (w) => w.replace(/c(?![hk])/g, "s"), (w) => w.replace(/ch$/, "k")];
+  const skels = (w) => {
+    const out = new Set();
+    for (let m = 0; m < 1 << ways.length; m++) {
+      let x = w;
+      ways.forEach((f, i) => { if (m & (1 << i)) x = f(x); });
+      out.add(HEB_SKEL(hebrewGuess(x)));
+    }
+    return [...out];
+  };
+  v = { n: parts.length, f: skels(parts[0]), l: skels(parts.slice(1).join("") || parts[0]) };
+  NAME_SKELS.set(p.id, v);
+  return v;
+}
 function importFind(text) {
   const T = " " + IMP_NORM(text) + " ";
   const heWords = [], heLine = [];
@@ -6414,6 +6445,107 @@ $("impOut").addEventListener("click", (e) => {
   $("impOut").innerHTML = ""; $("impText").value = ""; IMP_FOUND = [];
 });
 $("impBox").addEventListener("toggle", () => { if ($("impBox").open) renderImport(); });
+// ---------- import a whole draft from the league's site ----------
+// The draft summary's pick board: the teams in draft order (mine marked), then every pick in the order made (in a
+// snake draft every second round runs backwards, which the board's arrows show). Read from the page's layout when it
+// was pasted with it, else from the plain text (team names, then "round.pick" and the player's name twice).
+let DR = null, DR_HTML = null, DR_HTML_TEXT = null, DR_UNDO = null;
+function drFromHtml(html) {
+  if (!html || !/draft-pick-cell/.test(html)) return null;
+  const doc = new DOMParser().parseFromString(html, "text/html");
+  const txt = (el) => (el?.textContent || "").replace(/\s+/g, " ").trim();
+  const ths = [...doc.querySelectorAll("th")].filter((th) => th.querySelector(".team-header-name"));
+  const teams = ths.map((th) => txt(th.querySelector(".team-header-name")));
+  const mine = ths.findIndex((th) => th.classList.contains("my-team"));
+  const rows = [...doc.querySelectorAll("tr.draft-round")].map((tr) => [...tr.querySelectorAll("td.draft-pick-cell")]);
+  if (!teams.length || !rows.length) return null;
+  // the arrow on a round's picks points the way the round runs
+  const dirOf = (row) => { const a = row.map((td) => td.querySelector(".round-arrow")?.className || "").find((c) => c && !/\bdown\b/.test(c)); return a == null ? null : /reversed/.test(a); };
+  const d0 = rows[0] ? dirOf(rows[0]) : null, d1 = rows[1] ? dirOf(rows[1]) : null;
+  const snake = d0 == null || d1 == null ? true : d0 !== d1;
+  const picks = [];
+  for (const row of rows) for (const td of row) picks.push(txt(td.querySelector(".player-name")) || null);
+  return { teams, mine: mine >= 0 ? mine : null, snake, picks };
+}
+function drFromText(text) {
+  const L = text.split(/\r?\n/).map((l) => l.replace(/\s+/g, " ").trim()).filter(Boolean);
+  const first = L.findIndex((l) => l === "1.1");
+  if (first < 0) return null;
+  // the team names stand right before the first pick, each written twice (picture and name)
+  const teams = [];
+  for (let i = first - 1; i >= 1 && L[i] === L[i - 1]; i -= 2) teams.unshift(L[i]);
+  const picks = [];
+  for (let i = first; i < L.length; i++) {
+    if (/^\d+\.\d+$/.test(L[i]) || POS_ONLY.test(L[i])) continue;
+    if (L[i] === L[i + 1]) { picks.push(L[i]); i++; }
+  }
+  return teams.length && picks.length ? { teams, mine: null, snake: true, picks } : null;
+}
+$("drText").addEventListener("paste", (e) => {
+  DR_HTML = drFromHtml(e.clipboardData?.getData("text/html")); DR_HTML_TEXT = null;
+  setTimeout(() => { DR_HTML_TEXT = $("drText").value; drBuild(); renderDr(); }, 0);
+});
+function drBuild() {
+  const src = DR_HTML && DR_HTML_TEXT === $("drText").value ? DR_HTML : drFromText($("drText").value);
+  if (!src) { DR = null; return; }
+  const n = src.teams.length;
+  const rows = src.picks.map((raw, k) => {
+    const r = Math.floor(k / n), i = k % n;
+    return { raw, k, t: src.snake && r % 2 === 1 ? n - 1 - i : i, p: raw ? txPlayer(raw) : null };
+  }).filter((x) => x.raw);
+  // a name two players fit about as well: not one already drafted, else the better known one
+  const used = new Set(rows.filter((x) => x.p).map((x) => x.p.id));
+  for (const x of rows) if (!x.p) { x.p = txClosest(x.raw, (p) => (used.has(p.id) ? -1e9 : seasonValue(p))); if (x.p) used.add(x.p.id); }
+  DR = { ...src, rows };
+}
+function renderDr() {
+  const out = $("drOut");
+  if (!DR) { out.innerHTML = `<p class="munote">לא זוהה לוח בחירות. ודאו שהעתקתם את "לוח בחירות" מסיכום הדראפט.</p>`; return; }
+  const n = DR.teams.length, miss = DR.rows.filter((x) => !x.p), rounds = Math.ceil(DR.picks.length / n);
+  const dup = new Set(), seen = new Set();
+  for (const x of DR.rows) if (x.p) { if (seen.has(x.p.id)) dup.add(x.p.id); seen.add(x.p.id); }
+  out.innerHTML = `<p class="impsum">זוהו <b>${n}</b> קבוצות ו־<b>${DR.rows.length}</b> בחירות (${rounds} סיבובים${DR.snake ? ", סנייק" : ""}).${DR.mine != null ? ` הקבוצה שלך: <b>${esc(DR.teams[DR.mine])}</b>.` : ` <span class="txguess">הקבוצה שלך לא סומנה בהדבקה: בחרו אותה בהגדרות הליגה אחרי העדכון.</span>`}
+      ${miss.length ? `<br><span class="impwarn">${miss.length} שחקנים לא זוהו ולא ייכנסו (חסרים בנתונים, או שתבחרו להם שחקן מהרשימה):</span>` : ""}</p>
+    ${miss.length ? `<ol class="txlist">${miss.map((x) => `<li><div class="txm"><span class="impwarn">לא זוהה</span> <small>${esc(x.raw)}</small> <small>(${esc(DR.teams[x.t])})</small>
+      <select class="txfix" data-drpick="${x.k}" aria-label="איזה שחקן זה"><option value="">בחרו שחקן…</option>${txRank(x.raw).map((p) => `<option value="${p.id}">${esc(p.name)} · ${esc(p.team26 || "")}</option>`).join("")}</select></div></li>`).join("")}</ol>` : ""}
+    ${dup.size ? `<p class="impwarn">שחקן זוהה פעמיים: ${[...dup].map((id) => esc(PLAYER_BY_ID.get(id).name)).join(", ")}. בדקו את השמות לפני העדכון.</p>` : ""}
+    <details class="drteams"><summary>הקבוצות לפי הסדר</summary><ol>${DR.teams.map((t, i) => `<li>${esc(t)} <small>(${DR.rows.filter((x) => x.t === i && x.p).length} שחקנים)</small></li>`).join("")}</ol></details>
+    <button type="button" class="mact on" id="drApply">עדכון הליגה לפי הדראפט</button>${DR_UNDO ? ` <button type="button" class="mact" id="drUndo">ביטול הייבוא</button>` : ""}`;
+}
+$("drRead").addEventListener("click", () => { drBuild(); renderDr(); });
+$("drOut").addEventListener("change", (e) => {
+  const s = e.target.closest("[data-drpick]");
+  if (!s) return;
+  const x = DR.rows.find((r) => r.k === Number(s.dataset.drpick)), p = PLAYER_BY_ID.get(Number(s.value));
+  if (!x || !p) return;
+  st.nameAlias = st.nameAlias || {}; st.nameAlias[aliasKey(x.raw)] = p.id; saveSettings();
+  drBuild(); renderDr();
+});
+$("drOut").addEventListener("click", (e) => {
+  if (e.target.closest("#drUndo") && DR_UNDO) {
+    const u = DR_UNDO; DR_UNDO = null;
+    picks.length = 0; picks.push(...u.picks);
+    Object.assign(st, u.st);
+    rebuildSets(); saveSettings(); update(false); flushPicks(); renderDr();
+    return showToast("הליגה חזרה למה שהייתה לפני הייבוא");
+  }
+  if (!e.target.closest("#drApply") || !DR) return;
+  const n = DR.teams.length;
+  if (picks.length && !confirm(`הליגה בחדר הדראפט תוחלף בדראפט שהודבק: ${n} קבוצות ו־${DR.rows.filter((x) => x.p).length} שחקנים. אפשר לבטל אחר כך. להמשיך?`)) return;
+  const keys = ["teams", "teamNames", "roster", "snake", "myPos", "tags", "il", "ilp", "txLast", "txUndo", "txHist", "teamMap"];
+  DR_UNDO = { picks: picks.map((x) => ({ ...x })), st: JSON.parse(JSON.stringify(Object.fromEntries(keys.map((k) => [k, st[k] ?? null])))) };
+  const seen = new Set();
+  picks.length = 0;
+  for (const x of DR.rows) if (x.p && !seen.has(x.p.id)) { seen.add(x.p.id); picks.push({ id: x.p.id, team: x.t }); }
+  // a new league: its teams, sizes and my place; the notes of the previous league (table marks, IL, imported moves) go
+  st.teams = n; st.teamNames = DR.teams.slice(); st.snake = DR.snake;
+  st.roster = Math.max(5, Math.min(20, Math.ceil(DR.picks.length / n)));
+  if (DR.mine != null) st.myPos = DR.mine + 1;
+  st.tags = {}; st.il = {}; st.ilp = {}; st.txLast = null; st.txUndo = null; st.txHist = []; st.teamMap = {};
+  rebuildSets(); saveSettings(); update(false); flushPicks(); renderDr();
+  showToast(`הליגה עודכנה: ${n} קבוצות, ${picks.length} שחקנים`);
+});
+
 
 // ---------- import the league's transactions page ----------
 // Each move is a card: its date and time, "free agent move" (or a trade) and the team, then the players. The +/- signs
@@ -6457,19 +6589,18 @@ function txRank(raw, n = 8) {
     for (let i = 1; i <= m; i++) { const cur = [i]; for (let j = 1; j <= k; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = cur; }
     return prev[k];
   };
-  const sim = (a, b) => (!a.length || !b.length ? 0 : 1 - lev(a, b) / Math.max(a.length, b.length));
+  const sim = (a, b) => (!a.length && !b.length ? 1 : !a.length || !b.length ? 0 : 1 - lev(a, b) / Math.max(a.length, b.length));
   let ws = words.filter((w, i) => i === 0 || !/^(גוניור|גוניר|הבן|השני|השלישי)$/.test(w));
   if (ws.length >= 3 && ws[0].length <= 2 && ws[1].length <= 3) ws = [ws[0] + ws[1], ...ws.slice(2)];
   const f = HEB_SKEL(ws[0]), l = HEB_SKEL(ws.slice(1).join("") || ws[0]);
   return players.filter((x) => x.team26 || x.L).map((p) => {
-    const parts = IMP_NORM(p.name).replace(/ (jr|sr|ii|iii|iv)$/, "").split(" ");
-    const last = parts.slice(1).join("") || parts[0];
-    const sf = Math.max(sim(f, HEB_SKEL(hebrewGuess(parts[0]))), sim(f, HEB_SKEL(hebrewGuess(parts[0].replace(/j/g, "y")))));
-    const sl = Math.max(sim(l, HEB_SKEL(hebrewGuess(last))), sim(l, HEB_SKEL(hebrewGuess(last.replace(/j/g, "y")))));
+    const k = nameSkels(p);
+    const sf = Math.max(...k.f.map((x) => sim(f, x))), sl = Math.max(...k.l.map((x) => sim(l, x)));
     return { p, sc: 0.4 * sf + 0.6 * sl };
   }).sort((a, b) => b.sc - a.sc).slice(0, n).map((x) => x.p);
 }
-function txClosest(raw) {
+// tie: when two players fit the name about as well (Jalen / Jaylin Williams), the one it says is likelier
+function txClosest(raw, tie = null) {
   const words = HEB_NORM(raw).split(/[^א-ת]+/).filter((w) => w.length > 1);
   const en = IMP_NORM(raw).split(" ").filter((w) => /[a-z]/.test(w));
   if (!words.length && en.length) return null;
@@ -6480,30 +6611,32 @@ function txClosest(raw) {
     for (let i = 1; i <= m; i++) { const cur = [i]; for (let j = 1; j <= n; j++) cur[j] = Math.min(prev[j] + 1, cur[j - 1] + 1, prev[j - 1] + (a[i - 1] === b[j - 1] ? 0 : 1)); prev = cur; }
     return prev[n];
   };
-  const sim = (a, b) => (!a.length || !b.length ? 0 : 1 - lev(a, b) / Math.max(a.length, b.length));
+  const sim = (a, b) => (!a.length && !b.length ? 1 : !a.length || !b.length ? 0 : 1 - lev(a, b) / Math.max(a.length, b.length));
   // "ג'וניור" and the like are a suffix, not part of the last name
   let ws = words.filter((w, i) => i === 0 || !/^(גוניור|גוניר|הבן|השני|השלישי)$/.test(w));
   // initials spelled out ("סי גי מקולום" = CJ McCollum): the two short words are the first name
   if (ws.length >= 3 && ws[0].length <= 2 && ws[1].length <= 3) ws = [ws[0] + ws[1], ...ws.slice(2)];
   const f = HEB_SKEL(ws[0]), l = HEB_SKEL(ws.slice(1).join(""));
-  let best = null, second = 0;
+  const cands = [];
   for (const p of players.filter((x) => x.team26 || x.L)) {
-    const parts = IMP_NORM(p.name).replace(/ (jr|sr|ii|iii|iv)$/, "").split(" ");
-    if (parts.length < 2) continue;
-    const last = parts.slice(1).join("");
-    const sf = Math.max(sim(f, HEB_SKEL(hebrewGuess(parts[0]))), sim(f, HEB_SKEL(hebrewGuess(parts[0].replace(/j/g, "y")))));
-    const sl = Math.max(sim(l, HEB_SKEL(hebrewGuess(last))), sim(l, HEB_SKEL(hebrewGuess(last.replace(/j/g, "y")))));
+    const k = nameSkels(p);
+    if (k.n < 2) continue;
+    const sf = Math.max(...k.f.map((x) => sim(f, x))), sl = Math.max(...k.l.map((x) => sim(l, x)));
     // a short first name ("Nic", "Alex") is the start of the full one
-    const fg = HEB_SKEL(hebrewGuess(parts[0])), pre = f.length >= 2 && fg.length >= 2 && (f.startsWith(fg) || fg.startsWith(f));
+    const pre = f.length >= 2 && k.f.some((g) => g.length >= 2 && (f.startsWith(g) || g.startsWith(f)));
     // and starts with the same letter, unless almost the same ("פורטר" is not Huerter: a player missing from the data
     // gets no one rather than someone else)
-    const lg = HEB_SKEL(hebrewGuess(last)), lgy = HEB_SKEL(hebrewGuess(last.replace(/j/g, "y")));
-    const head = l[0] && (l[0] === lg[0] || l[0] === lgy[0]);
+    const head = l[0] && k.l.some((g) => g[0] === l[0]);
     if (sl < 0.75 || (!head && sl < 0.9) || (sf < 0.6 && !pre)) continue;  // the last name has to be close, and the first name too (a namesake missing from the data is not another player)
-    const sc = 0.4 * sf + 0.6 * sl;
-    if (!best || sc > best.sc) { second = best ? best.sc : 0; best = { p, sc }; } else if (sc > second) second = sc;
+    cands.push({ p, sc: 0.4 * sf + 0.6 * sl });
   }
-  return best && best.sc >= 0.5 && best.sc - second >= 0.04 ? best.p : null;
+  cands.sort((a, b) => b.sc - a.sc);
+  const best = cands[0];
+  if (!best || best.sc < 0.5) return null;
+  if (!cands[1] || best.sc - cands[1].sc >= 0.04) return best.p;
+  if (!tie) return null;
+  const near = cands.filter((c) => c.sc > best.sc - 0.04).map((c) => ({ p: c.p, v: tie(c.p) })).sort((a, b) => b.v - a.v);
+  return near[0].v - near[1].v >= 1 ? near[0].p : null;
 }
 // the page's own words that are not part of a move (ads, menus)
 const TX_NOISE = /פרסומת|בחסות|winner|advert|sponsored/i;
