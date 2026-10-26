@@ -335,6 +335,12 @@ tr.sel-team td { box-shadow: inset 0 -2px 0 var(--accent), inset 0 2px 0 var(--a
   .lgonly { display: none; }
   .smonly { display: inline; }
 }
+/* advanced stats: on a phone one table at a time, players or teams, by the switch on top (players first) */
+.advseg { display: none; }
+@media (max-width: 700px) {
+  #viewAdv .advseg { display: flex; justify-self: center; }
+  #viewAdv[data-advv="p"] .advT, #viewAdv[data-advv="t"] .advP, #viewAdv #teamTitle { display: none; }
+}
 /* the imports (copy a page of the league's site and paste it) are done on a computer: not on a phone */
 @media (max-width: 700px) { details.impbox { display: none !important; } }
 .mtags .mwhy { color: var(--muted); font-size: .72rem; line-height: 1.3; }
@@ -2038,15 +2044,19 @@ table.box.titab tr.punted td { opacity: .4; }
         <div id="muOut"></div>
       </section>
 
-      <section class="view" id="viewAdv" role="tabpanel" aria-labelledby="tabAdv" hidden>
-        <div class="tbl-wrap">
+      <section class="view" id="viewAdv" role="tabpanel" aria-labelledby="tabAdv" data-advv="p" hidden>
+        <div class="seg advseg" id="advSeg" role="group" aria-label="איזו טבלה להציג">
+          <button type="button" data-advv="p" aria-pressed="true">אישיים</button>
+          <button type="button" data-advv="t" aria-pressed="false">קבוצתיים</button>
+        </div>
+        <div class="tbl-wrap advP">
           <table>
             <thead><tr id="advHead"></tr></thead>
             <tbody id="advBody"></tbody>
           </table>
         </div>
-        <h3 id="teamTitle">קבוצות</h3>
-        <div class="tbl-wrap short">
+        <h3 id="teamTitle" class="advT">קבוצות</h3>
+        <div class="tbl-wrap short advT">
           <table>
             <thead><tr id="teamHead"></tr></thead>
             <tbody id="teamBody"></tbody>
@@ -6727,6 +6737,12 @@ function renderDr() {
     <button type="button" class="mact on" id="drApply"${DR.mine == null ? " disabled" : ""}>עדכון הליגה לפי הדראפט${DR.mine == null ? " (קודם בחרו את הקבוצה שלכם)" : ""}</button>${DR_UNDO ? ` <button type="button" class="mact" id="drUndo">ביטול הייבוא</button>` : ""}`;
 }
 $("drRead").addEventListener("click", () => { drBuild(); renderDr(); });
+$("advSeg").addEventListener("click", (e) => {
+  const b = e.target.closest("[data-advv]");
+  if (!b) return;
+  $("viewAdv").dataset.advv = b.dataset.advv;
+  for (const x of $("advSeg").querySelectorAll("[data-advv]")) x.setAttribute("aria-pressed", x === b);
+});
 $("clock").addEventListener("click", (e) => {
   if (!e.target.closest("#dToolsBtn")) return;
   const on = $("viewDraft").classList.toggle("dtools");
