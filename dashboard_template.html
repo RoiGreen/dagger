@@ -5271,7 +5271,16 @@ function muParse(text) {
     if (Object.keys(row).length >= 6) out[name] = row;
     name = null; vals = [];
   }
-  return Object.keys(out).length ? out : null;
+  if (!Object.keys(out).length) return null;
+  // the round's days, as the page's day tabs give them ("ב׳ 19/10", "Mon 19/10"): the first is the week it belongs to
+  const tab = text.split(/\r?\n/).map((l) => l.trim().match(/^[א-תA-Za-z]{1,4}[׳'.]?\s+(\d{1,2})\/(\d{1,2})$/)).find(Boolean);
+  if (tab) {
+    const now = new Date(), y = now.getFullYear(), dd = Number(tab[1]), mm = Number(tab[2]);
+    // the year that puts the date nearest to today (a week of late December read in January)
+    const pick = [y - 1, y, y + 1].map((yy) => new Date(Date.UTC(yy, mm - 1, dd, 12))).sort((a, b) => Math.abs(a - now) - Math.abs(b - now))[0];
+    Object.defineProperty(out, "week", { value: weekOf(pick.toISOString().slice(0, 10)).from, enumerable: false });
+  }
+  return out;
 }
 // the league's score for this team in the week shown, when one was pasted for it
 const muActual = (team) => { const a = st.muActual; return a && a.week === weekDays()[0] ? a.teams?.[team] || null : null; };
@@ -6560,7 +6569,9 @@ let MU_PEND = null;  // the table read, waiting for its team names to be matched
 function muApply() {
   const got = MU_PEND;
   if (!got) return;
-  const names = Object.keys(got), me = muMe(), pair = [me, st.muOpp];
+  // the matchup of the page's week (its opponent by the schedule), else the one open here
+  const names = Object.keys(got), me = muMe(), wOpp = got.week ? scheduledOpp(got.week) : null;
+  const pair = [me, wOpp != null && wOpp !== me ? wOpp : st.muOpp];
   let miss = names.filter((nm) => txTeam(nm) == null);
   // one name unknown and one team of this matchup left: that is it
   const taken = names.map((nm) => txTeam(nm)).filter((t) => t != null);
@@ -6575,7 +6586,11 @@ function muApply() {
   $("muImpMap").innerHTML = "";
   const teams = {};
   for (const nm of names) teams[txTeam(nm)] = got[nm];
-  st.muActual = { week: weekDays()[0], ts: Date.now(), teams };
+  // the week is the page's own (its day tabs), not the one open here: on a Monday morning the league's round of last
+  // week may still be running in America. The matchup then shows that week
+  const week = got.week || weekDays()[0];
+  st.muActual = { week, ts: Date.now(), teams };
+  st.muWeekOff = Math.round((Date.parse(week + "T12:00:00Z") - Date.parse(weekRange().from + "T12:00:00Z")) / (7 * 864e5));
   MU_PEND = null;
   saveSettings(); MU = null; renderMatchup(); muImpNote();
   $("muImpText").value = "";
