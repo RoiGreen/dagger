@@ -335,10 +335,12 @@ tr.sel-team td { box-shadow: inset 0 -2px 0 var(--accent), inset 0 2px 0 var(--a
   .lgonly { display: none; }
   .smonly { display: inline; }
 }
-/* advanced stats: on a phone one table at a time, players or teams, by the switch on top (players first) */
+/* advanced stats: on a phone one table at a time, players or teams, by the switch beside the season box (players first) */
 .advseg { display: none; }
 @media (max-width: 700px) {
-  #viewAdv .advseg { display: flex; justify-self: center; }
+  #topBar[data-tab="adv"] .advseg { display: inline-flex; }
+  #topBar[data-tab="adv"] .topform select { min-width: 0; }
+  .advseg button { padding: 6px 12px; font-size: .82rem; }
   #viewAdv[data-advv="p"] .advT, #viewAdv[data-advv="t"] .advP, #viewAdv #teamTitle { display: none; }
 }
 /* the imports (copy a page of the league's site and paste it) are done on a computer: not on a phone */
@@ -1892,6 +1894,10 @@ table.box.titab tr.punted td { opacity: .4; }
           <option value="14">14 ימים אחרונים</option>
           <option value="30">חודש אחרון</option>
         </select></label>
+      <div class="seg advseg" id="advSeg" role="group" aria-label="איזו טבלה להציג">
+        <button type="button" data-advv="p" aria-pressed="true">אישיים</button>
+        <button type="button" data-advv="t" aria-pressed="false">קבוצתיים</button>
+      </div>
       </div>
       <section class="view" id="viewBoard" role="tabpanel" aria-labelledby="tabBoard">
       <div class="legend">
@@ -2045,10 +2051,6 @@ table.box.titab tr.punted td { opacity: .4; }
       </section>
 
       <section class="view" id="viewAdv" role="tabpanel" aria-labelledby="tabAdv" data-advv="p" hidden>
-        <div class="seg advseg" id="advSeg" role="group" aria-label="איזו טבלה להציג">
-          <button type="button" data-advv="p" aria-pressed="true">אישיים</button>
-          <button type="button" data-advv="t" aria-pressed="false">קבוצתיים</button>
-        </div>
         <div class="tbl-wrap advP">
           <table>
             <thead><tr id="advHead"></tr></thead>
@@ -7483,6 +7485,7 @@ function syncControls() {
     : st.teamSel.length <= 4 ? st.teamSel.map((t) => t === "-" ? "FA" : t).join(", ") : `${st.teamSel.length} קבוצות נבחרו`;
   $("snake").checked = st.snake;
   for (const b of document.querySelectorAll("[data-tab]")) b.setAttribute("aria-selected", b.dataset.tab === st.tab);
+  $("topBar").dataset.tab = st.tab;
   // my team sits at the top of the draft room while it is open (it can be folded there), and in the side bar elsewhere
   const folded = MINE_FOLDED;  // folded on every visit, until opened
   $("minePanel").classList.toggle("folded", folded);
