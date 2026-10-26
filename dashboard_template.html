@@ -2249,6 +2249,24 @@ const FORM_MIN = { 7: 1, 14: 1, 30: 1 };  // no games minimum: one game in the w
 // Fantasy positions: a player is eligible at each one in his "PG/SG" string
 const POSITIONS = ["PG", "SG", "SF", "PF", "C"];
 const hasPos = (p, x) => (p.pos || "").split("/").includes(x);
+// The fantasy league gives some players other positions than the NBA's lists (Dončić PG,SG; Barnes SG,SF,PF). Read
+// from what is pasted from the league's site (the draft board, the moves page), kept per player, and put on him
+const posNorm = (t) => { const k = String(t || "").toUpperCase().split(/[\s,/]+/).filter((x) => /^(PG|SG|SF|PF|C)$/.test(x)); return k.length ? [...new Set(k)].join("/") : null; };
+function leaguePosSet(p, t) {
+  const v = posNorm(t);
+  if (!p || !v) return;
+  st.leaguePos = st.leaguePos || {};
+  st.leaguePos[p.id] = v;
+}
+function applyLeaguePos() {
+  const by = new Map(players.map((x) => [x.id, x]));  // runs before the shared lookup exists (at load)
+  for (const [id, v] of Object.entries(st.leaguePos || {})) {
+    const p = by.get(Number(id));
+    if (!p) continue;
+    if (p.pos0 === undefined) p.pos0 = p.pos;
+    p.pos = v;
+  }
+}
 
 // ---------- state ----------
 const st = {
@@ -2353,6 +2371,7 @@ function applySettings(s) {
 const settingsData = () => ({ ...st, punts: [...st.punts], pos: [...st.pos] });
 try {
   applySettings(JSON.parse(localStorage.getItem(SETTINGS_KEY) || "null"));
+  try { applyLeaguePos(); } catch (e) {}
   // A reload stays on the same tab (sessionStorage lives as long as the browser tab); a new visit opens the home tab
   const tab = sessionStorage.getItem(TAB_KEY);
   if (["board", "adv", "draft", "cmp", "mu"].includes(tab)) st.tab = tab;
@@ -6653,8 +6672,9 @@ function drFromHtml(html) {
   const d0 = rows[0] ? dirOf(rows[0]) : null, d1 = rows[1] ? dirOf(rows[1]) : null;
   const snake = d0 == null || d1 == null ? true : d0 !== d1;
   const picks = [];
-  for (const row of rows) for (const td of row) picks.push(txt(td.querySelector(".player-name")) || null);
-  return { teams, mine: mine >= 0 ? mine : null, snake, picks };
+  const pos = [];
+  for (const row of rows) for (const td of row) { picks.push(txt(td.querySelector(".player-name")) || null); pos.push(txt(td.querySelector(".player-position")) || null); }
+  return { teams, mine: mine >= 0 ? mine : null, snake, picks, pos };
 }
 function drFromText(text) {
   const L = text.split(/\r?\n/).map((l) => l.replace(/\s+/g, " ").trim()).filter(Boolean);
@@ -6663,12 +6683,12 @@ function drFromText(text) {
   // the team names stand right before the first pick, each written twice (picture and name)
   const teams = [];
   for (let i = first - 1; i >= 1 && L[i] === L[i - 1]; i -= 2) teams.unshift(L[i]);
-  const picks = [];
+  const picks = [], pos = [];
   for (let i = first; i < L.length; i++) {
     if (/^\d+\.\d+$/.test(L[i]) || POS_ONLY.test(L[i])) continue;
-    if (L[i] === L[i + 1]) { picks.push(L[i]); i++; }
+    if (L[i] === L[i + 1]) { picks.push(L[i]); pos.push(POS_ONLY.test(L[i + 2] || "") ? L[i + 2] : null); i++; }
   }
-  return teams.length && picks.length ? { teams, mine: null, snake: true, picks } : null;
+  return teams.length && picks.length ? { teams, mine: null, snake: true, picks, pos } : null;
 }
 $("drText").addEventListener("paste", (e) => {
   DR_HTML = drFromHtml(e.clipboardData?.getData("text/html")); DR_HTML_TEXT = null;
@@ -6682,7 +6702,7 @@ function drBuild() {
   // rounds are picked from the last column back, which only sets the order the picks are kept in here
   const rows = src.picks.map((raw, k) => {
     const r = Math.floor(k / n), i = k % n;
-    return { raw, k, t: i, seq: r * n + (src.snake && r % 2 === 1 ? n - 1 - i : i), p: raw ? txPlayer(raw) : null };
+    return { raw, k, t: i, seq: r * n + (src.snake && r % 2 === 1 ? n - 1 - i : i), pos: src.pos?.[k] || null, p: raw ? txPlayer(raw) : null };
   }).filter((x) => x.raw).sort((a, b) => a.seq - b.seq);
   // a name two players fit about as well: not one already drafted, else the better known one
   const used = new Set(rows.filter((x) => x.p).map((x) => x.p.id));
@@ -6736,7 +6756,8 @@ $("drOut").addEventListener("click", (e) => {
   DR_UNDO = { picks: picks.map((x) => ({ ...x })), st: JSON.parse(JSON.stringify(Object.fromEntries(keys.map((k) => [k, st[k] ?? null])))) };
   const seen = new Set();
   picks.length = 0;
-  for (const x of DR.rows) if (x.p && !seen.has(x.p.id)) { seen.add(x.p.id); picks.push({ id: x.p.id, team: x.t }); }
+  for (const x of DR.rows) if (x.p && !seen.has(x.p.id)) { seen.add(x.p.id); picks.push({ id: x.p.id, team: x.t }); leaguePosSet(x.p, x.pos); }
+  applyLeaguePos();
   // a new league: its teams, sizes and my place; the notes of the previous league (table marks, IL, imported moves) go
   st.teams = n; st.teamNames = DR.teams.slice(); st.snake = DR.snake;
   st.roster = Math.max(5, Math.min(20, Math.ceil(DR.picks.length / n)));
@@ -6859,7 +6880,7 @@ function txParse(text) {
       if (!cur.team) { cur.team = l; if (cur.wantTeam === 1) cur.wantTeam = 0; continue; }
       if (cur.trade && !cur.team2) { cur.team2 = l; cur.wantTeam = 0; continue; }
     }
-    if (POS_ONLY.test(l)) continue;
+    if (POS_ONLY.test(l)) { const r = cur.rows[cur.rows.length - 1]; if (r && !r.pos) r.pos = l; continue; }
     // each name shows twice (the photo's caption and the name): one row
     if (l === prev) continue;
     prev = l;
@@ -6913,7 +6934,7 @@ function txFromHtml(html) {
     if (cols.length >= 2) {
       const teams = [...card.querySelectorAll(".trade-team-name")].map(txt);
       const rows = [];
-      cols.slice(0, 2).forEach((col, ci) => { for (const r of col.querySelectorAll(".txn-row")) rows.push({ raw: nameOf(r), side: ci }); });
+      cols.slice(0, 2).forEach((col, ci) => { for (const r of col.querySelectorAll(".txn-row")) rows.push({ raw: nameOf(r), side: ci, pos: txt(r.querySelector(".txn-player-pos")) || null }); });
       cards.push({ ts, trade: true, team: teams[0], team2: teams[1], rows });
       continue;
     }
@@ -6924,7 +6945,7 @@ function txFromHtml(html) {
       for (const r of sec.querySelectorAll(".txn-row")) {
         // the icon says it; failing that, of two sections the first is the one added
         const dir = iconDir(r) || (sections.length === 2 ? (si === 0 ? "in" : "out") : null);
-        rows.push({ raw: nameOf(r), dir });
+        rows.push({ raw: nameOf(r), dir, pos: txt(r.querySelector(".txn-player-pos")) || null });
       }
     });
     if (team && rows.length) cards.push({ ts, trade: false, team, team2: null, rows });
@@ -7076,6 +7097,8 @@ $("txOut").addEventListener("click", (e) => {
     if (from == null || from === to) return;
     for (const key of ["il", "ilp"]) if (st[key]?.[from]) st[key][from] = st[key][from].filter((x) => x !== id);
   };
+  for (const c of TX) for (const m of c.moves) if (m.p && m.pos) leaguePosSet(m.p, m.pos);
+  applyLeaguePos();
   for (const c of TX) {
     if (c.t == null) continue;
     for (const m of c.moves) {
