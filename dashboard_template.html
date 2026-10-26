@@ -2012,6 +2012,7 @@ table.box.titab tr.punted td { opacity: .4; }
             <p class="munote">באתר הליגה פתחו את עמוד המצ'אפ, סמנו הכל (<bdi>Ctrl+A</bdi>), העתיקו והדביקו כאן (<bdi>Ctrl+V</bdi>). מה שכבר שוחק נלקח מאתר הליגה כמו שהוא, לשתי הקבוצות, ו־Dagger מחשב תחזית רק למשחקים שעוד לא התחילו. כדאי להדביק שוב מדי פעם במהלך השבוע.</p>
             <textarea id="muImpText" rows="3" placeholder="הדביקו כאן את עמוד המצ'אפ…"></textarea>
             <div class="improw"><button type="button" class="mact on" id="muImpRead">עדכון התוצאה</button><button type="button" class="mact" id="muImpClear" hidden>חזרה לחישוב של Dagger</button><small id="muImpNote" class="munote"></small></div>
+            <div id="muImpMap"></div>
           </div>
         </details>
         <div id="muOut"></div>
@@ -5239,29 +5240,36 @@ const weekFormer = (team, roster) => { const ids = new Set(); for (const d of we
 // FT%, 3PTM, REB, AST, STL, BLK, TOV). Kept per week with the time it was pasted; what was played up to then is taken
 // as it is, and only games that start later are projected.
 function muParse(text) {
-  const L = text.split(/\r?\n/).map((l) => l.trim());
-  const h = L.findIndex((l) => /\t/.test(l) && /\bPTS\b/.test(l) && /\bREB\b/.test(l));
+  // the cells come one per line or several on a line split by tabs (as the browser copies the table): read them as one
+  // run of cells. The table starts at its header (PTS ... TOV); each team is its name, then one cell per column
+  const cells = [];
+  for (const l of text.split(/\r?\n/)) for (const x of l.split("\t")) { const v = x.trim(); if (v) cells.push(v); }
+  const COLS = /^(PTS|FGM\/A|FG%|FTM\/A|FT%|3PTM|3PM|REB|AST|STL|BLK|TOV)$/;
+  const h = cells.findIndex((x, i) => x === "PTS" && cells.slice(i, i + 14).includes("REB") && cells.slice(i, i + 14).includes("TOV"));
   if (h < 0) return null;
-  const head = L[h].split("\t").map((x) => x.trim()).slice(1);
+  const head = [];
+  let i = h;
+  while (i < cells.length && COLS.test(cells[i])) head.push(cells[i++]);
+  const num = (x) => /^(\d+(\.\d+)?|\.\d+|\d+\/\d+)$/.test(x);
   const out = {};
-  let name = null;
-  for (let i = h + 1; i < L.length; i++) {
-    const l = L[i];
-    if (!l) continue;
-    if (/\t/.test(l) && /\bPTS\b/.test(l)) break;  // the next table (the projection)
-    if (!/\t/.test(l)) { name = l; continue; }
-    const v = l.split("\t").map((x) => x.trim()), row = {};
+  let name = null, vals = [];
+  for (; i < cells.length; i++) {
+    const x = cells[i];
+    if (x === "PTS" || /^(תחזית|projection)$/i.test(x)) break;  // the next table (the projection)
+    if (!num(x)) { if (!vals.length) name = x; continue; }  // a team name (written twice), or the score column's title
+    if (!name) continue;  // the score after a team's row
+    vals.push(x);
+    if (vals.length < head.length) continue;
+    const row = {};
     head.forEach((k, j) => {
-      const x = v[j];
-      if (x == null || x === "") return;
-      const pair = x.match(/^(\d+)\/(\d+)$/);
+      const v = vals[j], pair = v.match(/^(\d+)\/(\d+)$/);
       if (k === "FGM/A" && pair) { row.FGM = +pair[1]; row.FGA = +pair[2]; }
       else if (k === "FTM/A" && pair) { row.FTM = +pair[1]; row.FTA = +pair[2]; }
-      else if (k === "3PTM" || k === "3PM") row.FG3M = +x;
-      else if (["PTS", "REB", "AST", "STL", "BLK", "TOV"].includes(k)) row[k] = +x;
+      else if (k === "3PTM" || k === "3PM") row.FG3M = +v;
+      else if (["PTS", "REB", "AST", "STL", "BLK", "TOV"].includes(k)) row[k] = +v;
     });
-    if (name && Object.keys(row).length >= 6) out[name] = row;
-    name = null;
+    if (Object.keys(row).length >= 6) out[name] = row;
+    name = null; vals = [];
   }
   return Object.keys(out).length ? out : null;
 }
@@ -6548,16 +6556,41 @@ const muImpNote = () => {
   $("muImpClear").hidden = !on;
   $("muImpNote").textContent = on ? `התוצאה עד ${new Date(a.ts).toLocaleString("he-IL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" })} נלקחה מאתר הליגה (${Object.keys(a.teams).map((t) => teamName(Number(t))).join(", ")})` : "";
 };
-$("muImpRead").addEventListener("click", () => {
-  const got = muParse($("muImpText").value);
-  if (!got) { $("muImpNote").textContent = "לא נמצאה טבלת התוצאה. ודאו שהעתקתם את כל עמוד המצ'אפ."; return; }
-  const teams = {}, miss = [];
-  for (const [nm, row] of Object.entries(got)) { const t = txTeam(nm); if (t == null) miss.push(nm); else teams[t] = row; }
-  if (!Object.keys(teams).length) { $("muImpNote").textContent = `שמות הקבוצות (${miss.join(", ")}) לא תואמים לשמות כאן. עדכנו את שמות הקבוצות בהגדרות הליגה.`; return; }
+let MU_PEND = null;  // the table read, waiting for its team names to be matched
+function muApply() {
+  const got = MU_PEND;
+  if (!got) return;
+  const names = Object.keys(got), me = muMe(), pair = [me, st.muOpp];
+  let miss = names.filter((nm) => txTeam(nm) == null);
+  // one name unknown and one team of this matchup left: that is it
+  const taken = names.map((nm) => txTeam(nm)).filter((t) => t != null);
+  const left = pair.filter((t) => !taken.includes(t));
+  if (miss.length === 1 && left.length === 1) { st.teamMap = st.teamMap || {}; st.teamMap[miss[0]] = left[0]; miss = []; }
+  if (miss.length) {
+    const n = Math.max(st.teams, 1);
+    $("muImpNote").textContent = "שייכו את שמות הקבוצות מאתר הליגה לקבוצות כאן (פעם אחת):";
+    $("muImpMap").innerHTML = miss.map((nm) => `<div class="improw"><span class="txteam">${esc(nm)}</span><select data-mumap="${esc(nm)}"><option value="">איזו קבוצה זו?</option>${Array.from({ length: n }, (_, i) => `<option value="${i}">${esc(teamName(i))}${pair.includes(i) ? " (במצ'אפ)" : ""}</option>`).join("")}</select></div>`).join("");
+    return;
+  }
+  $("muImpMap").innerHTML = "";
+  const teams = {};
+  for (const nm of names) teams[txTeam(nm)] = got[nm];
   st.muActual = { week: weekDays()[0], ts: Date.now(), teams };
+  MU_PEND = null;
   saveSettings(); MU = null; renderMatchup(); muImpNote();
   $("muImpText").value = "";
-  showToast(`התוצאה עודכנה מאתר הליגה${miss.length ? ` (לא זוהו: ${miss.join(", ")})` : ""}`);
+  showToast("התוצאה עודכנה מאתר הליגה");
+}
+$("muImpRead").addEventListener("click", () => {
+  MU_PEND = muParse($("muImpText").value);
+  if (!MU_PEND) { $("muImpMap").innerHTML = ""; $("muImpNote").textContent = "לא נמצאה טבלת התוצאה (PTS … TOV). ודאו שהעתקתם את עמוד המצ'אפ, כולל הטבלה שמתחת לתוצאה."; return; }
+  muApply();
+});
+$("muImpMap").addEventListener("change", (e) => {
+  const s = e.target.closest("[data-mumap]");
+  if (!s || s.value === "") return;
+  st.teamMap = st.teamMap || {}; st.teamMap[s.dataset.mumap] = Number(s.value); saveSettings();
+  muApply();
 });
 $("muImpClear").addEventListener("click", () => { st.muActual = null; saveSettings(); MU = null; renderMatchup(); muImpNote(); });
 $("muImpBox").addEventListener("toggle", () => { if ($("muImpBox").open) muImpNote(); });
@@ -6797,7 +6830,8 @@ function txTeam(name) {
   const n = IMP_NORM(HEB_NORM(name));
   for (let i = 0; i < Math.max(st.teams, 1); i++) {
     const t = IMP_NORM(HEB_NORM(teamName(i)));
-    if (t && (t === n || n.includes(t) || t.includes(n))) return i;
+    // one name inside the other only for names of 3 letters or more ("b" is in every name)
+    if (t && (t === n || (Math.min(t.length, n.length) >= 3 && (n.includes(t) || t.includes(n))))) return i;
   }
   return null;
 }
