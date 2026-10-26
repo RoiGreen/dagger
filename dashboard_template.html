@@ -315,6 +315,26 @@ tr.sel-team td { box-shadow: inset 0 -2px 0 var(--accent), inset 0 2px 0 var(--a
 .txlist .txdir.in { background: color-mix(in srgb, var(--pos) 16%, transparent); color: var(--pos); }
 .txlist .txdir.guess { outline: 2px dashed var(--warn, #d08700); outline-offset: 1px; }
 .impbody .txguess { color: var(--warn, #b26a00); font-weight: 700; }
+/* phone, a finished draft: the board comes first; the pick tools open with a button */
+.dtoolsbtn { display: none; }
+.smonly { display: none; }
+.muscore .gclabel { display: none; }
+@media (max-width: 700px) {
+  #viewDraft.ddone .dtoolsbtn { display: inline-block; margin-inline-start: 8px; font-size: .8rem; }
+  #viewDraft.ddone:not(.dtools) .pickbar, #viewDraft.ddone:not(.dtools) .pickrow2, #viewDraft.ddone:not(.dtools) #draftAdvice { display: none !important; }
+  /* the header: tighter, so the page starts higher */
+  header.top .jumbo-in { padding: 4px 10px; }
+  header.top .brand .ball, header.top .brand .logo svg { width: 24px; height: 24px; }
+  header.top h1 { font-size: 1.05rem; }
+  header.top .ticker { padding: 3px 6px; gap: 5px; }
+  header.top .ticker .game { padding: 2px 7px; font-size: .74rem; min-width: 76px; }
+  /* the show bar fits one row */
+  #showSeg button { padding-inline: 8px; font-size: .82rem; }
+  /* games count under each team in the matchup card: say what it is */
+  .muscore .gclabel { display: inline; font-size: .72rem; opacity: .75; margin-inline-end: 3px; }
+  .lgonly { display: none; }
+  .smonly { display: inline; }
+}
 /* the imports (copy a page of the league's site and paste it) are done on a computer: not on a phone */
 @media (max-width: 700px) { details.impbox { display: none !important; } }
 .mtags .mwhy { color: var(--muted); font-size: .72rem; line-height: 1.3; }
@@ -1854,10 +1874,10 @@ table.box.titab tr.punted td { opacity: .4; }
       </div>
       <div class="topbar" id="topBar">
       <div class="seg showseg" id="showSeg" role="group" aria-label="אילו שחקנים להציג">
-        <button type="button" data-show="free">שחקנים חופשיים</button>
+        <button type="button" data-show="free"><span class="lgonly">שחקנים </span>חופשיים</button>
         <button type="button" data-show="mine">הקבוצה שלי</button>
-        <button type="button" data-show="fav">המועדפים שלי</button>
-        <button type="button" data-show="all">כל השחקנים</button>
+        <button type="button" data-show="fav"><span class="lgonly">ה</span>מועדפים<span class="lgonly"> שלי</span></button>
+        <button type="button" data-show="all"><span class="lgonly">כל השחקנים</span><span class="smonly">כולם</span></button>
       </div>
       <label class="topform">
         <select id="formWinTop" aria-label="כושר עדכני">
@@ -2642,7 +2662,10 @@ function render() {
 
   // header
   $("viewBoard").dataset.fmt = st.fmt; $("viewBoard").style.setProperty("--nc", Math.max(CATS.length, 5));
-  const order = COLS;  // the same columns, in the same order, on a phone and on the desktop
+  // a phone shows what decides: the rank, the player, his value (Z, or FPTS in a points league), then the categories;
+  // age, games, availability and minutes are in the player's card (a tap on his name)
+  const col = (k) => COLS.find((c) => c.k === k);
+  const order = PHONE.matches ? [col("rank"), col("name"), col(st.fmt === "pts" ? "fp" : "zTotal"), ...COLS.filter((c) => c.cat), col("act")].filter(Boolean) : COLS;
   $("head").innerHTML = (statRank ? `<th class="nosort" scope="col">${esc(statLabel)} Rank</th>` : "") + order.map((c) => {
     const label = c.k === "rank" ? (m === "g" ? "Rank" : "Rank 36 MIN") : c.l;
     const cls = [st.sort === c.k ? "sorted" : "", st.sort === c.k && st.asc ? "asc" : "", c.nosort ? "nosort" : "", c.k === "act" ? "acts" : "",
@@ -3665,9 +3688,11 @@ function renderDraft() {
   clock.classList.toggle("you", wait === 0);
   clock.innerHTML = `${league}<span class="big">${wait === 0 ? "התור שלך" : `על השעון: ${esc(teamName(onClock))}`} · ${pickLabel(next)}</span>` +
     `<span>בחירה ${next} בסך הכול${wait ? ` · עוד ${wait} בחירות עד התור שלך (${pickLabel(myK)})` : ""}</span>`;
-  if (next > n * Math.max(st.roster, 1)) {
+  const done = next > n * Math.max(st.roster, 1);
+  $("viewDraft").classList.toggle("ddone", done);
+  if (done) {
     clock.classList.remove("you");
-    clock.innerHTML = `${league}<span class="big">הדראפט הושלם</span><span>${picks.length} בחירות, ${st.roster} לכל קבוצה. אפשר לערוך כל קבוצה בלחיצה על משבצת בלוח.</span>`;
+    clock.innerHTML = `${league}<span class="big">הדראפט הושלם</span><button type="button" class="linkbtn dtoolsbtn" id="dToolsBtn">${$("viewDraft").classList.contains("dtools") ? "הסתרת כלי הבחירה" : "כלי הבחירה"}</button><span>${picks.length} בחירות, ${st.roster} לכל קבוצה. אפשר לערוך כל קבוצה בלחיצה על משבצת בלוח.</span>`;
   }
 
   // Who picks next: the team on the clock unless the user chooses another
@@ -5935,9 +5960,9 @@ function renderMatchup() {
   const modeSeg = weekLive ? `<div class="seg mumode" role="group" aria-label="לייב או תחזית"><button type="button" data-mumode="live" aria-pressed="${isLive}">לייב</button><button type="button" data-mumode="proj" aria-pressed="${!isLive}">תחזית</button></div>` : "";
   out.innerHTML = `
     <div class="muscore">
-      <div class="mside">${faces(mineP, ilA)}<b>${esc(myName)}</b><span title="משחקים בהרכב: שוחקו מתוך סך הכול השבוע"><b class="gcount" dir="ltr">${SA.played}/${SA.played + SA.gamesAll}</b></span></div>
+      <div class="mside">${faces(mineP, ilA)}<b>${esc(myName)}</b><span title="משחקים בהרכב: שוחקו מתוך סך הכול השבוע"><small class="gclabel">משחקים</small><b class="gcount" dir="ltr">${SA.played}/${SA.played + SA.gamesAll}</b></span></div>
       <div class="mmid">${modeSeg}${PV ? `<div class="mupv">עם הפיק אפ: <b>${esc(PV.X.name)}</b>${PV.drop ? ` במקום <b>${esc(PV.drop.name)}</b>` : ""} · <span dir="ltr">${pctTxt(odds.win)} → ${pctTxt(PV.r.win)}</span> <button type="button" class="mact" data-mupvoff="1">ביטול</button></div>` : ""}${score}<div class="mwin ${oddsKey(SO.win)}"><b>${pctTxt(SO.win)}</b><span>סיכוי לנצח${isLive ? " (לפי התוצאה עד כה והתחזית להמשך)" : ""}</span></div>${leadCols()}${isLive ? `<div class="mulivenote">לפי הסגל וההרכב ב־<bdi>Dagger</bdi>. שיניתם משהו באתר הליגה? עדכנו כאן (ייבוא סגל בחדר הדראפט, או לחיצה על משבצת בהרכב היומי)</div>` : ""}</div>
-      <div class="mside">${faces(oppP, ilB)}<b>${esc(oppName)}</b><span title="משחקים בהרכב: שוחקו מתוך סך הכול השבוע"><b class="gcount" dir="ltr">${B.played}/${B.played + B.gamesAll}</b></span></div>
+      <div class="mside">${faces(oppP, ilB)}<b>${esc(oppName)}</b><span title="משחקים בהרכב: שוחקו מתוך סך הכול השבוע"><small class="gclabel">משחקים</small><b class="gcount" dir="ltr">${B.played}/${B.played + B.gamesAll}</b></span></div>
     </div>
     <div class="mugrid">
       <section class="cmpsec"><h3 class="ctr">הקטגוריות</h3>
@@ -6682,6 +6707,11 @@ function renderDr() {
     <button type="button" class="mact on" id="drApply"${DR.mine == null ? " disabled" : ""}>עדכון הליגה לפי הדראפט${DR.mine == null ? " (קודם בחרו את הקבוצה שלכם)" : ""}</button>${DR_UNDO ? ` <button type="button" class="mact" id="drUndo">ביטול הייבוא</button>` : ""}`;
 }
 $("drRead").addEventListener("click", () => { drBuild(); renderDr(); });
+$("clock").addEventListener("click", (e) => {
+  if (!e.target.closest("#dToolsBtn")) return;
+  const on = $("viewDraft").classList.toggle("dtools");
+  e.target.textContent = on ? "הסתרת כלי הבחירה" : "כלי הבחירה";
+});
 $("drOut").addEventListener("change", (e) => {
   if (e.target.id === "drMine") { DR.mine = e.target.value === "" ? null : Number(e.target.value); DR.mineAsked = true; return renderDr(); }
   const s = e.target.closest("[data-drpick]");
