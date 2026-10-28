@@ -3045,7 +3045,7 @@ function renderTicker() {
 }
 // Live scores straight from ESPN's scoreboard (open to any site), so a result shows as soon as it happens and not
 // at the next update of the site. Games in play refresh every minute while the page is on screen.
-const ESPN_ABBR = { GS: "GSW", NY: "NYK", SA: "SAS", NO: "NOP", UTAH: "UTA", WSH: "WAS" };
+const ESPN_ABBR = { GS: "GSW", NY: "NYK", SA: "SAS", NO: "NOP", UTAH: "UTA", WSH: "WAS", PHO: "PHX" };
 const LIVE = new Map();  // game id -> { fin, live, hs, as }
 const gameNow = (g) => (g.fin ? { fin: true, hs: g.hs, as: g.as } : LIVE.get(g.id) || {});
 const LIVE_AT = new Map();  // day -> when it was fetched
@@ -3068,9 +3068,10 @@ async function liveScoresFor(day) {
       const ab = (x) => ESPN_ABBR[x.team.abbreviation] || x.team.abbreviation;
       const g = games.find((x) => x.h === ab(H) && x.a === ab(A));
       if (!g || st8.state === "pre") continue;
-      const v = { fin: st8.state === "post", live: st8.state === "in" ? (st8.shortDetail || "LIVE") : null, hs: Number(H.score), as: Number(A.score) };
+      const v = { fin: st8.state === "post", live: st8.state === "in" ? (st8.shortDetail || "LIVE") : null, hs: Number(H.score), as: Number(A.score), ev: ev.id };
       const old = LIVE.get(g.id);
       if (!old || old.hs !== v.hs || old.as !== v.as || old.live !== v.live || old.fin !== v.fin) { LIVE.set(g.id, v); changed = true; }
+      if (changed && !$("gameModal").hidden && $("gameCard").dataset.gid === g.id) openGame(g.id);
     }
     if (changed && (tickerDay || defaultTickerDay()) === day) renderTicker();
   } catch (e) {}
@@ -3132,6 +3133,56 @@ function boxTable(team, rows) {
       return head("Starters") + five.map((r) => line(r)).join("") + (bench.length ? head("Bench") + bench.map((r) => line(r)).join("") : "");
     })()}</tbody><tfoot>${line([...total.slice(0, 2), 240, ...total.slice(3)], "sum").replace(/<td>240<\/td>/, "<td></td>")}</tfoot></table></div></div>`;
 }
+// Box score of a game in play or just ended, straight from ESPN (as the live scores), so it shows without waiting
+// for the next update of the site. Same rows as the site's own box scores; ESPN players are matched to the
+// board by name and team (one not matched still shows, without his card). A game in play refreshes every minute.
+const ESPN_BOX = new Map();  // game id -> { box, fin, at }
+const boxKey = (n) => String(n || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/-/g, " ").replace(/[^a-z ]/g, "")
+  .split(" ").filter((w) => w && !["jr", "sr", "ii", "iii", "iv"].includes(w)).join(" ");
+async function espnBox(g) {
+  let ev = LIVE.get(g.id)?.ev;
+  if (!ev) {  // a game already final in the site: its ESPN id from that night's scoreboard
+    const sb = await (await fetch(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=${g.d.replace(/-/g, "")}`)).json();
+    const ab = (x) => ESPN_ABBR[x.team.abbreviation] || x.team.abbreviation;
+    ev = (sb.events || []).find((e) => { const c = e.competitions?.[0]?.competitors || []; return c.some((x) => ab(x) === g.h) && c.some((x) => ab(x) === g.a); })?.id;
+    if (!ev) return null;
+  }
+  const js = await (await fetch(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=${ev}`)).json();
+  const byTeam = new Map(), byName = new Map();
+  for (const p of players) {
+    const k = boxKey(p.name);
+    byTeam.set(`${p.team26}|${k}`, p.id);
+    byName.set(k, byName.has(k) ? null : p.id);
+  }
+  const box = {};
+  for (const side of js.boxscore?.players || []) {
+    const team = ESPN_ABBR[side.team.abbreviation] || side.team.abbreviation, st = side.statistics?.[0];
+    if (!st) continue;
+    const ix = Object.fromEntries(st.labels.map((l, i) => [l, i]));
+    const rows = [];
+    for (const a of st.athletes || []) {
+      const s = a.stats || [];
+      if (a.didNotPlay || !s.length || !String(s[ix.MIN] || "").replace(/-/g, "")) continue;
+      const nm = a.athlete.displayName, k = boxKey(nm), id = byTeam.get(`${team}|${k}`) || byName.get(k) || null;
+      const two = (l) => String(s[ix[l]] || "0-0").split("-").map(Number), n = (l) => Number(s[ix[l]]) || 0;
+      const [fgm, fga] = two("FG"), [f3m, f3a] = two("3PT"), [ftm, fta] = two("FT");
+      const pos = a.starter ? ({ PG: "G", SG: "G", SF: "F", PF: "F" }[a.athlete.position?.abbreviation] || (a.athlete.position?.abbreviation || "").slice(0, 1)) : "";
+      rows.push([PLAYER_BY_ID.get(id)?.name || nm, id, n("MIN"), n("PTS"), n("REB"), n("AST"), n("STL"), n("BLK"), f3m, fgm, fga, ftm, fta, n("TO"), f3a, pos]);
+    }
+    if (rows.length) box[team] = rows;
+  }
+  return Object.keys(box).length ? box : null;
+}
+async function loadEspnBox(g) {
+  const had = ESPN_BOX.get(g.id);
+  if (had && (had.pending || (had.box && had.fin) || Date.now() - had.at < 55e3)) return;
+  ESPN_BOX.set(g.id, { ...(had || {}), pending: true, at: Date.now() });
+  let box = null;
+  try { box = await espnBox(g); } catch (e) {}
+  ESPN_BOX.set(g.id, { box: box || had?.box, fin: !!(box && gameNow(g).fin), at: Date.now() });
+  if (!$("gameModal").hidden && $("gameCard").dataset.gid === g.id) openGame(g.id, true);
+}
+let boxTimer = null;
 const sideTag = (t) => `${teamLogo(t)}${esc(t)}`;
 // Coming game: each team's leader in every category, injured players flagged, and the injury report
 function previewTeam(team) {
@@ -3153,11 +3204,18 @@ function injuryList(team) {
   return hurt.length ? hurt.map((p) => `<li>${injuryPill(p)}<span class="pn">${esc(p.name)}</span><span class="why">${esc(injuryHe(p.hurt.inj) || "")}</span></li>`).join("")
     : `<li class="none">אין פצועים</li>`;
 }
-function openGame(gid) {
+function openGame(gid, fromBox) {
   const g = GAMES.find((x) => x.id === gid);
   if (!g) return;
   const gv = gameNow(g);
-  const box = (D.box || {})[gid];
+  // the site's box score, or (a game in play or not yet in the site) ESPN's
+  const espn = !(D.box || {})[gid] && (gv.fin || gv.live) ? ESPN_BOX.get(gid) : null;
+  const box = (D.box || {})[gid] || espn?.box;
+  clearTimeout(boxTimer);
+  if (!(D.box || {})[gid] && (gv.fin || gv.live)) {
+    if (!fromBox) loadEspnBox(g);
+    if (gv.live) boxTimer = setTimeout(() => { if (!$("gameModal").hidden && $("gameCard").dataset.gid === gid) loadEspnBox(g); }, 60e3);
+  }
   const when = g.t.toLocaleString("he-IL", { weekday: "long", day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit", timeZone: "Asia/Jerusalem" });
   const head = `<div class="ghead">
       <div class="gteam ga">${gv.fin || gv.live ? `<b class="gsc${gv.fin && gv.as > gv.hs ? " won" : ""}">${gv.as}</b>` : ""}<span>${esc(g.a)}</span>${teamLogo(g.a)}</div>
@@ -3165,15 +3223,15 @@ function openGame(gid) {
       <div class="gteam gh">${teamLogo(g.h)}<span>${esc(g.h)}</span>${gv.fin || gv.live ? `<b class="gsc${gv.fin && gv.hs > gv.as ? " won" : ""}">${gv.hs}</b>` : ""}</div>
     </div>`;
   let body;
-  if (g.fin && box) {
-    // One team at a time: two tabs with the full team name and logo
-    const teams = [g.a, g.h].filter((t) => box[t]);
-    body = `<div class="gtabs" role="tablist">${teams.map((t, i) => `<button type="button" role="tab" data-gtab="${t}" aria-selected="${i === 0}">${teamLogo(t)}<span>${esc(TEAM_NAMES[t] || t)}</span></button>`).join("")}</div>` +
-      teams.map((t, i) => boxTable(t, box[t]).replace(`data-gbox="${t}"`, `data-gbox="${t}"${i ? " hidden" : ""}`)).join("");
-  } else if (g.fin) {
-    body = `<p class="gnote">ה־Box Score של המשחק הזה כבר לא שמור באתר</p>`;
+  if ((g.fin || gv.fin || gv.live) && box) {
+    // One team at a time: two tabs with the full team name and logo (the one open stays open on a refresh)
+    const open = $("gameCard").dataset.gid === gid ? $("gameCard").querySelector('[data-gtab][aria-selected="true"]')?.dataset.gtab : null;
+    const teams = [g.a, g.h].filter((t) => box[t]), first = teams.includes(open) ? teams.indexOf(open) : 0;
+    body = (gv.live ? `<p class="gnote">המשחק בעיצומו · מתעדכן כל דקה</p>` : "") + `<div class="gtabs" role="tablist">${teams.map((t, i) => `<button type="button" role="tab" data-gtab="${t}" aria-selected="${i === first}">${teamLogo(t)}<span>${esc(TEAM_NAMES[t] || t)}</span></button>`).join("")}</div>` +
+      teams.map((t, i) => boxTable(t, box[t]).replace(`data-gbox="${t}"`, `data-gbox="${t}"${i !== first ? " hidden" : ""}`)).join("");
   } else if (gv.fin || gv.live) {
-    body = `<p class="gnote">${gv.live ? "המשחק בעיצומו" : "המשחק הסתיים"}. ה־Box Score יופיע אחרי העדכון הבא של האתר.</p>`;
+    const e = ESPN_BOX.get(gid);
+    body = `<p class="gnote">${!e || e.pending ? "טוען את ה־Box Score…" : `${gv.live ? "המשחק בעיצומו" : "המשחק הסתיים"}. ה־Box Score עוד לא זמין, נסו שוב בעוד דקה.`}</p>`;
   } else {
     const A = previewTeam(g.a), H = previewTeam(g.h);
     const who = (x) => x.p ? `<span class="pn">${esc(x.p.name)}</span>${x.p.hurt ? injuryPill(x.p) : ""}` : "–";
@@ -3184,6 +3242,7 @@ function openGame(gid) {
       <div class="ginj"><div><h4>${sideTag(g.a)}</h4><ul>${injuryList(g.a)}</ul></div><div><h4>${sideTag(g.h)}</h4><ul>${injuryList(g.h)}</ul></div></div></div>`;
   }
   $("gameCard").innerHTML = `<button type="button" class="gclose" data-gclose="1" aria-label="סגירה">✕</button>${head}${body}`;
+  $("gameCard").dataset.gid = gid;
   $("gameModal").hidden = false;
 }
 // ---------- player card: last games and the next ones ----------

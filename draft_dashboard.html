@@ -3045,7 +3045,7 @@ function renderTicker() {
 }
 // Live scores straight from ESPN's scoreboard (open to any site), so a result shows as soon as it happens and not
 // at the next update of the site. Games in play refresh every minute while the page is on screen.
-const ESPN_ABBR = { GS: "GSW", NY: "NYK", SA: "SAS", NO: "NOP", UTAH: "UTA", WSH: "WAS" };
+const ESPN_ABBR = { GS: "GSW", NY: "NYK", SA: "SAS", NO: "NOP", UTAH: "UTA", WSH: "WAS", PHO: "PHX" };
 const LIVE = new Map();  // game id -> { fin, live, hs, as }
 const gameNow = (g) => (g.fin ? { fin: true, hs: g.hs, as: g.as } : LIVE.get(g.id) || {});
 const LIVE_AT = new Map();  // day -> when it was fetched
@@ -3140,8 +3140,13 @@ const ESPN_BOX = new Map();  // game id -> { box, fin, at }
 const boxKey = (n) => String(n || "").normalize("NFKD").replace(/[̀-ͯ]/g, "").toLowerCase().replace(/-/g, " ").replace(/[^a-z ]/g, "")
   .split(" ").filter((w) => w && !["jr", "sr", "ii", "iii", "iv"].includes(w)).join(" ");
 async function espnBox(g) {
-  const ev = LIVE.get(g.id)?.ev;
-  if (!ev) return null;
+  let ev = LIVE.get(g.id)?.ev;
+  if (!ev) {  // a game already final in the site: its ESPN id from that night's scoreboard
+    const sb = await (await fetch(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/scoreboard?dates=${g.d.replace(/-/g, "")}`)).json();
+    const ab = (x) => ESPN_ABBR[x.team.abbreviation] || x.team.abbreviation;
+    ev = (sb.events || []).find((e) => { const c = e.competitions?.[0]?.competitors || []; return c.some((x) => ab(x) === g.h) && c.some((x) => ab(x) === g.a); })?.id;
+    if (!ev) return null;
+  }
   const js = await (await fetch(`https://site.api.espn.com/apis/site/v2/sports/basketball/nba/summary?event=${ev}`)).json();
   const byTeam = new Map(), byName = new Map();
   for (const p of players) {
@@ -3170,12 +3175,11 @@ async function espnBox(g) {
 }
 async function loadEspnBox(g) {
   const had = ESPN_BOX.get(g.id);
-  if (had && (had.fin || Date.now() - had.at < 55e3)) return;
-  ESPN_BOX.set(g.id, { ...(had || {}), at: Date.now() });
-  try {
-    const box = await espnBox(g);
-    if (box) ESPN_BOX.set(g.id, { box, fin: !!gameNow(g).fin, at: Date.now() });
-  } catch (e) {}
+  if (had && (had.pending || (had.box && had.fin) || Date.now() - had.at < 55e3)) return;
+  ESPN_BOX.set(g.id, { ...(had || {}), pending: true, at: Date.now() });
+  let box = null;
+  try { box = await espnBox(g); } catch (e) {}
+  ESPN_BOX.set(g.id, { box: box || had?.box, fin: !!(box && gameNow(g).fin), at: Date.now() });
   if (!$("gameModal").hidden && $("gameCard").dataset.gid === g.id) openGame(g.id, true);
 }
 let boxTimer = null;
@@ -3238,6 +3242,7 @@ function openGame(gid, fromBox) {
       <div class="ginj"><div><h4>${sideTag(g.a)}</h4><ul>${injuryList(g.a)}</ul></div><div><h4>${sideTag(g.h)}</h4><ul>${injuryList(g.h)}</ul></div></div></div>`;
   }
   $("gameCard").innerHTML = `<button type="button" class="gclose" data-gclose="1" aria-label="סגירה">✕</button>${head}${body}`;
+  $("gameCard").dataset.gid = gid;
   $("gameModal").hidden = false;
 }
 // ---------- player card: last games and the next ones ----------
