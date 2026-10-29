@@ -6126,7 +6126,7 @@ function renderMatchup() {
             const pg = Math.min(MU_PAGE, pages - 1);
             const pager = pages > 1 ? `<div class="mupager"><button type="button" class="mact" data-mupage="${pg - 1}"${pg ? "" : " disabled"} aria-label="עמוד קודם"><bdi dir="ltr">→</bdi></button>${Array.from({ length: pages }, (_, i) => `<button type="button" class="mact${i === pg ? " on" : ""}" data-mupage="${i}">${i + 1}</button>`).join("")}<button type="button" class="mact" data-mupage="${pg + 1}"${pg < pages - 1 ? "" : " disabled"} aria-label="עמוד הבא"><bdi dir="ltr">←</bdi></button></div>` : "";
             const forcedName = MU_FORCE != null ? PLAYER_BY_ID.get(MU_FORCE)?.name : null;
-            return list.length || searched ? `<div class="mupickhead">${forcedName ? `<b class="muforcehead">מחליפים ל־<bdi>${esc(forcedName)}</bdi>, מהסיכוי הגבוה לנמוך</b>` : ""}<span>סיכוי לנצח במצ'אפ הקרוב</span></div><ol class="mupicks">${searched ? moveRow(searched, -1) : ""}${list.slice(pg * per, pg * per + per).map((x, j) => moveRow(x, pg * per + j)).join("")}</ol>${pager}`
+            return list.length || searched ? `<div class="mupickhead">${forcedName ? `<b class="muforcehead">מחליפים ל־<bdi>${esc(forcedName)}</bdi></b>` : ""}<span>סיכוי לנצח במצ'אפ הקרוב</span></div><ol class="mupicks">${searched ? moveRow(searched, -1) : ""}${list.slice(pg * per, pg * per + per).map((x, j) => moveRow(x, pg * per + j)).join("")}</ol>${pager}`
               : `<p class="munote nopick">אין פיק אפ שמשפר את הסיכוי לנצח השבוע</p>`;
           })()}`}
     </section>
