@@ -337,6 +337,7 @@ tr.sel-team td { box-shadow: inset 0 -2px 0 var(--accent), inset 0 2px 0 var(--a
 }
 /* advanced stats: on a phone one table at a time, players or teams, by the switch beside the season box (players first) */
 .advseg { display: none; }
+.txold > summary { cursor: pointer; color: var(--muted); font-size: .85rem; margin: 6px 0; }
 @media (max-width: 700px) {
   #topBar[data-tab="adv"] .advseg { display: inline-flex; }
   #topBar[data-tab="adv"] .topform select { min-width: 0; }
@@ -7093,14 +7094,20 @@ function renderTx() {
       return g ? `<span class="txguess">ב־${g} העברות של שחקן בודד הכיוון הוא ניחוש (מסומן ב־?), כי הסימנים + / − לא הועתקו. בדקו אותן, או העתיקו מהמחשב: Ctrl+A, Ctrl+C, ואז Ctrl+V כאן.</span><br>` : ""; })()}זוהו <b>${TX.length}</b> העברות${st.txLast ? `, מתוכן <b>${fresh.length}</b> חדשות מאז הייבוא הקודם (${fmt(st.txLast)})` : ""}.
       ${st.txLast ? `<button type="button" class="mact" id="txReset" title="${st.txUndo ? "הסגלים חוזרים למה שהיו לפני הייבוא הקודם, וההעברות נקראות מחדש" : "כל ההעברות בעמוד ייקראו מחדש"}">${st.txUndo ? "ביטול הייבוא הקודם וקריאה מחדש" : "ייבוא מחדש של הכל"}</button>` : ""}</p>
     ${st.txLast && !fresh.length ? `<p class="munote">כל ההעברות בעמוד כבר יובאו, ולכן הן מסומנות באפור. הסגלים כבר מעודכנים לפיהן. לחיצה על "עדכון הסגלים" שומרת את התאריך והשעה של כל אחת מהן למצ'אפ (מי נספר באיזה יום), בלי לשנות את הסגלים. אם הייבוא הקודם לא היה נכון, לחצו על הכפתור שלמעלה.</p>` : ""}
-    <ol class="txlist">${TX.map((c, ci) => `<li class="${c.old ? "old" : ""}"><div class="txh"><span>${fmt(c.ts)}</span> <b>${esc(c.t != null ? teamName(c.t) : c.team)}</b>${c.trade ? ` ⇄ <b>${esc(c.t2 != null ? teamName(c.t2) : c.team2 || "?")}</b> <small>(טרייד)</small>` : ""}${c.old ? ` <small>(כבר יובאה)</small>` : ""}</div>
+    ${(() => {
+      // moves already imported cannot change any more: folded away under the new ones, so only those need a look
+      const li = (c, ci) => `<li class="${c.old ? "old" : ""}"><div class="txh"><span>${fmt(c.ts)}</span> <b>${esc(c.t != null ? teamName(c.t) : c.team)}</b>${c.trade ? ` ⇄ <b>${esc(c.t2 != null ? teamName(c.t2) : c.team2 || "?")}</b> <small>(טרייד)</small>` : ""}${c.old ? ` <small>(כבר יובאה)</small>` : ""}</div>
       ${c.moves.map((m, mi) => `<div class="txm${m.on && !c.old ? "" : " off"}"><label><input type="checkbox" data-txon="${ci}|${mi}"${m.on && !c.old ? " checked" : ""}></label>
         <button type="button" class="txdir ${m.dir}${m.sure ? "" : " guess"}" data-txdir="${ci}|${mi}" title="${m.sure ? "לחיצה: הפוך כיוון" : "ניחוש: אין באתר הליגה סימן שהועתק. בדקו ולחצו כדי להפוך"}">${m.dir === "in" ? "▲ נכנס" : m.dir === "out" ? "▼ יוצא" : `⇄ ל־${m.to != null ? esc(teamName(m.to)) : "?"}`}${m.sure ? "" : "?"}</button>
         ${m.p ? `<span class="pn">${esc(m.p.name)}</span>` : `<span class="impwarn">לא זוהה</span>`} <small>${esc(m.raw)}</small>${m.elsewhere != null ? ` <small class="impwarn">(ב־Dagger הוא אצל ${esc(teamName(m.elsewhere))})</small>` : ""}
         <select class="txfix" data-txpick="${ci}|${mi}" aria-label="איזה שחקן זה">${(() => {
           const opts = txRank(m.raw); if (m.p && !opts.includes(m.p)) opts.unshift(m.p);
           return `<option value="">${m.p ? "תיקון…" : "בחרו שחקן…"}</option>` + opts.map((x) => `<option value="${x.id}"${m.p === x ? " selected" : ""}>${esc(x.name)} · ${esc(x.team26 || "")}</option>`).join("") + `<option value="other">שחקן אחר…</option>`;
-        })()}</select>${m.other ? `<input class="txfix" list="impAll2" data-txfix="${ci}|${mi}" placeholder="שם באנגלית…" autocomplete="off">` : ""}</div>`).join("")}</li>`).join("")}</ol>
+        })()}</select>${m.other ? `<input class="txfix" list="impAll2" data-txfix="${ci}|${mi}" placeholder="שם באנגלית…" autocomplete="off">` : ""}</div>`).join("")}</li>`;
+      const all = TX.map((c, ci) => ({ c, ci })), neu = all.filter((x) => !x.c.old), old = all.filter((x) => x.c.old);
+      return (neu.length ? `<ol class="txlist">${neu.map((x) => li(x.c, x.ci)).join("")}</ol>` : "") +
+        (old.length ? `<details class="txold"><summary>${old.length} העברות שכבר יובאו (הצגה)</summary><ol class="txlist">${old.map((x) => li(x.c, x.ci)).join("")}</ol></details>` : "");
+    })()}
     <datalist id="impAll2">${players.filter((p) => p.team26).map((p) => `<option value="${esc(p.name)}"></option>`).join("")}</datalist>
     <button type="button" class="mact on" id="txApply"${unmapped.length ? " disabled" : ""}>עדכון הסגלים${unmapped.length ? " (קודם שייכו את הקבוצות)" : ""}</button>`;
 }
