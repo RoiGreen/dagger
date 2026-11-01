@@ -1214,7 +1214,6 @@ table.box.lgtab .lgup { color: var(--pos); font-weight: 800; }
 .lgweek { display: flex; align-items: center; justify-content: center; gap: 10px; flex-wrap: wrap; margin: 0 0 10px; }
 .lgweek select { width: auto; min-width: 240px; max-width: 100%; font: inherit; font-weight: 700; padding: 6px 10px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--ink); }
 .lgweek small { color: var(--muted); }
-.lgview { width: fit-content; margin: 0 auto 10px; }
 .lgpk { display: flex; justify-content: center; gap: 28px; flex-wrap: wrap; margin: -4px 0 12px; }
 .lgpk .mvblock { display: grid; justify-items: center; gap: 8px; }
 .lgpk .mvcards { display: flex; gap: 14px; flex-wrap: wrap; justify-content: center; }
@@ -4713,68 +4712,11 @@ function checkedMoves() {
   return out.length ? out : null;
 }
 const M_LEAGUE = () => !!CMP_MODES[st.cmp.mode]?.league;
-// What each team actually piled up in a round: the matchup's own count (a player's games while he was on the roster,
-// in the lineup that day; the league's numbers where its score was pasted), run for every team over that week.
-// Worked out again while the roster history covers it, then kept as it was
-const RES_KEEP = 28;  // days after a round ends: older ones stay as last worked out
-function roundResults(k) {
-  const n = Math.max(st.teams, 1), w = roundWeek(k);
-  if (!st.lgRes || st.lgRes.n !== n) st.lgRes = { n, r: {} };
-  const kept = st.lgRes.r[k];
-  if (kept && shiftDay(w.to, RES_KEEP) < etDay(new Date())) return kept;
-  const keepMU = MU, keepWEEK = WEEK;
-  let out;
-  try {
-    WEEK = { from: w.from, to: w.to };
-    MU = { model: new Map(), games: new Map(), pre: false, days: Array.from({ length: 7 }, (_, i) => shiftDay(w.from, i)) };
-    for (const g of GAMES) if (!g.pre) { MU.games.set(`${g.h}|${g.d}`, g); MU.games.set(`${g.a}|${g.d}`, g); }
-    out = { full: LOG_END >= w.to, teams: Array.from({ length: n }, (_, t) => {
-      const T = planWeek(rosterOf(t), ilOf(t), t);
-      return { v: Object.fromEntries(MU_KEYS.map((x) => [x, Math.round((T.done[x] || 0) * 100) / 100])), games: T.played, actual: !!T.actual };
-    }) };
-  } finally { MU = keepMU; WEEK = keepWEEK; }
-  if (out.full && JSON.stringify(kept) !== JSON.stringify(out)) { st.lgRes.r[k] = out; saveSettings(); }
-  return out;
-}
-const lgViewSeg = (v) => `<div class="seg lgview" role="group" aria-label="מה להציג">${[["rank", "דירוג עוצמה"], ["res", "תוצאות המחזור"]].map(([k, l]) =>
-  `<button type="button" data-lgview="${k}" aria-pressed="${v === k}">${l}</button>`).join("")}</div>`;
-function resultsTable(last) {
-  const n = Math.max(st.teams, 1), ks = Array.from({ length: last }, (_, i) => i + 1);
-  if (!ks.length) return `<section class="cmpsec lgsec"><h3 class="ctr">תוצאות המחזור</h3>${lgViewSeg("res")}<p class="munote nopick">התוצאות יופיעו ביום ב׳ שאחרי המחזור הראשון</p></section>`;
-  const sel = ks.includes(st.cmp.lgRound) ? st.cmp.lgRound : ks[ks.length - 1];
-  const R = roundResults(sel);
-  const pct = (m, a) => (a ? m / a : 0);
-  const teams = R.teams.map((x, t) => ({ t, g: x.games, actual: x.actual, T: { ...x.v, FG_PCT: pct(x.v.FGM, x.v.FGA), FT_PCT: pct(x.v.FTM, x.v.FTA), FG3_PCT: pct(x.v.FG3M, x.v.FG3A) } }));
-  const live = CATS.filter((c) => !st.punts.has(c.k));
-  for (const c of CATS) {
-    const sign = c.k === "TOV" ? -1 : 1, val = (x) => sign * (x.T[c.k] ?? 0);
-    for (const x of teams) {
-      const better = teams.filter((y) => val(y) > val(x)).length, same = teams.filter((y) => val(y) === val(x)).length;
-      x[`r_${c.k}`] = better + 1;
-      x[`p_${c.k}`] = n - better - (same - 1) / 2;
-    }
-  }
-  for (const x of teams) x.pts = live.reduce((a, c) => a + x[`p_${c.k}`], 0);
-  teams.sort((a, b) => b.pts - a.pts || a.t - b.t);
-  const heat = Object.fromEntries(CATS.map((c) => [c.k, percentileHeat(teams.map((x) => (c.k === "TOV" ? -1 : 1) * (x.T[c.k] ?? 0)))]));
-  const fmt = (k, v) => (k.endsWith("_PCT") ? fmt3(v) : k === "DD2" || k === "TD3" ? String(Math.round(v)) : String(Math.round(v * 10) / 10));
-  return `<section class="cmpsec lgsec"><h3 class="ctr">תוצאות המחזור</h3>${lgViewSeg("res")}
-    <div class="lgweek"><select data-lground aria-label="איזה מחזור">${ks.map((k) => `<option value="${k}"${k === sel ? " selected" : ""}>${esc(roundLabel(k))}</option>`).join("")}</select><small>מה שכל קבוצה צברה בפועל במחזור${R.full ? "" : " · חסרים עוד משחקים מסוף המחזור, עד עדכון הנתונים הבא"}</small></div>
-    <div class="tbl-wrap short"><table class="box lgtab"><thead><tr><th class="nosort" data-tip="המקום לפי נקודות הרוטו">#</th><th class="nosort">קבוצה</th><th class="nosort" data-tip="משחקים שנספרו (שחקן בהרכב באותו יום)">משחקים</th>
-      ${CATS.map((c) => `<th class="nosort${st.punts.has(c.k) ? " punted" : ""}">${c.l}</th>`).join("")}<th class="nosort" data-tip="בכל קטגוריה: הראשונה מקבלת ${n} נקודות והאחרונה 1">נק׳ רוטו</th></tr></thead><tbody>
-      ${teams.map((x, i) => `<tr class="${x.t === myIdx() ? "me" : ""}"><td class="rank">${i + 1}</td><td class="tn">${esc(teamName(x.t))}${x.actual ? ` <small class="lgsame" title="המספרים מהתוצאה שהודבקה מאתר הליגה">✓</small>` : ""}</td><td>${x.g}</td>
-        ${CATS.map((c) => `<td class="${st.punts.has(c.k) ? "punted" : ""}" style="${heat[c.k]((c.k === "TOV" ? -1 : 1) * (x.T[c.k] ?? 0))}">${fmt(c.k, x.T[c.k] ?? 0)}<small>#${x[`r_${c.k}`]}</small></td>`).join("")}
-        <td><b>${Number.isInteger(x.pts) ? x.pts : x.pts.toFixed(1)}</b></td></tr>`).join("")}
-    </tbody></table></div>
-    <p class="munote ctrnote">סך הקטגוריות במחזור, כמו בספירה של המצ'אפ: רק משחקים של שחקנים שהיו בסגל באותו יום ובהרכב. FG% ו־FT% מסך הקליעות. ✓ = המספרים מהתוצאה שהודבקה מאתר הליגה.</p>
-  </section>`;
-}
 // mv: the moves being checked (checkedMoves), applied to their teams in the round shown
 function leagueTable(mv = null) {
   const n = Math.max(st.teams, 1);
   const W = weeklyRanks();
   if (!W) return `<p class="munote nopick">אחרי הדראפט (כשלכל הקבוצות יש שחקנים) יופיע כאן דירוג העוצמה</p>`;
-  if (st.cmp.lgView === "res") return resultsTable(W.last);
   const rounds = Object.keys(W.R).map(Number).sort((a, b) => a - b);
   const sel = st.cmp.lgRound != null && W.R[st.cmp.lgRound] ? st.cmp.lgRound : rounds[rounds.length - 1];
   const snap0 = W.R[sel];
@@ -4863,7 +4805,7 @@ function leagueTable(mv = null) {
   const pkNames = (ids) => ids.map((id) => PLAYER_BY_ID.get(id)?.name).filter(Boolean).map((x) => `<bdi>${esc(x)}</bdi>`).join(", ");
   const kinds = pkOn ? [...new Set(mv.map((m) => m.kind))] : [];
   const kindHe = { pickup: "הפיק אפ", trade: "הטרייד" };
-  return `<section class="cmpsec lgsec"><h3 class="ctr">דירוג עוצמה${pkOn ? ` · כולל ${kinds.map((k) => kindHe[k]).join(" ו")}` : ""}</h3>${pkOn ? "" : lgViewSeg("rank")}
+  return `<section class="cmpsec lgsec"><h3 class="ctr">דירוג עוצמה${pkOn ? ` · כולל ${kinds.map((k) => kindHe[k]).join(" ו")}` : ""}</h3>
     ${pkOn ? `<div class="lgpk">${kinds.map((k) => `<div class="mvblock"><div class="mvcards">${mv.filter((m) => m.kind === k).map((m) => mvCard(m)).join("")}</div><button type="button" class="mact" data-pkclear="${k}">בלי ${kindHe[k]}</button></div>`).join("")}</div>` : ""}
     <div class="lgweek"><select data-lground aria-label="איזה מחזור">${rounds.map((k) => `<option value="${k}"${k === sel ? " selected" : ""}>${esc(roundLabel(k))}</option>`).join("")}</select><small>${when}</small></div>
     <div class="tbl-wrap short"><table class="box lgtab"><thead><tr><th class="nosort${key === "pts" ? " sorted" : ""}"><button type="button" class="lsort" data-cmplsort="pts" data-tip="המקום הכללי: לפי המקומות בכל הקטגוריות">#</button></th>
@@ -4876,7 +4818,7 @@ function leagueTable(mv = null) {
         ${CATS.map((c) => `<td class="${st.punts.has(c.k) ? "punted" : ""}" style="${x.list.length ? heat[c.k]((c.k === "TOV" ? -1 : 1) * (x.T[c.k] ?? 0)) : ""}">${x.list.length ? catFmt(c.k)(x.T[c.k] ?? 0) : "–"}<small>#${x[`r_${c.k}`]}</small></td>`).join("")}
         <td class="lgtip">${tip(x)}</td></tr>`; }).join("")}
     </tbody></table></div>
-    <p class="munote ctrnote">כמה חזק הסגל, לא מה שקרה בשבוע: סכום הממוצעים למשחק של השחקנים בסגל הפעיל (בלי IL) ביום הפרסום. מה שכל קבוצה צברה בפועל: "תוצאות המחזור". הדירוג מתעדכן בכל יום ב׳ ב־9:00 לפי המחזור שהסתיים.</p>
+    <p class="munote ctrnote">סכום הממוצעים למשחק של השחקנים בסגל הפעיל (בלי IL) ביום הפרסום. הדירוג מתעדכן בכל יום ב׳ ב־9:00 לפי המחזור שהסתיים.</p>
   </section>`;
 }
 $("viewCmp").addEventListener("change", (e) => {
@@ -4886,8 +4828,6 @@ $("viewCmp").addEventListener("change", (e) => {
 $("viewCmp").addEventListener("click", (e) => {
   const clr = e.target.closest("[data-pkclear]");
   if (clr) { const k = clr.dataset.pkclear; if (st.cmp.saved) delete st.cmp.saved[k]; return renderCmp(); }
-  const lv = e.target.closest("[data-lgview]");
-  if (lv) { e.stopImmediatePropagation(); st.cmp.lgView = lv.dataset.lgview; saveSettings(); return renderCmp(); }
   const sortBtn = e.target.closest("[data-cmplsort]");
   if (sortBtn) { st.cmp.lsort = sortBtn.dataset.cmplsort; return renderCmp(); }
 }, true);
