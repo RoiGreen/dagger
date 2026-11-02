@@ -1,11 +1,12 @@
 ﻿PLAYER_NAME,TEAM,STATUS,FANTASY_STATUS,INJURY,RETURN_DATE,COMMENT,UPDATED
+Kingston Flemings,Atlanta Hawks,Suspension,OUT,Suspension,2026-11-04,"Flemings (suspension) won't play in Monday's game against Indiana, Andrew Schlecht of The Athletic reports.",2026-11-02T02:02Z
 Jalen Johnson,Atlanta Hawks,Day-To-Day,GTD,Ankle,2026-11-02,Johnson (ankle) is questionable to play Monday against the Pacers.,2026-11-01T22:28Z
 Jock Landale,Atlanta Hawks,Out,OUT,Hip,2026-11-04,Landale (hip) has been ruled out for Monday's game against Indiana.,2026-11-01T22:22Z
 Mouhamed Gueye,Atlanta Hawks,Out,OUT,Foot Fracture,2026-11-20,"Gueye underwent surgery Tuesday to repair a fractured left foot that he suffered during a workout last week, Brad Rowland of the Locked On Podcast Network reports.",2026-10-19T19:38Z
 Henri Veesaar,Atlanta Hawks,Out,OFS,Knee,2027-07-01,"Veesaar was diagnosed with a torn right ACL and is expected to miss the 2026-27 season, the Hawks announced Monday.",2026-09-21T19:50Z
 Mitchell Robinson,Boston Celtics,Out,OUT,Rest,2026-11-02,Robinson (rest) has been ruled out for Sunday's game against the Magic.,2026-11-01T15:05Z
 Devin Carter,Boston Celtics,Out,OUT,Illness,2026-11-08,"Carter has been diagnosed with mononucleosis and is without a timetable for a return, Gary Washburn of The Boston Globe reports.",2026-10-18T14:49Z
-Mikel Brown Jr.,Brooklyn Nets,Out,OUT,Rest,2026-11-02,Brown (rest) is out for Sunday's game in Indiana.,2026-10-31T20:58Z
+Mikel Brown Jr.,Brooklyn Nets,Day-To-Day,GTD,Rest,2026-11-02,Brown (rest) is out for Sunday's game in Indiana.,2026-11-02T01:51Z
 Egor Demin,Brooklyn Nets,Out,OUT,Leg Bruise,2026-11-07,"The Nets exercised Demin's third-year team option for the 2027-28 season, Sharif Phillips-Keaton of USA Today reports Thursday.",2026-10-29T17:09Z
 Tyler Bilodeau,Brooklyn Nets,Out,OUT,Shoulder Sprain,2026-11-06,Bilodeau (shoulder) has been ruled out for Sunday's game against Indiana.,2026-10-25T17:19Z
 Grant Williams,Charlotte Hornets,Out,OUT,Hamstring,2026-11-09,Williams (hamstring) is listed as out for Monday's game against the Pistons.,2026-11-01T22:17Z
@@ -34,12 +35,13 @@ Jimmy Butler III,Golden State Warriors,Out,OUT,Knee Surgery,2027-01-02,"Butler (
 Clint Capela,Houston Rockets,Day-To-Day,GTD,Ankle Sprain,2026-11-02,Capela (ankle) is questionable to play in Monday's game against the Celtics.,2026-11-01T20:46Z
 Reed Sheppard,Houston Rockets,Day-To-Day,GTD,Back,2026-11-02,Sheppard (back) is questionable for Monday's game against the Celtics.,2026-11-01T20:41Z
 Steven Adams,Houston Rockets,Out,OUT,Calf Strain,2026-11-09,"Head coach Ime Udoka said Monday that Adams could be out ""a week or two"" due to his right soleus strain, Lachard Binkley of SI.com reports.",2026-10-26T22:52Z
-Obi Toppin,Indiana Pacers,Out,GTD,Back Soreness,2026-11-02,"Toppin (back) is out for Sunday's game against the Nets, Alex Golden of SI.com reports.",2026-11-01T20:29Z
-T.J. McConnell,Indiana Pacers,Out,OUT,Hamstring Strain,2026-11-02,Indiana recalled McConnell (hamstring) from the G League's Noblesville Boom on Saturday.,2026-11-01T16:26Z
+Obi Toppin,Indiana Pacers,Day-To-Day,GTD,Back Soreness,2026-11-02,"Toppin (back) is out for Sunday's game against the Nets, Alex Golden of SI.com reports.",2026-11-02T01:51Z
+T.J. McConnell,Indiana Pacers,Out,GTD,Hamstring Strain,2026-11-02,Indiana recalled McConnell (hamstring) from the G League's Noblesville Boom on Saturday.,2026-11-01T16:26Z
 Ivica Zubac,Indiana Pacers,Out,OUT,Ankle Sprain,2026-11-02,Zubac (ankle) will remain on the inactive list for Sunday's game against the Nets.,2026-10-31T21:14Z
 Johnny Furphy,Indiana Pacers,Out,OUT,Knee Surgery,2027-01-02,"Furphy (knee) is practicing with the G League's Noblesville Boom, per Alex Golden of SI.com.",2026-10-30T19:06Z
 Ben Sheppard,Indiana Pacers,Out,OUT,Knee,2027-01-02,"Head coach Rick Carlise confirmed Sheppard will miss ""months"" after undergoing surgery to repair a torn meniscus in his left knee, Tony East of Forbes.com reports.",2026-10-28T21:41Z
 Tyrese Haliburton,Indiana Pacers,Out,OUT,Hamstring Strain,2026-11-13,"Haliburton (hamstring) will miss at least the next two weeks of action, Shams Charania of ESPN reports.",2026-10-28T21:30Z
+Derrick Jones Jr.,LA Clippers,Day-To-Day,GTD,Knee,2026-11-02,"Jones (right knee) has been ruled out for the rest of Sunday's game against the Clippers, Ohm Youngmisuk of ESPN.com reports.",2026-11-02T03:47Z
 Max Strus,LA Clippers,Out,OUT,Foot Plantar Fasciitis,2026-11-08,"Strus (foot) practiced and participated in 5-on-5 with the San Diego Clippers on Saturday, Los Angeles Clippers sideline reporter/host Ohm Youngmisuk reports.",2026-11-02T00:45Z
 Yanic Konan Niederhauser,LA Clippers,Out,OUT,Foot Surgery,2026-11-08,"Niederhauser (foot) had his third-year team option picked up Thursday by the Clippers, Ohm Youngmisuk of ESPN.com reports.",2026-11-01T20:17Z
 Brandon Ingram,LA Clippers,Out,OUT,Achilles Surgery,2026-11-08,"Ingram (Achilles) is making progress but is set to miss at least one more week, Ohm Youngmisuk of ESPN.com reports.",2026-11-01T20:17Z
