@@ -3285,6 +3285,8 @@ const CARD_ADV = [
   { l: "USG%", v: (p) => advVal(p, "USG"), f: fmt1, ok: (p) => !!p.adv, tip: "אחוז מההתקפות של הקבוצה שמסתיימות אצלו כשהוא על המגרש: בזריקה לסל, בזריקות עונשין או באיבוד. אסיסטים לא נספרים" },
   { l: "EFG%", v: (p) => advVal(p, "EFG"), f: fmt3, ok: (p) => p.L.g.FGA >= 5, tip: "יעילות הקליעה מהשדה בלבד, בלי זריקות עונשין: כמו FG%, אבל שלשה שנכנסה שווה פי 1.5 מסל של 2 (3 נקודות במקום 2). מראה כמה טובות הזריקות שלו מהשדה" },
   { l: "TS%", v: tsPct, f: fmt3, ok: (p) => p.L.g.FGA >= 5, tip: "יעילות הקליעה הכוללת: כמו EFG%, אבל כוללת גם את זריקות העונשין. שחקן שמגיע הרבה לקו וקולע שם יקבל TS% גבוה מה־EFG% שלו" },
+  { l: "PPP", v: (p) => advVal(p, "PPP"), f: (x) => x.toFixed(2), ok: (p) => p.L.g.FGA >= 5, tip: "נקודות לכל פוזשן שהשחקן מסיים בעצמו: PTS חלקי (FGA + 0.44×FTA + TOV). מעל 1.10 זה סקורר יעיל מאוד" },
+  { l: "STOCKS", v: (p) => advVal(p, "STOCKS"), f: fmt1, tip: "Stocks: חטיפות + חסימות למשחק (STL + BLK). מראה כמה הוא תורם בשתי הקטגוריות ההגנתיות" },
   { l: "AST/TOV", v: (p) => astTovRatio(p), f: (x) => x.toFixed(2), ok: (p) => p.L.g.TOV > 0, tip: "כמה אסיסטים על כל איבוד" },
   { l: "ORTG", v: (p) => advVal(p, "ORTG"), f: fmt1, ok: (p) => !!p.adv, tip: "נקודות שהקבוצה קולעת ל־100 פוזשנים כשהשחקן על המגרש" },
   { l: "PACE", v: (p) => advVal(p, "PACE"), f: fmt1, ok: (p) => !!p.adv, tip: "פוזשנים ל־48 דקות כשהשחקן על המגרש" },
@@ -3500,6 +3502,8 @@ const ADV_COLS = [
   { k: "USG", l: "USG%", asc: false, tip: "אחוז מההתקפות של הקבוצה שמסתיימות אצלו כשהוא על המגרש: בזריקה לסל, בזריקות עונשין או באיבוד. אסיסטים לא נספרים" },
   { k: "EFG", l: "EFG%", asc: false, tip: "יעילות הקליעה מהשדה בלבד, בלי זריקות עונשין: כמו FG%, אבל שלשה שנכנסה שווה פי 1.5 מסל של 2 (3 נקודות במקום 2). מראה כמה טובות הזריקות שלו מהשדה" },
   { k: "TS", l: "TS%", asc: false, tip: "יעילות הקליעה הכוללת: כמו EFG%, אבל כוללת גם את זריקות העונשין. שחקן שמגיע הרבה לקו וקולע שם יקבל TS% גבוה מה־EFG% שלו" },
+  { k: "PPP", l: "PPP", asc: false, tip: "נקודות לכל פוזשן שהשחקן מסיים בעצמו: PTS חלקי (FGA + 0.44×FTA + TOV). מעל 1.10 זה סקורר יעיל מאוד" },
+  { k: "STOCKS", l: "STOCKS", asc: false, tip: "Stocks: חטיפות + חסימות למשחק (STL + BLK). מראה כמה הוא תורם בשתי הקטגוריות ההגנתיות" },
   { k: "PACE", l: "PACE", asc: false, tip: "פוזשנים ל־48 דקות כשהשחקן על המגרש" },
   { k: "ORTG", l: "ORTG", asc: false, tip: "נקודות שהקבוצה קולעת ל־100 פוזשנים כשהשחקן על המגרש" },
   { k: "ASTTOV", l: "AST/TOV", asc: false, tip: "כמה אסיסטים השחקן נותן על כל איבוד" },
@@ -3515,6 +3519,9 @@ function advVal(p, k) {
   if (k === "TPACE") return TEAM_STATS.get(p.team26)?.PACE ?? null;
   if (k === "ASTTOV") return astTovRatio(p);
   if (k === "TS") { const d = 2 * (p.L.g.FGA + 0.44 * p.L.g.FTA); return p.L.g.FGA > 0 && d ? p.L.g.PTS / d : null; }
+  // points per possession he ends himself (shot, trip to the line or turnover)
+  if (k === "PPP") { const d = p.L.g.FGA + 0.44 * p.L.g.FTA + p.L.g.TOV; return p.L.g.FGA > 0 && d ? p.L.g.PTS / d : null; }
+  if (k === "STOCKS") return p.L.g.STL + p.L.g.BLK;
   if (k === "EFG") return p.L.g.FGA > 0 ? (p.L.g.FGM + 0.5 * p.L.g.FG3M) / p.L.g.FGA : null;
   if (!p.adv) return null;
   return { USG: p.adv[0] * 100, PACE: p.adv[1], ORTG: p.adv[2] }[k];
@@ -3536,7 +3543,7 @@ function renderAdv() {
   // advanced numbers mean little in a few minutes a game: 10+ minutes only (my team and favorites always show)
   const ADV_MIN = 10, enough = (p) => (p.L?.g.MIN ?? 0) >= ADV_MIN || mine.has(p.id) || fav.has(p.id);
   const rows = list.filter((p) => passes(p) && enough(p));
-  const heats = Object.fromEntries(["USG", "EFG", "TS", "PACE", "ORTG", "ASTTOV", "TPACE"].map((k) => [k, percentileHeat(list.filter(enough).map((p) => advVal(p, k)))]));
+  const heats = Object.fromEntries(["USG", "EFG", "TS", "PPP", "STOCKS", "PACE", "ORTG", "ASTTOV", "TPACE"].map((k) => [k, percentileHeat(list.filter(enough).map((p) => advVal(p, k)))]));
   const key = (p) => st.advSort === "rank" ? now.rank.get(p.id) : st.advSort === "name" ? p.name
     : st.advSort === "gp" ? p.gp : st.advSort === "min" ? p.L.g.MIN : (advVal(p, st.advSort) ?? -Infinity);
   rows.sort((a, b) => {
@@ -3546,7 +3553,7 @@ function renderAdv() {
   });
 
   // Sorting by a stat adds that stat's league rank (1 = highest) at the right edge
-  const statCol = ["USG", "EFG", "TS", "PACE", "ORTG", "ASTTOV", "TPACE", "gp", "min"].includes(st.advSort)
+  const statCol = ["USG", "EFG", "TS", "PPP", "STOCKS", "PACE", "ORTG", "ASTTOV", "TPACE", "gp", "min"].includes(st.advSort)
     ? ADV_COLS.find((c) => c.k === st.advSort) : null;
   let statRank = null;
   if (statCol) {
@@ -3571,7 +3578,7 @@ function renderAdv() {
   $("advBody").innerHTML = rows.map((p) => {
     const cell = (k) => {
       const v = advVal(p, k);
-      const txt = v == null ? "–" : k === "ASTTOV" ? v.toFixed(2) : k === "EFG" || k === "TS" ? fmt3(v) : v.toFixed(1);
+      const txt = v == null ? "–" : k === "ASTTOV" || k === "PPP" ? v.toFixed(2) : k === "EFG" || k === "TS" ? fmt3(v) : v.toFixed(1);
       return `<td style="${heats[k](v)}">${txt}</td>`;
     };
     return `<tr class="${mine.has(p.id) ? "is-mine" : ""} ${taken.has(p.id) ? "is-taken" : ""} ${fav.has(p.id) ? "is-fav" : ""}">
@@ -3579,7 +3586,7 @@ function renderAdv() {
       ${posR ? posTd(posR, p) : `<td class="rank">${now.rank.get(p.id)}</td>`}
       ${nameCell(p)}
       <td>${p.gp}</td><td>${fmt1(p.L.g.MIN)}</td>
-      ${cell("USG")}${cell("EFG")}${cell("TS")}${cell("PACE")}${cell("ORTG")}${cell("ASTTOV")}${cell("TPACE")}
+      ${cell("USG")}${cell("EFG")}${cell("TS")}${cell("PPP")}${cell("STOCKS")}${cell("PACE")}${cell("ORTG")}${cell("ASTTOV")}${cell("TPACE")}
       <td class="acts">${actions(p)}</td></tr>`;
   }).join("") || EMPTY_ROW(ADV_COLS.length + (statCol ? 1 : 0));
 
@@ -4022,6 +4029,8 @@ const CMP_ADV = [
   { k: "USG", l: "USG%", tip: "אחוז מההתקפות של הקבוצה שמסתיימות אצלו כשהוא על המגרש: בזריקה לסל, בזריקות עונשין או באיבוד. אסיסטים לא נספרים" },
   { k: "PACE", l: "PACE", tip: "פוזשנים ל־48 דקות כשהשחקן על המגרש" },
   { k: "ORTG", l: "ORTG", tip: "נקודות שהקבוצה קולעת ל־100 פוזשנים כשהשחקן על המגרש" },
+  { k: "PPP", l: "PPP", tip: "נקודות לכל פוזשן שהשחקן מסיים בעצמו: PTS חלקי (FGA + 0.44×FTA + TOV). מעל 1.10 זה סקורר יעיל מאוד" },
+  { k: "STOCKS", l: "STOCKS", tip: "Stocks: חטיפות + חסימות למשחק (STL + BLK). מראה כמה הוא תורם בשתי הקטגוריות ההגנתיות" },
   { k: "ASTTOV", l: "AST/TOV", tip: "כמה אסיסטים השחקן נותן על כל איבוד" },
   { k: "TPACE", l: "TEAM PACE", tip: "הקצב של הקבוצה שהשחקן ישחק בה ב־2026-27" },
 ];
@@ -4111,6 +4120,9 @@ function cmpTotals(list, avg = false) {
   }
   const tov = list.reduce((a, p) => a + p.L.g.TOV, 0);
   o.ASTTOV = tov ? list.reduce((a, p) => a + p.L.g.AST, 0) / tov : null;
+  const used = list.reduce((a, p) => a + p.L.g.FGA + 0.44 * p.L.g.FTA + p.L.g.TOV, 0);
+  o.PPP = used ? list.reduce((a, p) => a + p.L.g.PTS, 0) / used : null;
+  o.STOCKS = list.reduce((a, p) => a + p.L.g.STL + p.L.g.BLK, 0) / (avg && list.length ? list.length : 1);
   const tp = list.map((p) => advVal(p, "TPACE")).filter((v) => v != null);
   o.TPACE = tp.length ? tp.reduce((a, b) => a + b, 0) / tp.length : null;
   if (avg && list.length) {
@@ -4434,7 +4446,7 @@ function renderCmp() {
   const gen = cmpTable([...catRows,
     { k: "Z", l: "Z", tot: true, fmt: (v) => v.toFixed(2), tip: "כמה טוב יותר משחקן שאפשר להרים בחינם (בלי Punt)" },
     { k: "FPTS", l: "FPTS", tot: true, fmt: fmt1 }], A, B, nA, nB);
-  const advRows = CMP_ADV.map((r) => ({ ...r, fmt: r.k === "AVAIL" ? (v) => Math.round(v * 100) + "%" : r.k === "ASTTOV" ? (v) => v.toFixed(2) : fmt1 }));
+  const advRows = CMP_ADV.map((r) => ({ ...r, fmt: r.k === "AVAIL" ? (v) => Math.round(v * 100) + "%" : r.k === "ASTTOV" || r.k === "PPP" ? (v) => v.toFixed(2) : fmt1 }));
   // Winner mark: the player's photo when each side is one player, otherwise the side's colour
   const one = LA.length === 1 && LB.length === 1;
   const mark = (side) => {
@@ -7790,6 +7802,8 @@ const SORT_OPTS = {
     { k: "USG", l: "USG%", asc: false },
     { k: "EFG", l: "EFG% (יעילות קליעה)", asc: false },
     { k: "TS", l: "TS% (יעילות קליעה כוללת)", asc: false },
+    { k: "PPP", l: "PPP (נקודות לפוזשן)", asc: false },
+    { k: "STOCKS", l: "STOCKS (חטיפות + חסימות)", asc: false },
     { k: "PACE", l: "PACE", asc: false },
     { k: "ORTG", l: "ORTG", asc: false },
     { k: "ASTTOV", l: "AST/TOV (אסיסטים לכל איבוד)", asc: false },
