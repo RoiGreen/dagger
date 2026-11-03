@@ -2817,6 +2817,8 @@ function catOk(p) {
     const v = Number(f.val) || 0;
     if (!v) return true;
     if (f.cat === "TOV") return o.TOV <= v;
+    if (f.cat === "STOCKS") return o.STL + o.BLK >= v;
+    if (f.cat === "PPP") { const d = o.FGA + 0.44 * o.FTA + o.TOV; return d > 0 && o.PTS / d >= v; }
     const x = f.cat.endsWith("_PCT") ? o[f.cat] * 100 : o[f.cat];
     return x >= v;
   });
@@ -2825,6 +2827,7 @@ function catOk(p) {
 const CAT_OPTS = [["PTS", "נקודות (PTS)"], ["REB", "ריבאונדים (REB)"], ["AST", "אסיסטים (AST)"], ["STL", "חטיפות (STL)"],
   ["BLK", "חסימות (BLK)"], ["FG3M", "שלשות (3PM)"], ["FG_PCT", "FG% (באחוזים)"], ["FT_PCT", "FT% (באחוזים)"],
   ["FG3_PCT", "3P% (באחוזים)"], ["OREB", "ריבאונד התקפה (OREB)"], ["DD2", "דאבל דאבל למשחק (DD)"], ["TD3", "טריפל דאבל למשחק (TD)"],
+  ["STOCKS", "STOCKS (חטיפות + חסימות)"], ["PPP", "PPP (נקודות לפוזשן, למשל 1.1)"],
   ["TOV", "איבודים (TOV) – מקסימום"]];
 function catRowHtml(f, i) {
   return `<div class="cfrow">
@@ -3286,7 +3289,7 @@ const CARD_ADV = [
   { l: "EFG%", v: (p) => advVal(p, "EFG"), f: fmt3, ok: (p) => p.L.g.FGA >= 5, tip: "יעילות הקליעה מהשדה בלבד, בלי זריקות עונשין: כמו FG%, אבל שלשה שנכנסה שווה פי 1.5 מסל של 2 (3 נקודות במקום 2). מראה כמה טובות הזריקות שלו מהשדה" },
   { l: "TS%", v: tsPct, f: fmt3, ok: (p) => p.L.g.FGA >= 5, tip: "יעילות הקליעה הכוללת: כמו EFG%, אבל כוללת גם את זריקות העונשין. שחקן שמגיע הרבה לקו וקולע שם יקבל TS% גבוה מה־EFG% שלו" },
   { l: "PPP", v: (p) => advVal(p, "PPP"), f: (x) => x.toFixed(2), ok: (p) => p.L.g.FGA >= 5, tip: "נקודות לכל פוזשן שהשחקן מסיים בעצמו: PTS חלקי (FGA + 0.44×FTA + TOV). מעל 1.10 זה סקורר יעיל מאוד" },
-  { l: "STOCKS", v: (p) => advVal(p, "STOCKS"), f: fmt1, tip: "Stocks: חטיפות + חסימות למשחק (STL + BLK). מראה כמה הוא תורם בשתי הקטגוריות ההגנתיות" },
+  { l: "STOCKS", v: (p) => p.L.g.STL + p.L.g.BLK, f: fmt1, tip: "Stocks: חטיפות + חסימות למשחק (STL + BLK). מראה כמה הוא תורם בשתי הקטגוריות ההגנתיות" },
   { l: "AST/TOV", v: (p) => astTovRatio(p), f: (x) => x.toFixed(2), ok: (p) => p.L.g.TOV > 0, tip: "כמה אסיסטים על כל איבוד" },
   { l: "ORTG", v: (p) => advVal(p, "ORTG"), f: fmt1, ok: (p) => !!p.adv, tip: "נקודות שהקבוצה קולעת ל־100 פוזשנים כשהשחקן על המגרש" },
   { l: "PACE", v: (p) => advVal(p, "PACE"), f: fmt1, ok: (p) => !!p.adv, tip: "פוזשנים ל־48 דקות כשהשחקן על המגרש" },
@@ -3521,7 +3524,7 @@ function advVal(p, k) {
   if (k === "TS") { const d = 2 * (p.L.g.FGA + 0.44 * p.L.g.FTA); return p.L.g.FGA > 0 && d ? p.L.g.PTS / d : null; }
   // points per possession he ends himself (shot, trip to the line or turnover)
   if (k === "PPP") { const d = p.L.g.FGA + 0.44 * p.L.g.FTA + p.L.g.TOV; return p.L.g.FGA > 0 && d ? p.L.g.PTS / d : null; }
-  if (k === "STOCKS") return p.L.g.STL + p.L.g.BLK;
+  if (k === "STOCKS") return p.L[st.mode].STL + p.L[st.mode].BLK;
   if (k === "EFG") return p.L.g.FGA > 0 ? (p.L.g.FGM + 0.5 * p.L.g.FG3M) / p.L.g.FGA : null;
   if (!p.adv) return null;
   return { USG: p.adv[0] * 100, PACE: p.adv[1], ORTG: p.adv[2] }[k];
@@ -4122,13 +4125,13 @@ function cmpTotals(list, avg = false) {
   o.ASTTOV = tov ? list.reduce((a, p) => a + p.L.g.AST, 0) / tov : null;
   const used = list.reduce((a, p) => a + p.L.g.FGA + 0.44 * p.L.g.FTA + p.L.g.TOV, 0);
   o.PPP = used ? list.reduce((a, p) => a + p.L.g.PTS, 0) / used : null;
-  o.STOCKS = list.reduce((a, p) => a + p.L.g.STL + p.L.g.BLK, 0) / (avg && list.length ? list.length : 1);
   const tp = list.map((p) => advVal(p, "TPACE")).filter((v) => v != null);
   o.TPACE = tp.length ? tp.reduce((a, b) => a + b, 0) / tp.length : null;
   if (avg && list.length) {
     for (const k of ["PTS", "REB", "AST", "STL", "BLK", "FG3M", "TOV", "FGM", "FGA", "FTM", "FTA", "Z", "FPTS", "MIN"]) o[k] /= list.length;
     for (const k of Object.keys(o.z)) o.z[k] /= list.length;
   }
+  o.STOCKS = o.STL + o.BLK;
   o.fp = Object.fromEntries(FP_PARTS.map((x) => [x.k, x.v(o)]));
   return o;
 }
