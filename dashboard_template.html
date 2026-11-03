@@ -3457,7 +3457,8 @@ function computeTeams() {
       acc.set(t.t, a);
     }
   }
-  TEAM_ROWS = [...acc.values()].map((a) => ({ ...a, PACE: a.PACE / a.n, OFF_RATING: a.OFF_RATING / a.n, DEF_RATING: a.DEF_RATING / a.n, NET_RATING: a.NET_RATING / a.n }));
+  // a team's points per possession is its offensive rating per 1 possession instead of per 100
+  TEAM_ROWS = [...acc.values()].map((a) => ({ ...a, PACE: a.PACE / a.n, PPP: a.OFF_RATING / a.n / 100, OFF_RATING: a.OFF_RATING / a.n, DEF_RATING: a.DEF_RATING / a.n, NET_RATING: a.NET_RATING / a.n }));
   TEAM_STATS = new Map(TEAM_ROWS.map((t) => [t.t, t]));
   const range = seasonRange();
   ADV_COLS.find((c) => c.k === "TPACE").l = `TEAM PACE ${range}`;
@@ -3596,6 +3597,7 @@ function renderAdv() {
   // Teams: lower DRTG is better, so its shading is inverted
   const TCOLS = [
     { k: "PACE", l: "PACE", tip: "פוזשנים של הקבוצה ל־48 דקות. קצב גבוה יותר נותן יותר התקפות ויותר סטטיסטיקה" },
+    { k: "PPP", l: "PPP", tip: "נקודות שהקבוצה קולעת בכל פוזשן (ORTG חלקי 100). 1.15 = 115 נקודות ל־100 פוזשנים" },
     { k: "OFF_RATING", l: "ORTG", tip: "נקודות שהקבוצה קולעת ל־100 פוזשנים" },
     { k: "DEF_RATING", l: "DRTG", inv: true, tip: "נקודות שהקבוצה סופגת ל־100 פוזשנים. נמוך יותר = הגנה טובה יותר" },
     { k: "NET_RATING", l: "NET", tip: "ORTG פחות DRTG: בכמה נקודות ל־100 פוזשנים הקבוצה טובה מהיריבות" },
@@ -3615,12 +3617,12 @@ function renderAdv() {
   const lg = Object.fromEntries(TCOLS.map((c) => [c.k, avgOf(c.k)]));
   const nbaLogo = (D.logos || {}).NBA_mark;
   const lgRow = `<tr class="lgavg"><td class="rank"></td><td class="name tteam"><span class="tt">${nbaLogo ? `<img class="tlogo lglogo" src="${nbaLogo}" alt="NBA">` : ""}<span class="n">NBA</span><span class="t">League Average</span></span></td>` +
-    TCOLS.map((c) => `<td>${c.k === "NET_RATING" && lg[c.k] > 0 ? "+" : ""}${lg[c.k].toFixed(1)}</td>`).join("") + `</tr>`;
+    TCOLS.map((c) => `<td>${c.k === "NET_RATING" && lg[c.k] > 0 ? "+" : ""}${lg[c.k].toFixed(c.k === "PPP" ? 2 : 1)}</td>`).join("") + `</tr>`;
   const at = teams.findIndex((t) => (st.teamAsc ? 1 : -1) * sign(tcol) * (t[tcol.k] - lg[tcol.k]) > 0);
   $("teamBody").innerHTML = teams.map((t, i) => (i === at ? lgRow : "") +
     `<tr class="${st.teamSel.includes(t.t) ? "sel-team" : ""}"><td class="rank" style="color:var(--accent)">${teamRank(sign(tcol) * t[tcol.k])}</td>` +
     `<td class="name tteam"><span class="tt">${teamLogo(t.t)}<span class="n">${esc(t.t || "")}</span><span class="t">${esc(t.name)}</span></span></td>` +
-    TCOLS.map((c) => `<td style="${th[c.k](sign(c) * t[c.k])}">${c.k === "NET_RATING" && t[c.k] > 0 ? "+" : ""}${t[c.k].toFixed(1)}</td>`).join("") +
+    TCOLS.map((c) => `<td style="${th[c.k](sign(c) * t[c.k])}">${c.k === "NET_RATING" && t[c.k] > 0 ? "+" : ""}${t[c.k].toFixed(c.k === "PPP" ? 2 : 1)}</td>`).join("") +
     `</tr>`).join("") + (at < 0 ? lgRow : "");
 }
 
