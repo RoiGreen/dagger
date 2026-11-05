@@ -4556,7 +4556,7 @@ function renderCmp() {
         ${chart === "fp" ? cmpBars(fpParts().map((x) => ({ k: x.k, l: x.l, tip: x.tip })), A, B, "fp") : cmpBars(catRows, A, B, chart)}
       </div>
     </section>
-    ${c.mode === "pickup" && c.pt != null ? teamImpact(new Map([[c.pt, LB]]), "השפעה על הקבוצה") : ""}
+    ${c.mode === "pickup" && c.pt != null ? teamImpact([{ t: c.pt, out: c.a, inn: c.b }], "השפעה על הקבוצה") : ""}
     ${c.mode === "trade" ? tradeImpact() : `<section class="cmpsec">
       <h3>נתונים מתקדמים</h3>
       <div class="cmpgrid">
@@ -4565,46 +4565,26 @@ function renderCmp() {
       </div>
     </section>`}`;
 }
-// A trade, team by team: each team's categories before and after (per-game totals of the active roster), its place in
-// the league in each one, and its league points (like "כל הליגה": first in a category = as many points as teams).
-// The giving team loses the players given (and the ones released to make room) and gets the ones received (and the
-// free agents added); the other team the other way round. Teams not in the trade stay as they are.
+// A trade, team by team: each team's categories before and after, on the power ranking's numbers.
+// The giving team loses the players given (and the ones released or moved to IL to make room) and gets the ones
+// received (and the free agents added); the other team the other way round.
 function tradeImpact() {
   const c = st.cmp;
   const ta = c.tta != null && c.tta !== "" && !isNaN(Number(c.tta)) ? Number(c.tta) : null;
   const tb = c.ttb != null && c.ttb !== "" && !isNaN(Number(c.ttb)) ? Number(c.ttb) : null;
   if (ta == null && tb == null) return "";
-  const give = cmpBase("a"), get = cmpBase("b"), dropped = tradeExtras("a"), added = tradeExtras("b");
-  const ids = (L) => new Set(L.map((p) => p.id));
-  const active = (t) => rosterOf(t).filter((p) => !ilOf(t).has(p.id));
-  const after = (t) => {
-    const out = t === ta ? new Set([...give.map((p) => p.id), ...(c.drops || []).map((d) => d.id)]) : ids(get);  // released or moved to IL to make room
-    const inn = t === ta ? [...get, ...added] : give;
-    const seen = new Set();
-    return [...active(t).filter((p) => !out.has(p.id)), ...inn].filter((p) => !seen.has(p.id) && seen.add(p.id));
-  };
-  return teamImpact(new Map([ta, tb].filter((t) => t != null).map((t) => [t, after(t)])), "השפעה על הקבוצות");
+  const give = cmpBase("a").map((p) => p.id), get = cmpBase("b").map((p) => p.id);
+  const moves = [];
+  if (ta != null) moves.push({ t: ta, out: [...give, ...(c.drops || []).map((d) => d.id)], inn: [...get, ...(c.adds || [])] });
+  if (tb != null && tb !== ta) moves.push({ t: tb, out: get, inn: give });
+  return teamImpact(moves, "השפעה על הקבוצות");
 }
-// The cards of the teams that change: changed = team -> its active roster afterwards. The rest of the league stays.
-function teamImpact(changed, title) {
-  const n = Math.max(st.teams, 1);
-  const active = (t) => rosterOf(t).filter((p) => !ilOf(t).has(p.id));
-  const teamsNow = Array.from({ length: n }, (_, t) => ({ t, list: active(t) }));
-  const teamsAfter = teamsNow.map((x) => (changed.has(x.t) ? { t: x.t, list: changed.get(x.t) } : x));
-  const score = (teams) => {
-    for (const x of teams) x.T = cmpTotals(x.list);
-    for (const ct of CATS) {
-      const sign = ct.k === "TOV" ? -1 : 1, val = (x) => (x.list.length ? sign * (x.T[ct.k] ?? 0) : -Infinity);
-      for (const x of teams) {
-        const better = teams.filter((y) => val(y) > val(x)).length, same = teams.filter((y) => val(y) === val(x)).length;
-        x[`r_${ct.k}`] = better + 1; x[`p_${ct.k}`] = n - better - (same - 1) / 2;
-      }
-    }
-    for (const x of teams) x.pts = CATS.filter((ct) => !st.punts.has(ct.k)).reduce((a, ct) => a + x[`p_${ct.k}`], 0);
-    return teams;
-  };
-  score(teamsNow); score(teamsAfter);
-  const num = (v) => (Number.isInteger(v) ? String(v) : v.toFixed(1));
+// The teams a move changes, before and after, in the round the power ranking shows: the same totals and places as there.
+// moves: [{ t, out: [ids], inn: [ids] }]
+function teamImpact(moves, title) {
+  const W = weeklyRanks();
+  if (!W) return `<section class="cmpsec"><h3 class="ctr">${title}</h3><p class="munote nopick">אחרי הדראפט (כשלכל הקבוצות יש שחקנים) תופיע כאן ההשפעה</p></section>`;
+  const sel = lgRoundOf(W), teamsNow = snapPlaces(W.R[sel]), teamsAfter = snapPlaces(snapWithMoves(W.R[sel], sel, moves));
   const card = (t) => {
     const B = teamsNow[t], A2 = teamsAfter[t];
     const rows = CATS.map((ct) => {
@@ -4619,7 +4599,8 @@ function teamImpact(changed, title) {
       <div class="tbl-wrap short"><table class="box titab"><thead><tr><th class="nosort">קטגוריה</th><th class="nosort">לפני</th><th class="nosort">אחרי</th><th class="nosort">שינוי</th><th class="nosort">מקום בליגה</th></tr></thead><tbody>${rows}</tbody></table></div></div>`;
   };
   return `<section class="cmpsec"><h3 class="ctr">${title}</h3>
-    <div class="tigrid">${[...changed.keys()].map(card).join("")}</div>
+    <div class="lgweek"><small>${esc(roundLabel(sel))}</small></div>
+    <div class="tigrid">${moves.map((m) => card(m.t)).join("")}</div>
   </section>`;
 }
 
@@ -4728,7 +4709,7 @@ function checkedMoves() {
   }
   const tr = sv.trade, ta = tr?.tta != null && tr.tta !== "" ? Number(tr.tta) : null, tb = tr?.ttb != null && tr.ttb !== "" ? Number(tr.ttb) : null;
   if (tr && ta != null && tb != null && ta !== tb && (tr.a.length || tr.b.length)) {
-    const drops = (tr.drops || []).filter((d) => d.kind === "drop").map((d) => d.id), adds = tr.adds || [];
+    const drops = (tr.drops || []).map((d) => d.id), adds = tr.adds || [];  // released or moved to IL: off the active roster
     if (tr.a.every((id) => onTeam(ta, id)) && tr.b.every((id) => onTeam(tb, id)) && adds.every(isFree)) {
       out.push({ kind: "trade", t: ta, out: [...tr.a, ...drops], inn: [...tr.b, ...adds] }, { kind: "trade", t: tb, out: tr.b, inn: tr.a });
     } else delete sv.trade;
@@ -4736,17 +4717,11 @@ function checkedMoves() {
   return out.length ? out : null;
 }
 const M_LEAGUE = () => !!CMP_MODES[st.cmp.mode]?.league;
-// mv: the moves being checked (checkedMoves), applied to their teams in the round shown
-function leagueTable(mv = null) {
-  const n = Math.max(st.teams, 1);
-  const W = weeklyRanks();
-  if (!W) return `<p class="munote nopick">אחרי הדראפט (כשלכל הקבוצות יש שחקנים) יופיע כאן דירוג העוצמה</p>`;
-  const rounds = Object.keys(W.R).map(Number).sort((a, b) => a - b);
-  const sel = st.cmp.lgRound != null && W.R[st.cmp.lgRound] ? st.cmp.lgRound : rounds[rounds.length - 1];
-  const snap0 = W.R[sel];
-  // with a move: a team loses the lines of the players it lets go and gets the incoming ones' (that round's numbers)
-  const pkOn = !!(mv && mv.length);
-  const snap = !pkOn ? snap0 : { ...snap0, teams: snap0.teams.map((x, t) => {
+// the round the power ranking shows: the one picked there, else the latest
+const lgRoundOf = (W) => (st.cmp.lgRound != null && W.R[st.cmp.lgRound] ? st.cmp.lgRound : Math.max(...Object.keys(W.R).map(Number)));
+// A round with moves applied: a team loses the lines of the players it lets go and gets the incoming ones' (that round's numbers)
+function snapWithMoves(snap0, sel, mv) {
+  return { ...snap0, teams: snap0.teams.map((x, t) => {
     const ch = mv.filter((m) => m.t === t);
     if (!ch.length) return x;
     const v = { ...x.v };
@@ -4759,10 +4734,12 @@ function leagueTable(mv = null) {
     }
     return { ...x, has: Math.max(0, has), v };
   }) };
-  const pct = (m, a) => (a ? m / a : 0);
+}
+// Each team of a round with its totals and its place in each category (1 = best; fewer turnovers is better),
+// ties share the better place; Roto points from it
+function snapPlaces(snap) {
+  const n = Math.max(st.teams, 1), pct = (m, a) => (a ? m / a : 0);
   const teams = snap.teams.map((x, t) => ({ t, list: { length: x.has }, T: { ...x.v, FG_PCT: pct(x.v.FGM, x.v.FGA), FT_PCT: pct(x.v.FTM, x.v.FTA), FG3_PCT: pct(x.v.FG3M, x.v.FG3A) } }));
-  const live = CATS.filter((c) => !st.punts.has(c.k));
-  // place in each category (1 = best; fewer turnovers is better), ties share the better place; Roto points from it
   for (const c of CATS) {
     const sign = c.k === "TOV" ? -1 : 1, val = (x) => (x.list.length ? sign * (x.T[c.k] ?? 0) : -Infinity);
     for (const x of teams) {
@@ -4771,6 +4748,21 @@ function leagueTable(mv = null) {
       x[`p_${c.k}`] = n - better - (same - 1) / 2;  // a tie splits the points
     }
   }
+  return teams;
+}
+// mv: the moves being checked (checkedMoves), applied to their teams in the round shown
+function leagueTable(mv = null) {
+  const n = Math.max(st.teams, 1);
+  const W = weeklyRanks();
+  if (!W) return `<p class="munote nopick">אחרי הדראפט (כשלכל הקבוצות יש שחקנים) יופיע כאן דירוג העוצמה</p>`;
+  const rounds = Object.keys(W.R).map(Number).sort((a, b) => a - b);
+  const sel = lgRoundOf(W);
+  const snap0 = W.R[sel];
+  const pkOn = !!(mv && mv.length);
+  const snap = pkOn ? snapWithMoves(snap0, sel, mv) : snap0;
+  const pct = (m, a) => (a ? m / a : 0);
+  const teams = snapPlaces(snap);
+  const live = CATS.filter((c) => !st.punts.has(c.k));
   for (const x of teams) x.pts = live.reduce((a, c) => a + x[`p_${c.k}`], 0);
   // the overall place (by the category places), and the change from the round before
   const placeOf = (sn) => {
