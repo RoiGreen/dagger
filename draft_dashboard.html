@@ -1235,8 +1235,8 @@ table.box.lgtab th.sorted .lsort { color: var(--accent); text-decoration: underl
 @media (max-width: 700px) {
   table.box.lgtab td.rank, table.box.lgtab th:first-child { position: sticky; right: 0; z-index: 2; background: var(--surface); width: 28px; min-width: 28px; max-width: 28px; padding-inline: 2px; box-sizing: border-box; }
   table.box.lgtab th:nth-child(2) { font-size: .66rem; }
-  table.box.lgtab td.lgch, table.box.lgtab th:nth-child(2) { position: sticky; right: 28px; z-index: 2; background: var(--surface); width: 34px; min-width: 34px; max-width: 34px; padding-inline: 2px; box-sizing: border-box; }
-  table.box.lgtab td.tn, table.box.lgtab th:nth-child(3) { position: sticky; right: 62px; z-index: 2; background: var(--surface); max-width: 9em; overflow: hidden; text-overflow: ellipsis; }
+  table.box.lgtab td.lgch, table.box.lgtab th:nth-child(2) { position: sticky; right: 28px; z-index: 2; background: var(--surface); width: 58px; min-width: 58px; max-width: 58px; padding-inline: 2px; box-sizing: border-box; font-size: .7rem; }
+  table.box.lgtab td.tn, table.box.lgtab th:nth-child(3) { position: sticky; right: 86px; z-index: 2; background: var(--surface); max-width: 9em; overflow: hidden; text-overflow: ellipsis; }
 }
 
 table.box.murt .rsort { border: 0; background: none; font: inherit; color: inherit; cursor: pointer; padding: 0; white-space: nowrap; }
@@ -4789,6 +4789,14 @@ function leagueTable(mv = null) {
   const prevK = rounds.filter((k) => k < sel).pop();
   // with a pickup the change is the pickup's: the places without it
   const prev = pkOn ? Object.fromEntries(placeOf(snap0)) : prevK != null ? Object.fromEntries(placeOf(W.R[prevK])) : null;
+  // the same for each category: the places without the move, or in the round before
+  const prevSnap = pkOn ? snap0 : prevK != null ? W.R[prevK] : null;
+  const prevCat = !prevSnap ? null : Object.fromEntries(CATS.map((c) => {
+    const sign = c.k === "TOV" ? -1 : 1;
+    const val = (x) => (x.has ? sign * (PCT_PARTS[c.k] ? pct(x.v[PCT_PARTS[c.k][0]], x.v[PCT_PARTS[c.k][1]]) : x.v[c.k] ?? 0) : -Infinity);
+    return [c.k, prevSnap.teams.map((x) => 1 + prevSnap.teams.filter((y) => val(y) > val(x)).length)];
+  }));
+  const placeTag = (r0, r1) => (r0 == null || r0 === r1 ? `#${r1}` : `<span dir="ltr" class="${r1 < r0 ? "lgup" : "lgdn"}">#${r0} → #${r1}</span>`);
   // a short tip per team: the categories cheapest to climb in (closest to the team above, in the league's spread),
   // and one to let go when it is last there by far
   const sd = Object.fromEntries(CATS.map((c) => {
@@ -4837,9 +4845,9 @@ function leagueTable(mv = null) {
       ${CATS.map((c) => head(c.k, c.l)).join("")}<th class="nosort" data-tip="איפה הכי קל לעלות מקום (הכי קרוב לקבוצה שמעליה), ומה כדאי לשחרר כשהקבוצה אחרונה בו בפער גדול">המלצה</th></tr></thead><tbody>
       ${teams.map((x, i) => {
         const d = prev && prev[x.t] != null ? prev[x.t] - overall.get(x.t) : 0;
-        const ch = !prev || !d ? `<span class="lgsame">–</span>` : `<span class="${d > 0 ? "lgup" : "lgdn"}">${d > 0 ? "▲" : "▼"}${Math.abs(d)}</span>`;
+        const ch = !prev || !d ? `<span class="lgsame">–</span>` : `<span class="${d > 0 ? "lgup" : "lgdn"}">${d > 0 ? "▲" : "▼"} #${prev[x.t]} → #${overall.get(x.t)}</span>`;
         return `<tr class="${x.t === myIdx() ? "me" : ""}"><td class="rank">${key === "pts" ? overall.get(x.t) : i + 1}</td><td class="lgch" dir="ltr">${ch}</td><td class="tn">${esc(teamName(x.t))}</td>
-        ${CATS.map((c) => `<td class="${st.punts.has(c.k) ? "punted" : ""}" style="${x.list.length ? heat[c.k]((c.k === "TOV" ? -1 : 1) * (x.T[c.k] ?? 0)) : ""}">${x.list.length ? catFmt(c.k)(x.T[c.k] ?? 0) : "–"}<small>#${x[`r_${c.k}`]}</small></td>`).join("")}
+        ${CATS.map((c) => `<td class="${st.punts.has(c.k) ? "punted" : ""}" style="${x.list.length ? heat[c.k]((c.k === "TOV" ? -1 : 1) * (x.T[c.k] ?? 0)) : ""}">${x.list.length ? catFmt(c.k)(x.T[c.k] ?? 0) : "–"}<small>${placeTag(prevCat?.[c.k][x.t], x[`r_${c.k}`])}</small></td>`).join("")}
         <td class="lgtip">${tip(x)}</td></tr>`; }).join("")}
     </tbody></table></div>
     <p class="munote ctrnote">סכום הממוצעים למשחק של השחקנים בסגל הפעיל (בלי IL) ביום הפרסום. הדירוג מתעדכן בכל יום ב׳ ב־9:00 לפי המחזור שהסתיים.</p>
