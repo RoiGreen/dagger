@@ -1236,6 +1236,7 @@ table.box.lgtab tr.lgros td > div { position: sticky; right: 8px; max-width: min
 table.box.lgtab .lgrnone { color: var(--muted); }
 table.box.lgtab td.lgrec { font-family: var(--font-num); font-weight: 700; }
 #lgRecBox { margin-top: 10px; }
+#lgRecBox summary { cursor: pointer; font-weight: 700; }
 table.box.lgtab .lsort { border: 0; background: none; font: inherit; color: inherit; cursor: pointer; padding: 0; }
 table.box.lgtab th.sorted .lsort { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 700px) {
@@ -4913,7 +4914,7 @@ function leagueTable(mv = null) {
       const a = Math.round(recWeight(r) * 100);
       return ` המקום הכללי: ${100 - a}% כוח הסגל ו־${a}% המאזן בליגה.`;
     })()}</p>
-    ${sel > 0 && sel === W.last && st.lgWeekly?.r?.[sel] ? `<details class="dsetup tradebox impbox" id="lgRecBox">
+    ${sel > 0 && sel === W.last ? `<details class="dsetup tradebox" id="lgRecBox"${rec ? "" : " open"}>
       <summary>ייבוא טבלת הליגה (המאזן נכנס לדירוג)</summary>
       <div class="impbody">
         <p class="munote">באתר הליגה פתחו את טבלת הליגה, סמנו הכל (<bdi>Ctrl+A</bdi>), העתיקו והדביקו כאן (<bdi>Ctrl+V</bdi>).</p>
@@ -4933,7 +4934,8 @@ $("viewCmp").addEventListener("click", (e) => {
   if (e.target.closest("[data-lgrecread], [data-lgrecclear]")) {
     const W = weeklyRanks();
     if (!W) return;
-    const R = st.lgWeekly.r[lgRoundOf(W)];
+    const k = lgRoundOf(W);
+    const R = st.lgWeekly.r[k] || (st.lgWeekly.r[k] = W.R[k]);  // a round not kept yet is kept from now on, with its record
     if (!R) return;
     if (e.target.closest("[data-lgrecclear]")) { delete R.rec; saveSettings(); showToast("הדירוג חזר לכוח הסגל בלבד"); return renderCmp(); }
     const got = parseLeagueRecord($("lgRecText")?.value || "");
