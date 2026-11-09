@@ -1234,6 +1234,8 @@ table.box.lgtab .lgteam { border: 0; background: none; font: inherit; color: inh
 table.box.lgtab tr.lgros td { white-space: normal; text-align: right; direction: rtl; font-family: var(--font-body); font-size: .82rem; line-height: 1.6; background: var(--surface-2); }
 table.box.lgtab tr.lgros td > div { position: sticky; right: 8px; max-width: min(900px, calc(100vw - 80px)); }
 table.box.lgtab .lgrnone { color: var(--muted); }
+table.box.lgtab td.lgrec { font-family: var(--font-num); font-weight: 700; }
+#lgRecBox { margin-top: 10px; }
 table.box.lgtab .lsort { border: 0; background: none; font: inherit; color: inherit; cursor: pointer; padding: 0; }
 table.box.lgtab th.sorted .lsort { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 700px) {
@@ -4757,6 +4759,48 @@ function snapPlaces(snap) {
   }
   return teams;
 }
+// The league table's record (category wins-ties-losses), pasted from the league's site: each team's name, then its
+// record ("19-0-8"); the winning share right after it (".704") tells which side is the wins
+function parseLeagueRecord(text) {
+  const norm = (x) => x.toLowerCase().replace(/\s+/g, " ");
+  const T = norm(text), hits = [];
+  Array.from({ length: Math.max(st.teams, 1) }, (_, t) => [t, norm(teamName(t).trim())]).filter(([, nm]) => nm)
+    .sort((a, b) => b[1].length - a[1].length).forEach(([t, nm]) => {
+      for (let i = T.indexOf(nm); i >= 0; i = T.indexOf(nm, i + 1)) {
+        if (!hits.some((h) => i < h.end && i + nm.length > h.i)) hits.push({ t, i, end: i + nm.length });  // a longer name wins
+      }
+    });
+  hits.sort((a, b) => a.i - b.i);
+  const rec = {};
+  hits.forEach((h, j) => {
+    if (rec[h.t]) return;
+    const next = hits.slice(j + 1).find((x) => x.t !== h.t);
+    const seg = T.slice(h.end, next ? next.i : undefined);
+    const m = seg.match(/(\d+)\s*-\s*(\d+)\s*-\s*(\d+)/);
+    if (!m) return;
+    let [a, b, c] = m.slice(1).map(Number);
+    const sum = a + b + c, pm = seg.slice(m.index + m[0].length).match(/^\s*(1\.000|0?\.\d{3})/);
+    if (pm && sum) { const p = Number(pm[1]); if (Math.abs((c + b / 2) / sum - p) < Math.abs((a + b / 2) / sum - p)) [a, c] = [c, a]; }
+    rec[h.t] = [a, b, c];  // wins, ties, losses
+  });
+  return rec;
+}
+// The overall score: the roster's strength (its share of categories won against every other team, from the category
+// places) blended with the record in the league table. The record weighs more as the season goes: after M weeks
+// it is M / (M + 4) (3 weeks: 43%, 8 weeks: 67%)
+const REC_K = 4;
+function recWeight(r) {
+  if (!r) return 0;
+  const m = (r[0] + r[1] + r[2]) / Math.max(CATS.length, 1);
+  return m / (m + REC_K);
+}
+function lgScore(pts, nLive, n, r) {
+  const strength = nLive && n > 1 ? (pts - nLive) / (nLive * (n - 1)) : 0;
+  const g = r ? r[0] + r[1] + r[2] : 0;
+  if (!g) return strength;
+  const a = recWeight(r);
+  return (1 - a) * strength + a * (r[0] + r[1] / 2) / g;
+}
 // the teams opened in the power ranking, and the players behind a team's numbers in the round shown
 const LG_OPEN = new Set();
 function lgRoster(x) {
@@ -4780,7 +4824,9 @@ function leagueTable(mv = null) {
   const teams = snapPlaces(snap);
   const live = CATS.filter((c) => !st.punts.has(c.k));
   for (const x of teams) x.pts = live.reduce((a, c) => a + x[`p_${c.k}`], 0);
-  // the overall place (by the category places), and the change from the round before
+  const rec = snap0.rec || null;
+  for (const x of teams) x.score = lgScore(x.pts, live.length, n, rec?.[x.t]);
+  // the overall place (by the category places and the record), and the change from the round before
   const placeOf = (sn) => {
     const tt = sn.teams.map((x, t) => ({ t, has: x.has, T: { ...x.v, FG_PCT: pct(x.v.FGM, x.v.FGA), FT_PCT: pct(x.v.FTM, x.v.FTA), FG3_PCT: pct(x.v.FG3M, x.v.FG3A) } }));
     const pts = new Map(tt.map((x) => [x.t, 0]));
@@ -4791,7 +4837,8 @@ function leagueTable(mv = null) {
         pts.set(x.t, pts.get(x.t) + n - better - (same - 1) / 2);
       }
     }
-    return new Map([...tt].sort((a, b) => pts.get(b.t) - pts.get(a.t) || a.t - b.t).map((x, i) => [x.t, i + 1]));
+    const sc = (t) => lgScore(pts.get(t), live.length, n, sn.rec?.[t]);
+    return new Map([...tt].sort((a, b) => sc(b.t) - sc(a.t) || a.t - b.t).map((x, i) => [x.t, i + 1]));
   };
   const overall = placeOf(snap);
   const prevK = rounds.filter((k) => k < sel).pop();
@@ -4832,7 +4879,7 @@ function leagueTable(mv = null) {
     return parts.length ? parts.join("<br>") : "קבוצה מאוזנת";
   };
   const key = st.cmp.lsort && st.cmp.lsort !== "Z" ? st.cmp.lsort : "pts";
-  const sortVal = (x) => (key === "pts" ? x.pts : -x[`r_${key}`]);
+  const sortVal = (x) => (key === "pts" ? x.score : -x[`r_${key}`]);
   teams.sort((a, b) => sortVal(b) - sortVal(a) || a.t - b.t);
   const heat = Object.fromEntries(CATS.map((c) => [c.k, percentileHeat(teams.map((x) => (c.k === "TOV" ? -1 : 1) * (x.T[c.k] ?? 0)))]));
   const head = (k, l, tip = "") => `<th class="nosort${key === k ? " sorted" : ""}${st.punts.has(k) ? " punted" : ""}"${tip ? ` data-tip="${esc(tip)}"` : ""}><button type="button" class="lsort" data-cmplsort="${k}">${l}</button></th>`;
@@ -4850,15 +4897,30 @@ function leagueTable(mv = null) {
     <div class="lgweek"><select data-lground aria-label="איזה מחזור">${rounds.map((k) => `<option value="${k}"${k === sel ? " selected" : ""}>${esc(roundLabel(k))}</option>`).join("")}</select><small>${when}</small>${sel > 0 && sel === W.last && st.lgWeekly?.r?.[sel] ? `<button type="button" class="mact" data-lgrecalc data-tip="מחשב את המחזור מחדש לפי הסגלים וה־IL של עכשיו (למשל אחרי תיקון IL או ייבוא העברות)">חישוב מחדש</button>` : ""}</div>
     <div class="tbl-wrap short"><table class="box lgtab"><thead><tr><th class="nosort${key === "pts" ? " sorted" : ""}"><button type="button" class="lsort" data-cmplsort="pts" data-tip="המקום הכללי: לפי המקומות בכל הקטגוריות">#</button></th>
       <th class="nosort" data-tip="${pkOn ? "שינוי במקום הכללי בגלל המהלך" : "שינוי במקום הכללי לעומת השבוע הקודם"}">${pkOn ? "שינוי מהמהלך" : "שינוי"}</th><th class="nosort">קבוצה</th>
+      ${rec ? `<th class="nosort" data-tip="המאזן בטבלת הליגה: ניצחונות-תיקו-הפסדים בקטגוריות, ומתחתיו אחוז הניצחונות">מאזן</th>` : ""}
       ${CATS.map((c) => head(c.k, c.l)).join("")}<th class="nosort" data-tip="איפה הכי קל לעלות מקום (הכי קרוב לקבוצה שמעליה), ומה כדאי לשחרר כשהקבוצה אחרונה בו בפער גדול">המלצה</th></tr></thead><tbody>
       ${teams.map((x, i) => {
         const d = prev && prev[x.t] != null ? prev[x.t] - overall.get(x.t) : 0;
         const ch = !prev || !d ? `<span class="lgsame">–</span>` : `<span class="${d > 0 ? "lgup" : "lgdn"}">${d > 0 ? "▲" : "▼"} #${prev[x.t]} → #${overall.get(x.t)}</span>`;
         return `<tr class="${x.t === myIdx() ? "me" : ""}"><td class="rank">${key === "pts" ? overall.get(x.t) : i + 1}</td><td class="lgch" dir="ltr">${ch}</td><td class="tn"><button type="button" class="lgteam" data-lgteam="${x.t}" aria-expanded="${LG_OPEN.has(x.t)}" data-tip="מי נספר">${esc(teamName(x.t))}</button></td>
+        ${rec ? `<td class="lgrec">${rec[x.t] ? `<bdi dir="ltr">${rec[x.t].join("-")}</bdi><small>${fmt3((rec[x.t][0] + rec[x.t][1] / 2) / Math.max(rec[x.t][0] + rec[x.t][1] + rec[x.t][2], 1))}</small>` : "–"}</td>` : ""}
         ${CATS.map((c) => `<td class="${st.punts.has(c.k) ? "punted" : ""}" style="${x.list.length ? heat[c.k]((c.k === "TOV" ? -1 : 1) * (x.T[c.k] ?? 0)) : ""}">${x.list.length ? catFmt(c.k)(x.T[c.k] ?? 0) : "–"}<small>${placeTag(prevCat?.[c.k][x.t], x[`r_${c.k}`])}</small></td>`).join("")}
-        <td class="lgtip">${tip(x)}</td></tr>${LG_OPEN.has(x.t) ? `<tr class="lgros"><td colspan="${CATS.length + 4}"><div>${lgRoster(snap0.teams[x.t])}</div></td></tr>` : ""}`; }).join("")}
+        <td class="lgtip">${tip(x)}</td></tr>${LG_OPEN.has(x.t) ? `<tr class="lgros"><td colspan="${CATS.length + 4 + (rec ? 1 : 0)}"><div>${lgRoster(snap0.teams[x.t])}</div></td></tr>` : ""}`; }).join("")}
     </tbody></table></div>
-    <p class="munote ctrnote">סכום הממוצעים למשחק של השחקנים בסגל הפעיל (בלי IL) ביום הפרסום. הדירוג מתעדכן בכל יום ב׳ ב־9:00 לפי המחזור שהסתיים.</p>
+    <p class="munote ctrnote">סכום הממוצעים למשחק של השחקנים בסגל הפעיל (בלי IL) ביום הפרסום. הדירוג מתעדכן בכל יום ב׳ ב־9:00 לפי המחזור שהסתיים.${(() => {
+      const r = rec && Object.values(rec)[0];
+      if (!r) return "";
+      const a = Math.round(recWeight(r) * 100);
+      return ` המקום הכללי: ${100 - a}% כוח הסגל ו־${a}% המאזן בליגה.`;
+    })()}</p>
+    ${sel > 0 && sel === W.last && st.lgWeekly?.r?.[sel] ? `<details class="dsetup tradebox impbox" id="lgRecBox">
+      <summary>ייבוא טבלת הליגה (המאזן נכנס לדירוג)</summary>
+      <div class="impbody">
+        <p class="munote">באתר הליגה פתחו את טבלת הליגה, סמנו הכל (<bdi>Ctrl+A</bdi>), העתיקו והדביקו כאן (<bdi>Ctrl+V</bdi>).</p>
+        <textarea id="lgRecText" rows="3" placeholder="הדביקו כאן את טבלת הליגה…"></textarea>
+        <div class="improw"><button type="button" class="mact on" data-lgrecread>עדכון המאזן</button>${rec ? `<button type="button" class="mact" data-lgrecclear>בלי המאזן</button>` : ""}</div>
+      </div>
+    </details>` : ""}
   </section>`;
 }
 $("viewCmp").addEventListener("change", (e) => {
@@ -4868,13 +4930,29 @@ $("viewCmp").addEventListener("change", (e) => {
 $("viewCmp").addEventListener("click", (e) => {
   const clr = e.target.closest("[data-pkclear]");
   if (clr) { const k = clr.dataset.pkclear; if (st.cmp.saved) delete st.cmp.saved[k]; return renderCmp(); }
+  if (e.target.closest("[data-lgrecread], [data-lgrecclear]")) {
+    const W = weeklyRanks();
+    if (!W) return;
+    const R = st.lgWeekly.r[lgRoundOf(W)];
+    if (!R) return;
+    if (e.target.closest("[data-lgrecclear]")) { delete R.rec; saveSettings(); showToast("הדירוג חזר לכוח הסגל בלבד"); return renderCmp(); }
+    const got = parseLeagueRecord($("lgRecText")?.value || "");
+    const n = Math.max(st.teams, 1), found = Object.keys(got).length;
+    if (!found) return showToast("לא נמצא מאזן: בדקו ששמות הקבוצות ב־Dagger זהים לשמות באתר הליגה");
+    R.rec = got;
+    saveSettings();
+    const miss = Array.from({ length: n }, (_, t) => t).filter((t) => !got[t]).map(teamName);
+    showToast(miss.length ? `נמצא מאזן ל־${found} מתוך ${n} קבוצות. חסר: ${miss.join(", ")}` : `המאזן עודכן לכל ${n} הקבוצות`);
+    return renderCmp();
+  }
   const lt = e.target.closest("[data-lgteam]");
   if (lt) { const t = Number(lt.dataset.lgteam); LG_OPEN.has(t) ? LG_OPEN.delete(t) : LG_OPEN.add(t); return renderCmp(); }
   if (e.target.closest("[data-lgrecalc]")) {
     const W = weeklyRanks();
     if (!W) return;
-    const k = lgRoundOf(W);
+    const k = lgRoundOf(W), keep = st.lgWeekly.r[k]?.rec;
     st.lgWeekly.r[k] = rankSnap(k);
+    if (keep) st.lgWeekly.r[k].rec = keep;
     saveSettings();
     showToast("המחזור חושב מחדש לפי הסגלים של עכשיו");
     return renderCmp();
