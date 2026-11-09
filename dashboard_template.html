@@ -2746,7 +2746,9 @@ function render() {
 
 
   syncTeamNames(); syncLeaguePanel();
-  renderMine(); renderFav(); renderAdv(); renderDraft(); renderDist(); renderCmp(); renderMatchup();
+  renderMine(); renderFav(); renderAdv(); renderDraft(); renderDist(); renderCmp();
+  try { saveWeekForecast(); } catch (e) {}
+  renderMatchup();
 }
 
 // The team the shown stats come from: his team in the latest chosen season he played
@@ -5871,6 +5873,31 @@ function scheduledOpp(from) {
   const o = rounds[cycleOrder(Math.floor(w / R), R)[w % R]].get(me);
   return o != null && o >= 0 ? o : (me + 1) % n;  // a bye week: the next team, to still have a matchup to plan
 }
+// Dagger's forecast for the week, kept at the first visit of the week (every team, the rosters held as the week began,
+// every game projected) so the forecast button shows it as it was then. Before that visit it is worked out again.
+function saveWeekForecast() {
+  const n = Math.max(st.teams, 1);
+  if (n < 2 || !GAMES.length || !last?.now || !Array.from({ length: n }, (_, t) => rosterOf(t).length).every(Boolean)) return;
+  const wr = weekRange();
+  st.muPreSnap = st.muPreSnap && typeof st.muPreSnap === "object" ? st.muPreSnap : {};
+  if (st.muPreSnap[wr.from]) return;
+  const keepW = WEEK, keepM = MU;
+  try {
+    WEEK = wr;
+    MU = { model: new Map(), games: new Map(), pre: true, w: null };
+    for (const g of GAMES) if (!g.pre) { MU.games.set(`${g.h}|${g.d}`, g); MU.games.set(`${g.a}|${g.d}`, g); }
+    const r3 = (x) => Math.round(x * 1000) / 1000, round = (o) => Object.fromEntries(Object.entries(o).map(([k, v]) => [k, r3(v)]));
+    const teams = {};
+    for (let t = 0; t < n; t++) {
+      const T = planWeek(rosterOf(t), ilOf(t), t);
+      teams[t] = { mean: round(T.mean), v: round(T.v), covFG: r3(T.covFG), covFT: r3(T.covFT), covF3: r3(T.covF3), gamesAll: T.gamesAll };
+    }
+    st.muPreSnap[wr.from] = { ts: Date.now(), teams };
+    const weeks = Object.keys(st.muPreSnap).sort();
+    while (weeks.length > 30) delete st.muPreSnap[weeks.shift()];
+    saveSettings();
+  } finally { WEEK = keepW; MU = keepM; }
+}
 function renderMatchup() {
   if (st.tab !== "mu") return;
   WEEK = muWeekRange();
@@ -5913,12 +5940,20 @@ function renderMatchup() {
   // First pass with plain value; then my lineups again, weighted toward the categories still in play
   MU.w = null;
   let A = planWeek(mineP, ilA, me);
-  const B = planWeek(oppP, ilB, st.muOpp);
+  let B = planWeek(oppP, ilB, st.muOpp);
   let odds = muOdds(A, B);
   const base = odds;
   if (st.fmt !== "pts") {
     MU.w = Object.fromEntries(odds.cats.map((c) => [c.k, 0.2 + 3.2 * c.q * (1 - c.q)]));
     A = planWeek(mineP, ilA, me);
+    odds = muOdds(A, B);
+  }
+  // the forecast kept at the week's first visit: its totals replace the ones worked out again (the grid stays as it is)
+  const kept = MU.pre ? st.muPreSnap?.[WEEK.from] : null, kA = kept?.teams?.[me], kB = kept?.teams?.[st.muOpp];
+  const fromKept = !!(kA && kB);
+  if (fromKept) {
+    A = { ...A, mean: kA.mean, v: kA.v, covFG: kA.covFG, covFT: kA.covFT, covF3: kA.covF3, gamesAll: kA.gamesAll };
+    B = { ...B, mean: kB.mean, v: kB.v, covFG: kB.covFG, covFT: kB.covFT, covF3: kB.covF3, gamesAll: kB.gamesAll };
     odds = muOdds(A, B);
   }
   const isLive = weekLive && muMode === "live";
@@ -6213,7 +6248,7 @@ function renderMatchup() {
   };
   const score = st.fmt === "pts"
     ? `<div class="mnum"><span class="num${SO.fa > SO.fb ? " lead" : ""}">${Math.round(SO.fa)}</span><span class="sep">:</span><span class="num${SO.fb > SO.fa ? " lead" : ""}">${Math.round(SO.fb)}</span><small>FPTS · תחזית סוף השבוע</small></div>`
-    : `<div class="mnum"><span class="num${wins > losses ? " lead" : ""}">${wins}</span><span class="sep">:</span><span class="num${losses > wins ? " lead" : ""}">${losses}</span><small>${isLive ? `הערכה לפי הנתונים` : weekLive ? "תחזית Dagger מתחילת השבוע" : "תחזית סוף השבוע"}</small></div>`;
+    : `<div class="mnum"><span class="num${wins > losses ? " lead" : ""}">${wins}</span><span class="sep">:</span><span class="num${losses > wins ? " lead" : ""}">${losses}</span><small>${isLive ? `הערכה לפי הנתונים` : weekLive ? (fromKept ? `<span title="נשמרה ב־${new Date(kept.ts).toLocaleString("he-IL", { day: "numeric", month: "numeric", hour: "2-digit", minute: "2-digit" })}">תחזית Dagger מתחילת השבוע</span>` : "תחזית Dagger מתחילת השבוע (שחזור)") : "תחזית סוף השבוע"}</small></div>`;
   const modeSeg = weekLive ? `<div class="seg mumode" role="group" aria-label="לייב או תחזית"><button type="button" data-mumode="live" aria-pressed="${isLive}">לייב</button><button type="button" data-mumode="proj" aria-pressed="${!isLive}">תחזית</button></div>` : "";
   out.innerHTML = `
     <div class="muscore">
