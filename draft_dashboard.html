@@ -5558,9 +5558,15 @@ function muParse(text) {
 }
 // the league's score for this team in the week shown, when one was pasted for it
 const muActual = (team) => { const a = st.muActual; return a && a.week === weekDays()[0] ? a.teams?.[team] || null : null; };
+// The chance he plays, as it looked when the week began: a player who played in the 10 days before it counts as
+// healthy then; anyone else keeps his injury status of today (the injury report of that day is not kept)
+function preChance(p, from, g) {
+  const lo = shiftDay(from, -10);
+  return (p.recent || []).some((r) => r[0] >= lo && r[0] < from && r[5] > 0) ? 1 : playChance(p, g);
+}
 function planWeek(roster, il, team, swap = null) {
   const T = { done: zeroLine(), mean: zeroLine(), v: zeroLine(), covFG: 0, covFT: 0, covF3: 0, starts: 0, played: 0, gamesAll: 0, days: [], cell: new Map() };
-  const act = muActual(team);
+  const act = MU.pre ? null : muActual(team), wk0 = weekDays()[0];
   for (const d of weekDays()) {
     // A pickup counts from the moment it is made, except a game already under way: the added player misses it,
     // and the released one (who cannot be dropped mid-game) still has it
@@ -5569,9 +5575,11 @@ function planWeek(roster, il, team, swap = null) {
     const sameDay = on && d === swap.from;
     // a player put on the IL automatically (by his injury now) still counts for the days already played: he was active then
     const dayPast = d <= LOG_END && !MU.pre, autoIL = new Set(st.ilAuto?.[team] || []);
-    const who = roster.filter((p) => (!il.has(p.id) || (dayPast && autoIL.has(p.id))) && heldOn(team, p, d) !== false && !(on && p.id === swap.drop && !(sameDay && started(p))));
+    // the forecast from the week's start: the roster as it was then, all week (moves made later are left out)
+    const at = MU.pre ? wk0 : d;
+    const who = roster.filter((p) => (!il.has(p.id) || ((dayPast || MU.pre) && autoIL.has(p.id))) && heldOn(team, p, at) !== false && !(on && p.id === swap.drop && !(sameDay && started(p))));
     if (on && !(sameDay && started(swap.add))) who.push(swap.add);
-    const guests = [...dayGuests(team, d), ...dayFormer(team, d, roster)].filter((p, i, L) => !who.includes(p) && L.indexOf(p) === i);
+    const guests = [...(MU.pre ? [] : dayGuests(team, d)), ...dayFormer(team, at, roster)].filter((p, i, L) => !who.includes(p) && L.indexOf(p) === i);
     who.push(...guests);
     const cands = [], all = [];  // all: every scheduled game, injured or not (for the games count only)
     for (const p of who) {
@@ -5584,7 +5592,7 @@ function planWeek(roster, il, team, swap = null) {
         const gm = gameOn(p.team26, d);
         if (!gm) continue;
         if (act && new Date(gm.g.t).getTime() <= st.muActual.ts) continue;  // in the league's score already
-        const ch = playChance(p, gm.g);
+        const ch = MU.pre ? preChance(p, wk0, gm.g) : playChance(p, gm.g);
         if (ch <= 0) { T.cell.set(`${p.id}|${d}`, { gm, out: true }); continue; }
         const v = muVal(p, oppFactor(p.team26, gm.opp));
         cands.push({ p, v: ch < 1 ? (v > 0 ? v * 0.6 : v - 0.5) : v, gm, ch });  // a doubtful player ranks lower
@@ -5871,9 +5879,9 @@ function renderMatchup() {
   // the week has begun once one of its games is in the logs
   const weekLive = SEASON_DAYS.some((d) => d >= WEEK.from && d <= WEEK.to && d <= LOG_END);
   const muMode = !weekLive ? "proj" : MU_MODE?.week === WEEK.from ? MU_MODE.mode : "live";
-  // the forecast during the week: what has been played plus the projection of the rest (the same numbers as live,
-  // shown as the expected final score)
-  MU.pre = false;
+  // the forecast during the week: Dagger's forecast as the week began - the rosters held then, every game projected,
+  // none of the results (played or pasted from the league's site)
+  MU.pre = weekLive && muMode === "proj";
   const n = Math.max(st.teams, 1), me = muMe();
   const ms = $("muTeam");
   if (ms !== document.activeElement) {
@@ -5949,9 +5957,9 @@ function renderMatchup() {
   // pickups
   const left = Infinity;  // no weekly pickup limit
   if (MU_FORCE != null && !mineP.some((p) => p.id === MU_FORCE && !ilA.has(p.id))) MU_FORCE = null;  // he left the roster
-  const moves = left > 0 ? bestMoves(me, st.muOpp, mineP, ilA, B, odds, null, MU_FORCE) : [];
+  const moves = left > 0 && !MU.pre ? bestMoves(me, st.muOpp, mineP, ilA, B, odds, null, MU_FORCE) : [];
   if (MU_SEARCH != null && (picks.some((x) => x.id === MU_SEARCH) || mine.has(MU_SEARCH))) MU_SEARCH = null;  // he was added meanwhile
-  const searched = left > 0 && MU_SEARCH != null ? bestMoves(me, st.muOpp, mineP, ilA, B, odds, MU_SEARCH, MU_FORCE)[0] : null;
+  const searched = left > 0 && !MU.pre && MU_SEARCH != null ? bestMoves(me, st.muOpp, mineP, ilA, B, odds, MU_SEARCH, MU_FORCE)[0] : null;
   const dayShort = (d) => new Date(d + "T12:00:00Z").toLocaleDateString("he-IL", { weekday: "narrow", timeZone: "UTC" });
   // the release can be changed per row: the odds are worked out again for the player chosen
   const withDrop = (x0) => {
@@ -6205,7 +6213,7 @@ function renderMatchup() {
   };
   const score = st.fmt === "pts"
     ? `<div class="mnum"><span class="num${SO.fa > SO.fb ? " lead" : ""}">${Math.round(SO.fa)}</span><span class="sep">:</span><span class="num${SO.fb > SO.fa ? " lead" : ""}">${Math.round(SO.fb)}</span><small>FPTS · תחזית סוף השבוע</small></div>`
-    : `<div class="mnum"><span class="num${wins > losses ? " lead" : ""}">${wins}</span><span class="sep">:</span><span class="num${losses > wins ? " lead" : ""}">${losses}</span><small>${isLive ? `הערכה לפי הנתונים` : weekLive ? "צפי לסוף השבוע, כולל מה ששוחק" : "תחזית סוף השבוע"}</small></div>`;
+    : `<div class="mnum"><span class="num${wins > losses ? " lead" : ""}">${wins}</span><span class="sep">:</span><span class="num${losses > wins ? " lead" : ""}">${losses}</span><small>${isLive ? `הערכה לפי הנתונים` : weekLive ? "תחזית Dagger מתחילת השבוע" : "תחזית סוף השבוע"}</small></div>`;
   const modeSeg = weekLive ? `<div class="seg mumode" role="group" aria-label="לייב או תחזית"><button type="button" data-mumode="live" aria-pressed="${isLive}">לייב</button><button type="button" data-mumode="proj" aria-pressed="${!isLive}">תחזית</button></div>` : "";
   out.innerHTML = `
     <div class="muscore">
@@ -6258,7 +6266,7 @@ function renderMatchup() {
             const pager = pages > 1 ? `<div class="mupager"><button type="button" class="mact" data-mupage="${pg - 1}"${pg ? "" : " disabled"} aria-label="עמוד קודם"><bdi dir="ltr">→</bdi></button>${Array.from({ length: pages }, (_, i) => `<button type="button" class="mact${i === pg ? " on" : ""}" data-mupage="${i}">${i + 1}</button>`).join("")}<button type="button" class="mact" data-mupage="${pg + 1}"${pg < pages - 1 ? "" : " disabled"} aria-label="עמוד הבא"><bdi dir="ltr">←</bdi></button></div>` : "";
             const forcedName = MU_FORCE != null ? PLAYER_BY_ID.get(MU_FORCE)?.name : null;
             return list.length || searched ? `<div class="mupickhead">${forcedName ? `<b class="muforcehead">מחליפים ל־<bdi>${esc(forcedName)}</bdi></b>` : ""}<span>סיכוי לנצח במצ'אפ הקרוב</span></div><ol class="mupicks">${searched ? moveRow(searched, -1) : ""}${list.slice(pg * per, pg * per + per).map((x, j) => moveRow(x, pg * per + j)).join("")}</ol>${pager}`
-              : `<p class="munote nopick">אין פיק אפ שמשפר את הסיכוי לנצח השבוע</p>`;
+              : `<p class="munote nopick">${MU.pre ? "המלצות פיק אפ מופיעות במצב לייב" : "אין פיק אפ שמשפר את הסיכוי לנצח השבוע"}</p>`;
           })()}`}
     </section>
     <section class="cmpsec mudaygrid"><div class="dghead"><h3>הרכב יומי</h3>
