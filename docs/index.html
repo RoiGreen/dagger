@@ -5283,9 +5283,27 @@ function weekGamesLeft(team) {
 }
 // Chance he plays a given game: OUT = 0 until his expected return, GTD = half
 function playChance(p, g) {
-  if (!p.hurt) return 1;
-  if (p.hurt.ret && new Date(p.hurt.ret) <= g.t) return 1;
-  return p.hurt.s === "OUT" ? 0 : 0.5;
+  const rot = rotChance(p);
+  if (!p.hurt) return rot;
+  if (p.hurt.ret && new Date(p.hurt.ret) <= g.t) return rot;
+  return p.hurt.s === "OUT" ? 0 : 0.5 * rot;
+}
+// Out of the rotation: a player who sat his team's last 3 regular-season games plays as often as he played its last 10
+// (none of them: no games at all). A player on the injury report, or a regular of last season (20+ games, 20+ minutes),
+// is taken to have sat them hurt.
+const ROT = new Map();
+function rotChance(p) {
+  if (p.hurt) return 1;
+  if (ROT.has(p.id)) return ROT.get(p.id);
+  const rows = (p.recent || []).filter((r) => r[0] >= REG_START && r[0] <= LOG_END).sort((a, b) => (a[0] < b[0] ? 1 : -1)).slice(0, 10);
+  const played = rows.map((r) => r.length > 5 && r[5] > 0);
+  let c = 1;
+  if (rows.length >= 3 && !played.slice(0, 3).some(Boolean)) {
+    const prev = [2025, 2024].map((y) => p.seasons?.[y]).find((x) => x && x.gp >= 20);
+    if (!(prev && prev.s[ix.MIN] >= 20)) c = played.filter(Boolean).length / rows.length;
+  }
+  ROT.set(p.id, c);
+  return c;
 }
 // Opponent strength: a weaker defence and a faster pace mean more numbers (kept within ±12%)
 function oppFactor(team, opp) {
