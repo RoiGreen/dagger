@@ -1229,7 +1229,11 @@ table.box.lgtab .lgdn { color: var(--neg); font-weight: 800; }
 table.box.lgtab .lgsame { color: var(--muted); }
 table.box.lgtab td.lgtip { font-family: var(--font-body); font-size: .78rem; line-height: 1.35; white-space: normal; text-align: center; width: 130px; min-width: 130px; max-width: 130px; }
 table.box.lgtab th:last-child { text-align: center; }
-@media (min-width: 701px) { table.box.lgtab td:not(.rank):not(.lgch):not(.tn):not(.lgtip) { min-width: 66px; } }
+@media (min-width: 701px) { table.box.lgtab tr:not(.lgros) td:not(.rank):not(.lgch):not(.tn):not(.lgtip) { min-width: 66px; } }
+table.box.lgtab .lgteam { border: 0; background: none; font: inherit; color: inherit; cursor: pointer; padding: 0; text-decoration: underline dotted; text-underline-offset: 3px; }
+table.box.lgtab tr.lgros td { white-space: normal; text-align: right; direction: rtl; font-family: var(--font-body); font-size: .82rem; line-height: 1.6; background: var(--surface-2); }
+table.box.lgtab tr.lgros td > div { position: sticky; right: 8px; max-width: min(900px, calc(100vw - 80px)); }
+table.box.lgtab .lgrnone { color: var(--muted); }
 table.box.lgtab .lsort { border: 0; background: none; font: inherit; color: inherit; cursor: pointer; padding: 0; }
 table.box.lgtab th.sorted .lsort { color: var(--accent); text-decoration: underline; text-underline-offset: 3px; }
 @media (max-width: 700px) {
@@ -4652,17 +4656,20 @@ function rankLine(p, k) {
 function rankSnap(k) {
   const n = Math.max(st.teams, 1);
   return { n, at: new Date().toISOString(), teams: Array.from({ length: n }, (_, t) => {
-    const il = ilOf(t), list = rosterOf(t).filter((p) => !il.has(p.id));
+    const il = ilOf(t), all = rosterOf(t), list = all.filter((p) => !il.has(p.id));
     const o = Object.fromEntries(RANK_KEYS.map((x) => [x, 0]));
     let has = 0;
+    const ids = [], none = [];
     for (const p of list) {
       const a = rankLine(p, k);
-      if (!a) continue;
+      if (!a) { none.push(p.id); continue; }
       has++;
+      ids.push(p.id);
       for (const x of RANK_KEYS) o[x] += a[ix[x]] || 0;
     }
     for (const x of RANK_KEYS) o[x] = Math.round(o[x] * 100) / 100;
-    return { n: list.length, has, v: o };
+    // who was counted, who sat on IL and who had no games then: shown under the team in the power ranking
+    return { n: list.length, has, v: o, ids, none, il: all.filter((p) => il.has(p.id)).map((p) => p.id) };
   }) };
 }
 // keeps the rounds up to date: round 0 follows the rosters until the season starts; a published round is kept once
@@ -4750,6 +4757,15 @@ function snapPlaces(snap) {
   }
   return teams;
 }
+// the teams opened in the power ranking, and the players behind a team's numbers in the round shown
+const LG_OPEN = new Set();
+function lgRoster(x) {
+  if (!x?.ids) return `<span class="lgrnone">המחזור הזה נשמר בלי רשימת השחקנים</span>`;
+  const names = (ids) => ids.map((id) => PLAYER_BY_ID.get(id)?.name).filter(Boolean).map((nm) => `<bdi>${esc(nm)}</bdi>`).join(", ");
+  return [`<b>נספרו (${x.ids.length}):</b> ${names(x.ids) || "–"}`,
+    x.il?.length ? `<b>ב־IL (לא נספרו):</b> ${names(x.il)}` : "",
+    x.none?.length ? `<b>בלי משחקים ב־26-27 (לא נספרו):</b> ${names(x.none)}` : ""].filter(Boolean).join("<br>");
+}
 // mv: the moves being checked (checkedMoves), applied to their teams in the round shown
 function leagueTable(mv = null) {
   const n = Math.max(st.teams, 1);
@@ -4831,16 +4847,16 @@ function leagueTable(mv = null) {
   const kindHe = { pickup: "הפיק אפ", trade: "הטרייד" };
   return `<section class="cmpsec lgsec"><h3 class="ctr">דירוג עוצמה${pkOn ? ` · כולל ${kinds.map((k) => kindHe[k]).join(" ו")}` : ""}</h3>
     ${pkOn ? `<div class="lgpk">${kinds.map((k) => `<div class="mvblock"><div class="mvcards">${mv.filter((m) => m.kind === k).map((m) => mvCard(m)).join("")}</div><button type="button" class="mact" data-pkclear="${k}">בלי ${kindHe[k]}</button></div>`).join("")}</div>` : ""}
-    <div class="lgweek"><select data-lground aria-label="איזה מחזור">${rounds.map((k) => `<option value="${k}"${k === sel ? " selected" : ""}>${esc(roundLabel(k))}</option>`).join("")}</select><small>${when}</small></div>
+    <div class="lgweek"><select data-lground aria-label="איזה מחזור">${rounds.map((k) => `<option value="${k}"${k === sel ? " selected" : ""}>${esc(roundLabel(k))}</option>`).join("")}</select><small>${when}</small>${sel > 0 && sel === W.last && st.lgWeekly?.r?.[sel] ? `<button type="button" class="mact" data-lgrecalc data-tip="מחשב את המחזור מחדש לפי הסגלים וה־IL של עכשיו (למשל אחרי תיקון IL או ייבוא העברות)">חישוב מחדש</button>` : ""}</div>
     <div class="tbl-wrap short"><table class="box lgtab"><thead><tr><th class="nosort${key === "pts" ? " sorted" : ""}"><button type="button" class="lsort" data-cmplsort="pts" data-tip="המקום הכללי: לפי המקומות בכל הקטגוריות">#</button></th>
       <th class="nosort" data-tip="${pkOn ? "שינוי במקום הכללי בגלל המהלך" : "שינוי במקום הכללי לעומת השבוע הקודם"}">${pkOn ? "שינוי מהמהלך" : "שינוי"}</th><th class="nosort">קבוצה</th>
       ${CATS.map((c) => head(c.k, c.l)).join("")}<th class="nosort" data-tip="איפה הכי קל לעלות מקום (הכי קרוב לקבוצה שמעליה), ומה כדאי לשחרר כשהקבוצה אחרונה בו בפער גדול">המלצה</th></tr></thead><tbody>
       ${teams.map((x, i) => {
         const d = prev && prev[x.t] != null ? prev[x.t] - overall.get(x.t) : 0;
         const ch = !prev || !d ? `<span class="lgsame">–</span>` : `<span class="${d > 0 ? "lgup" : "lgdn"}">${d > 0 ? "▲" : "▼"} #${prev[x.t]} → #${overall.get(x.t)}</span>`;
-        return `<tr class="${x.t === myIdx() ? "me" : ""}"><td class="rank">${key === "pts" ? overall.get(x.t) : i + 1}</td><td class="lgch" dir="ltr">${ch}</td><td class="tn">${esc(teamName(x.t))}</td>
+        return `<tr class="${x.t === myIdx() ? "me" : ""}"><td class="rank">${key === "pts" ? overall.get(x.t) : i + 1}</td><td class="lgch" dir="ltr">${ch}</td><td class="tn"><button type="button" class="lgteam" data-lgteam="${x.t}" aria-expanded="${LG_OPEN.has(x.t)}" data-tip="מי נספר">${esc(teamName(x.t))}</button></td>
         ${CATS.map((c) => `<td class="${st.punts.has(c.k) ? "punted" : ""}" style="${x.list.length ? heat[c.k]((c.k === "TOV" ? -1 : 1) * (x.T[c.k] ?? 0)) : ""}">${x.list.length ? catFmt(c.k)(x.T[c.k] ?? 0) : "–"}<small>${placeTag(prevCat?.[c.k][x.t], x[`r_${c.k}`])}</small></td>`).join("")}
-        <td class="lgtip">${tip(x)}</td></tr>`; }).join("")}
+        <td class="lgtip">${tip(x)}</td></tr>${LG_OPEN.has(x.t) ? `<tr class="lgros"><td colspan="${CATS.length + 4}"><div>${lgRoster(snap0.teams[x.t])}</div></td></tr>` : ""}`; }).join("")}
     </tbody></table></div>
     <p class="munote ctrnote">סכום הממוצעים למשחק של השחקנים בסגל הפעיל (בלי IL) ביום הפרסום. הדירוג מתעדכן בכל יום ב׳ ב־9:00 לפי המחזור שהסתיים.</p>
   </section>`;
@@ -4852,6 +4868,17 @@ $("viewCmp").addEventListener("change", (e) => {
 $("viewCmp").addEventListener("click", (e) => {
   const clr = e.target.closest("[data-pkclear]");
   if (clr) { const k = clr.dataset.pkclear; if (st.cmp.saved) delete st.cmp.saved[k]; return renderCmp(); }
+  const lt = e.target.closest("[data-lgteam]");
+  if (lt) { const t = Number(lt.dataset.lgteam); LG_OPEN.has(t) ? LG_OPEN.delete(t) : LG_OPEN.add(t); return renderCmp(); }
+  if (e.target.closest("[data-lgrecalc]")) {
+    const W = weeklyRanks();
+    if (!W) return;
+    const k = lgRoundOf(W);
+    st.lgWeekly.r[k] = rankSnap(k);
+    saveSettings();
+    showToast("המחזור חושב מחדש לפי הסגלים של עכשיו");
+    return renderCmp();
+  }
   const sortBtn = e.target.closest("[data-cmplsort]");
   if (sortBtn) { st.cmp.lsort = sortBtn.dataset.cmplsort; return renderCmp(); }
 }, true);
