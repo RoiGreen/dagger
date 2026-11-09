@@ -6850,7 +6850,7 @@ function muApply() {
   // one name unknown and one team of this matchup left: that is it
   const taken = names.map((nm) => txTeam(nm)).filter((t) => t != null);
   const left = pair.filter((t) => !taken.includes(t));
-  if (miss.length === 1 && left.length === 1) { st.teamMap = st.teamMap || {}; st.teamMap[miss[0]] = left[0]; miss = []; }
+  if (miss.length === 1 && left.length === 1 && taken.every((t) => pair.includes(t))) { st.teamMap = st.teamMap || {}; st.teamMap[miss[0]] = left[0]; miss = []; }
   if (miss.length) {
     const n = Math.max(st.teams, 1);
     $("muImpNote").textContent = "שייכו את שמות הקבוצות מאתר הליגה לקבוצות כאן (פעם אחת):";
@@ -6863,12 +6863,26 @@ function muApply() {
   // the week is the page's own (its day tabs), not the one open here: on a Monday morning the league's round of last
   // week may still be running in America. The matchup then shows that week
   const week = got.week || weekDays()[0];
-  st.muActual = { week, ts: Date.now(), teams };
+  const old = st.muActual && st.muActual.week === week ? st.muActual.teams : {};
+  st.muActual = { week, ts: Date.now(), teams: { ...old, ...teams } };
   st.muWeekOff = Math.round((Date.parse(week + "T12:00:00Z") - Date.parse(weekRange().from + "T12:00:00Z")) / (7 * 864e5));
+  // another matchup of the league: shown here, my team's side first when it is in it
+  const ts = Object.keys(teams).map(Number);
+  let shown = "";
+  if (ts.length === 2) {
+    const a = ts.includes(muMe()) ? muMe() : ts.includes(myIdx()) ? myIdx() : ts[0], b = ts.find((t) => t !== a);
+    if (a !== muMe() || b !== st.muOpp) {
+      st.muTeam = a === myIdx() ? null : a;
+      if (a === myIdx()) st.oppByWeek = { ...(st.oppByWeek || {}), [week]: b };
+      else (st.oppByWeekT = st.oppByWeekT || {})[`${a}|${week}`] = b;
+      MU_DROP.clear();
+      shown = ` · מוצג: ${teamName(a)} מול ${teamName(b)}`;
+    }
+  }
   MU_PEND = null;
   saveSettings(); MU = null; renderMatchup(); muImpNote();
   $("muImpText").value = "";
-  showToast("התוצאה עודכנה מאתר הליגה");
+  showToast("התוצאה עודכנה מאתר הליגה" + shown);
 }
 $("muImpRead").addEventListener("click", () => {
   MU_PEND = muParse($("muImpText").value);
