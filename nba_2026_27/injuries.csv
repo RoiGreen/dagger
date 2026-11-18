@@ -26,7 +26,7 @@ Santi Aldama,Dallas Mavericks,Day-To-Day,GTD,Ankle Sprain,2026-11-18,Aldama (ank
 Julian Strawther,Denver Nuggets,Out,OUT,Knee Sprain,2026-11-29,"Strawther (knee) was diagnosed with a left knee sprain Friday and will be re-evaluated in six weeks, Vinny Benedetto of The Denver Gazette reports.",2026-10-17T00:52Z
 Isaiah Joe,Detroit Pistons,Out,OUT,Hip Bruise,2026-11-18,Joe (hip) is out for Tuesday's game against the Spurs.,2026-11-17T18:33Z
 Duncan Robinson,Detroit Pistons,Out,OUT,Quadriceps Strain,2026-11-27,"Robinson will be re-evaluated in one week due to a left quadriceps strain, Coty M. Davis of The Detroit News reports.",2026-11-17T16:25Z
-Taurean Prince,Detroit Pistons,Out,OUT,Knee Soreness,2026-11-18,Prince (knee) has been ruled out for Tuesday's game against the Spurs.,2026-11-16T22:58Z
+Taurean Prince,Detroit Pistons,Out,GTD,Knee Soreness,2026-11-18,Prince (knee) has been ruled out for Tuesday's game against the Spurs.,2026-11-16T22:58Z
 Ronald Holland II,Detroit Pistons,Out,OUT,Knee Bruise,2026-11-18,Holland is out for Tuesday's game against San Antonio due to a left knee contusion.,2026-11-16T22:53Z
 Jalen Duren,Detroit Pistons,Out,OUT,Hamstring Strain,2026-11-24,"Duren (hamstring) has begun on-court activity and will be re-evaluated in two weeks, Hunter Patterson of The Athletic reports.",2026-11-08T16:05Z
 Draymond Green,Golden State Warriors,Day-To-Day,GTD,Elbow Inflammation,2026-11-18,Green is questionable for Wednesday's game in Dallas due to inflammation in his right elbow.,2026-11-18T05:49Z
@@ -48,8 +48,8 @@ Yanic Konan Niederhauser,LA Clippers,Out,OUT,Foot Surgery,2026-11-23,Niederhause
 Brandon Ingram,LA Clippers,Out,OUT,Achilles Surgery,2026-11-19,"Ingram (Achilles) won't play in Friday's game against the Thunder, per Law Murray of The Athletic.",2026-11-12T21:05Z
 Bradley Beal,LA Clippers,Out,OUT,Knee Inflammation,2026-11-29,"Beal (knee) will not be ready for the start of the regular season, NBA writer Justin Russo reports.",2026-10-15T01:03Z
 Jordan Miller,LA Clippers,Out,OUT,Shoulder Surgery,2027-03-02,"Miller underwent surgery Wednesday to repair a torn left rotator cuff and will be re-evaluated in six months, per Law Murray of The Athletic.",2026-08-26T20:04Z
-Walker Kessler,Los Angeles Lakers,Out,OUT,Lower Leg Soreness,2026-11-18,"Head coach JJ Redick said he expects Walker (leg) to be available for Wednesday's game against the Jazz, Thuc Nhi Nguyen of the Los Angeles Times reports.",2026-11-18T02:57Z
-Austin Reaves,Los Angeles Lakers,Out,OUT,Heel Bruise,2026-11-18,"Reaves (heel) is out for Tuesday's game against the Hornets, Dave McMenamin of ESPN.com reports.",2026-11-17T01:11Z
+Austin Reaves,Los Angeles Lakers,Day-To-Day,GTD,Heel Bruise,2026-11-18,"Reaves (heel) is out for Tuesday's game against the Hornets, Dave McMenamin of ESPN.com reports.",2026-11-18T15:02Z
+Walker Kessler,Los Angeles Lakers,Day-To-Day,GTD,Lower Leg Soreness,2026-11-18,"Head coach JJ Redick said he expects Walker (leg) to be available for Wednesday's game against the Jazz, Thuc Nhi Nguyen of the Los Angeles Times reports.",2026-11-18T15:02Z
 GG Jackson,Memphis Grizzlies,Out,OUT,Foot Surgery,2027-01-18,Jackson underwent a procedure Wednesday to repair a broken fifth metatarsal in his left foot. He is expected to recover fully and will be re-evaluated in approximately three months.,2026-11-17T23:18Z
 Isaiah Stewart,Memphis Grizzlies,Out,OUT,Illness,2026-11-19,Stewart (illness) won't play Wednesday against the Cavs.,2026-11-17T22:10Z
 Ty Jerome,Memphis Grizzlies,Out,OUT,Hip,2026-11-19,Jerome (hip) has been ruled out for Wednesday's game in Cleveland.,2026-11-17T22:07Z
@@ -59,7 +59,7 @@ Myron Gardner,Miami Heat,Day-To-Day,GTD,Hamstring,2026-11-18,"Gardner (hamstring
 Nikola Jovic,Miami Heat,Day-To-Day,GTD,Illness,2026-11-18,"Jovic (illness) is listed as probable for Wednesday's game against Milwaukee, Ira Winderman of the South Florida Sun Sentinel reports.",2026-11-17T21:34Z
 Bam Adebayo,Miami Heat,Day-To-Day,GTD,Hip,2026-11-18,"Adebayo (hip) is probable for Wednesday's game against the Bucks, per Ira Winderman of the South Florida Sun Sentinel.",2026-11-17T21:32Z
 Ousmane Dieng,Milwaukee Bucks,Out,OUT,Finger Surgery,2026-12-14,"Dieng will undergo a procedure to repair a fractured left finger Monday, Justin Garcia of the Milwaukee Bucks Radio Network reports.",2026-11-15T23:46Z
-Zyon Pullin,Minnesota Timberwolves,Out,OUT,Quadriceps Bruise,2026-11-19,Pullin (quadriceps) has been ruled out for Tuesday's game against Portland.,2026-11-17T19:05Z
+Zyon Pullin,Minnesota Timberwolves,Out,GTD,Quadriceps Bruise,2026-11-19,Pullin (quadriceps) has been ruled out for Tuesday's game against Portland.,2026-11-17T19:05Z
 Jonathan Kuminga,Minnesota Timberwolves,Out,OUT,Shoulder,2026-11-19,Kuminga (shoulder) is out for Tuesday's game against Portland.,2026-11-17T19:03Z
 Jaylen Clark,Minnesota Timberwolves,Out,OUT,Hamstring,2026-11-29,Clark (hamstring) has been ruled out for the next two weeks.,2026-11-15T22:40Z
 Anthony Edwards,Minnesota Timberwolves,Out,OUT,Knee Surgery,2026-12-21,"Edwards underwent a successful arthroscopic procedure on his right knee Thursday, the Timberwolves announced.",2026-10-29T18:33Z
@@ -83,8 +83,8 @@ Jaylen Brown,Philadelphia 76ers,Out,OUT,Hamstring,2026-11-21,Brown is out for We
 Adem Bona,Philadelphia 76ers,Out,OUT,Back Sprain,2026-11-21,"Bona (back) will be re-evaluated in approximately one week after seeing a specialist, Ky Carlin of USA Today reports.",2026-11-12T16:36Z
 Ariel Hukporti,Philadelphia 76ers,Out,OFS,Achilles Surgery,2027-10-01,"Hukporti has sustained a season-ending ruptured right Achilles tendon, per Shams Charania of ESPN.",2026-10-06T19:17Z
 Mark Williams,Phoenix Suns,Out,OUT,Shoulder Surgery,2027-02-03,"Williams underwent surgery Thursday to repair a torn labrum in his left shoulder and will miss an extended period of time, Shams Charania of ESPN reports.",2026-09-11T16:03Z
-Deni Avdija,Portland Trail Blazers,Out,OUT,Foot,2026-11-19,Avdija (foot) won't play Tuesday versus Minnesota.,2026-11-18T00:28Z
-Chris Youngblood,Portland Trail Blazers,Out,OUT,Heel Bruise,2026-11-19,Youngblood (heel) has been ruled out for Tuesday's game at Minnesota.,2026-11-17T19:19Z
+Deni Avdija,Portland Trail Blazers,Day-To-Day,GTD,Foot,2026-11-19,Avdija (foot) won't play Tuesday versus Minnesota.,2026-11-18T15:04Z
+Chris Youngblood,Portland Trail Blazers,Out,GTD,Heel Bruise,2026-11-19,Youngblood (heel) has been ruled out for Tuesday's game at Minnesota.,2026-11-17T19:19Z
 Vit Krejci,Portland Trail Blazers,Out,OUT,Ankle,2027-01-12,"Krejci underwent surgery on his fractured left ankle Wednesday and will be re-evaluated in eight weeks, Brett Siegel of ClutchPoints.com reports.",2026-11-11T19:56Z
 Ja Morant,Portland Trail Blazers,Out,OUT,Hamstring,2026-12-01,"Head coach Micah Nori said Morant met with a doctor in Los Angeles, who gave him a positive outlook on his recovery from the hamstring injury. While Nori declined to update Morant's timetable, he added Morant ""may not be out for as long as we thought,"" Trail Blazers Insider Sean Highkin reports.",2026-11-08T02:18Z
 Shaedon Sharpe,Portland Trail Blazers,Out,OUT,Knee Surgery,2027-03-02,"Sharpe suffered a torn meniscus in his knee and is expected to miss six months, per Shams Charania of ESPN.",2026-08-24T20:23Z
@@ -98,7 +98,7 @@ Jayden Quaintance,San Antonio Spurs,Out,OUT,Knee Surgery,2026-12-03,"Quaintance 
 Kawhi Leonard,Toronto Raptors,Out,OUT,Knee Inflammation,2026-11-27,"Leonard (knee) has progressed in his strength and conditioning program but will miss at least one more week, Michael Scotto of HoopsHype.com reports.",2026-11-17T22:25Z
 Nate Bittle,Toronto Raptors,Out,OUT,Foot Fracture,2026-11-23,"Bittle (foot) has been ruled out for Sunday's game against the Knicks, Zulfi Sheikh of Sportsnet.ca reports.",2026-11-14T21:59Z
 Kevin McCullar Jr.,Toronto Raptors,Day-To-Day,GTD,Illness,2026-11-20,"McCullar signed a two-way contract with the Raptors on Thursday, Michael Scotto of HoopsHype.com reports.",2026-11-13T15:37Z
-Jaxson Hayes,Utah Jazz,Out,OUT,Knee Strain,2026-11-18,Hayes (knee) has been ruled out for Tuesday's game against the Clippers.,2026-11-17T01:08Z
+Jaxson Hayes,Utah Jazz,Day-To-Day,GTD,Knee Strain,2026-11-18,Hayes (knee) has been ruled out for Tuesday's game against the Clippers.,2026-11-18T14:59Z
 Lauri Markkanen,Utah Jazz,Out,OUT,Hand Fracture,2027-01-04,"Markkanen has been diagnosed with a non-displaced fracture in his right hand and will be sidelined for at least one month, Shams Charania of ESPN reports.",2026-11-11T18:22Z
 Jusuf Nurkic,Utah Jazz,Out,OUT,Foot Strain,2026-11-20,"Nurkic (toe) has begun participating in on-court activities as he continues recovering from a right foot injury sustained during an Oct. 4 preseason game against Denver. He will be re-evaluated in two weeks, the Jazz announced Friday.",2026-11-06T18:20Z
 Jaren Jackson Jr.,Utah Jazz,Out,OUT,Knee,2026-12-14,"Jackson has been diagnosed with a torn MCL in his right knee and will be sidelined for 6-to-8 weeks, per Shams Charania of ESPN.",2026-10-27T19:25Z
